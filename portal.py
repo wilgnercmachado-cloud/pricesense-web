@@ -70,8 +70,8 @@ URL_LOGO_LIGHT = f"data:image/svg+xml;base64,{b64_light}"
 URL_LOGO_DARK = f"data:image/svg+xml;base64,{b64_dark}"
 
 # ================= CONEXÃO COM BANCO DE DADOS =================
-SUPABASE_URL = "https://jawdoxmvnvidqkmfohsn.supabase.co"
-SUPABASE_KEY = "sb_publishable_qbnZplDdvwJL9Ph5IEvo8Q_4korwizq"
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
 @st.cache_resource
 def iniciar_supabase():
