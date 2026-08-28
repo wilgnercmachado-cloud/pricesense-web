@@ -321,7 +321,7 @@ def tela_login():
             st.markdown("<br>", unsafe_allow_html=True)
             
             if st.session_state.modo_login == "login":
-                usuario_input = st.text_input("Usuário", placeholder="Ex: wilgner.machado")
+                usuario_input = st.text_input("Usuário", placeholder="Ex: joao.silva")
                 senha_input = st.text_input("Senha", type="password", placeholder="••••••••")
                 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -354,13 +354,20 @@ def tela_login():
                     st.rerun()
                     
             else:
-                st.markdown("<h4 style='text-align: center; font-weight: 700; margin-bottom: 20px;'>Solicitação de Acesso</h4>", unsafe_allow_html=True)
+                st.markdown("<h4 style='text-align: center; font-weight: 700; margin-bottom: 5px;'>Solicitação de Acesso</h4>", unsafe_allow_html=True)
+                st.markdown("<p style='text-align: center; color: #888; font-size: 0.85em; margin-bottom: 20px;'>Preencha os dados abaixo para validação da sua credencial.</p>", unsafe_allow_html=True)
+                
                 nome_cad = st.text_input("Nome e Último Nome", placeholder="Ex: João Silva")
-                user_cad = st.text_input("Usuário Desejado", placeholder="Ex: joao.silva")
-                mat_cad = st.text_input("Matrícula")
-                cargo_cad = st.text_input("Cargo/Função")
-                senha_cad = st.text_input("Crie uma Senha", type="password")
-                senha2_cad = st.text_input("Repita a Senha", type="password")
+                
+                user_cad = st.text_input("Usuário Desejado", placeholder="Ex: joao.silva ou joao_silva")
+                st.caption("💡 *Este será o seu login. Use letras minúsculas e sem espaços.*")
+                
+                mat_cad = st.text_input("Matrícula", placeholder="Ex: 163067")
+                
+                cargo_cad = st.text_input("Cargo/Função", placeholder="Ex: Analista de Pricing")
+                
+                senha_cad = st.text_input("Crie uma Senha", type="password", placeholder="Sua senha secreta")
+                senha2_cad = st.text_input("Repita a Senha", type="password", placeholder="Confirme sua senha")
                 
                 st.markdown("<br>", unsafe_allow_html=True)
                 col_voltar, col_enviar = st.columns(2)
