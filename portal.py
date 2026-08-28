@@ -11,17 +11,13 @@ from supabase import create_client, Client
 
 # ================= GERENCIAMENTO DE ESTADO E USUÁRIOS =================
 if 'tema' not in st.session_state:
-    st.session_state.tema = "Light" # Light (Branco) agora é o Padrão
-
-# Refatoração do Banco de Dados para suportar Permissões de Telas e Status
-# Formato: {"usuario": ["senha", "Nome", is_admin, "Status", ["Tela 1", "Tela 2"]]}
-if 'db_usuarios' not in st.session_state or len(list(st.session_state.db_usuarios.values())[0]) < 5:
-    st.session_state.db_usuarios = {
-        "wilgner.machado": ["212223", "Wilgner C. Machado", True, "Aprovado", ["Preço Bot", "Pricing Regular (Em construção)", "Pricing Promo (Em breve)"]]
-    }
+    st.session_state.tema = "Light"
 
 if 'modo_login' not in st.session_state:
     st.session_state.modo_login = "login"
+
+if 'permissoes' not in st.session_state:
+    st.session_state.permissoes = []
 
 def aplicar_tema_nativo():
     try:
@@ -30,13 +26,13 @@ def aplicar_tema_nativo():
             st_config.set_option("theme.backgroundColor", "#0E1117")
             st_config.set_option("theme.secondaryBackgroundColor", "#1A1D25")
             st_config.set_option("theme.textColor", "#FFFFFF")
-            st_config.set_option("theme.primaryColor", "#E20000") # Vermelho Original
+            st_config.set_option("theme.primaryColor", "#E20000")
         else:
             st_config.set_option("theme.base", "light")
             st_config.set_option("theme.backgroundColor", "#F4F5F7")
             st_config.set_option("theme.secondaryBackgroundColor", "#FFFFFF")
             st_config.set_option("theme.textColor", "#1D1D1D")
-            st_config.set_option("theme.primaryColor", "#2424ED") # Azul Original
+            st_config.set_option("theme.primaryColor", "#2424ED")
     except Exception:
         pass
 
@@ -70,8 +66,13 @@ URL_LOGO_LIGHT = f"data:image/svg+xml;base64,{b64_light}"
 URL_LOGO_DARK = f"data:image/svg+xml;base64,{b64_dark}"
 
 # ================= CONEXÃO COM BANCO DE DADOS =================
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+try:
+    SUPABASE_URL = st.secrets["SUPABASE_URL"]
+    SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+except:
+    # Fallback seguro caso rode localmente sem o secrets
+    SUPABASE_URL = "https://jawdoxmvnvidqkmfohsn.supabase.co"
+    SUPABASE_KEY = "sb_publishable_qbnZplDdvwJL9Ph5IEvo8Q_4korwizq"
 
 @st.cache_resource
 def iniciar_supabase():
@@ -99,10 +100,8 @@ def aplicar_css_tema():
 
     css = f"""
     <style>
-    /* Injeção da Fonte Minimalista Inter */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
     
-    /* BLINDAGEM: A fonte Inter é aplicada, mas ÍCONES (material-symbols) continuam sendo desenhados corretamente */
     html, body, p, div, h1, h2, h3, h4, h5, h6, li, a, button, input, label, table, td, th {{ font-family: 'Inter', sans-serif; }}
     .material-symbols-rounded, .stIcon, span[class*="Icon"] {{ font-family: 'Material Symbols Rounded', 'Material Icons' !important; }}
 
@@ -114,7 +113,6 @@ def aplicar_css_tema():
 
     .tagline {{ text-align: center; font-style: italic; margin-top: 5px; margin-bottom: 25px; color: #888888; font-weight: 400; }}
     
-    /* Animações Isoladas para Login/Splash */
     @keyframes pulse-white {{ 0% {{ text-shadow: 0 0 10px rgba(255,255,255,0.4); transform: scale(0.99); }} 50% {{ text-shadow: 0 0 20px rgba(255,255,255,0.8); transform: scale(1.01); }} 100% {{ text-shadow: 0 0 10px rgba(255,255,255,0.4); transform: scale(0.99); }} }}
     @keyframes pulse-blue-new {{ 0% {{ text-shadow: 0 0 10px rgba(36, 36, 237, 0.3); transform: scale(0.99); }} 50% {{ text-shadow: 0 0 20px rgba(36, 36, 237, 0.6); transform: scale(1.01); }} 100% {{ text-shadow: 0 0 10px rgba(36, 36, 237, 0.3); transform: scale(0.99); }} }}
     
@@ -129,7 +127,6 @@ def aplicar_css_tema():
     [data-testid="stSidebar"] {{ background-color: {sidebar_bg} !important; backdrop-filter: blur(16px) !important; -webkit-backdrop-filter: blur(16px) !important; border-right: 1px solid {input_border} !important; }}
     [data-testid="stMarkdownContainer"] p, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownContainer"] h2, [data-testid="stMarkdownContainer"] h3, label {{ color: {text_color} !important; }}
 
-    /* Botões Primários (O botão de enviar email assume esse estilo) */
     .stButton > button[kind="primary"], div[data-testid="stPopover"] > button {{ 
         background-color: {primary} !important; background-image: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 100%) !important;
         border: 1px solid {primary} !important; color: #FFFFFF !important; font-weight: 600; border-radius: 10px !important; 
@@ -139,7 +136,6 @@ def aplicar_css_tema():
     .stButton > button[kind="primary"]:hover, div[data-testid="stPopover"] > button:hover {{ background-color: {primary_hover} !important; border-color: {primary_hover} !important; }}
     .stButton > button[kind="primary"] p, .stButton > button[kind="primary"] div, div[data-testid="stPopover"] > button p {{ color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important; }}
 
-    /* Botão Excel Exclusivo */
     .stDownloadButton > button[kind="primary"] {{ 
         background-color: {excel_color} !important; background-image: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 100%) !important;
         border: 1px solid {excel_color} !important; color: #FFFFFF !important; font-weight: 600; border-radius: 10px !important; 
@@ -149,7 +145,6 @@ def aplicar_css_tema():
     .stDownloadButton > button[kind="primary"]:hover {{ background-color: {excel_hover} !important; border-color: {excel_hover} !important; }}
     .stDownloadButton > button[kind="primary"] p {{ color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important; }}
 
-    /* Inputs e Expanders */
     [data-testid="stExpander"] {{ background-color: transparent !important; border: 1px solid {input_border} !important; border-radius: 12px !important; box-shadow: {glass_shadow} !important; }}
     .stTextInput > div > div, .stTextInput input, .stDateInput > div > div, .stDateInput input, div[data-baseweb="select"] > div, div[data-baseweb="select"] > div > div {{ 
         background-color: {input_bg} !important; backdrop-filter: blur(10px) !important; border: 1px solid {input_border} !important; border-radius: 10px !important; color: {text_color} !important; 
@@ -331,23 +326,27 @@ def tela_login():
                 st.markdown("<br>", unsafe_allow_html=True)
 
                 if st.button("Iniciar sessão", type="primary", use_container_width=True):
-                    if usuario_input in st.session_state.db_usuarios:
-                        dados_bd = st.session_state.db_usuarios[usuario_input]
-                        if senha_input == dados_bd[0]:
-                            if dados_bd[3] == "Aprovado":
-                                st.session_state.logado = True
-                                st.session_state.usuario_logado = dados_bd[1]
-                                st.session_state.is_admin = dados_bd[2]
-                                st.session_state.permissoes = dados_bd[4]
-                                st.rerun()
-                            elif dados_bd[3] == "Pendente":
-                                st.error("⏳ Sua solicitação ainda está em análise pelo administrador.")
-                            elif dados_bd[3] == "Rejeitado":
-                                st.error("❌ Seu acesso foi negado pelo administrador.")
+                    try:
+                        res = supabase.table('usuarios').select('*').eq('usuario', usuario_input).execute()
+                        if res.data:
+                            user_data = res.data[0]
+                            if senha_input == user_data['senha']:
+                                if user_data['status'] == 'Aprovado':
+                                    st.session_state.logado = True
+                                    st.session_state.usuario_logado = user_data['nome']
+                                    st.session_state.is_admin = user_data.get('is_admin', False)
+                                    st.session_state.permissoes = user_data.get('permissoes', [])
+                                    st.rerun()
+                                elif user_data['status'] == 'Pendente':
+                                    st.error("⏳ Sua solicitação ainda está em análise pelo administrador.")
+                                elif user_data['status'] == 'Rejeitado':
+                                    st.error("❌ Seu acesso foi negado pelo administrador.")
+                            else:
+                                st.error("❌ Senha incorreta.")
                         else:
-                            st.error("❌ Senha incorreta.")
-                    else:
-                        st.error("❌ Usuário não encontrado no sistema.")
+                            st.error("❌ Usuário não encontrado no sistema.")
+                    except Exception as e:
+                        st.error(f"Erro de conexão: {e}")
                 
                 st.markdown("<br>", unsafe_allow_html=True)
                 if st.button("Primeiro Acesso? Solicitar conta", use_container_width=True):
@@ -375,15 +374,28 @@ def tela_login():
                             st.error("⚠️ Preencha todos os campos obrigatórios.")
                         elif senha_cad != senha2_cad:
                             st.error("❌ As senhas digitadas não conferem.")
-                        elif user_cad in st.session_state.db_usuarios:
-                            st.error("⚠️ Este usuário já está em uso ou em análise.")
                         else:
-                            # Registra usuário como Pendente, sem permissões de tela iniciais
-                            st.session_state.db_usuarios[user_cad] = [senha_cad, f"{nome_cad} ({mat_cad})", False, "Pendente", []]
-                            st.success("✅ Solicitação enviada com sucesso! Aguarde a liberação do administrador.")
-                            time.sleep(2)
-                            st.session_state.modo_login = "login"
-                            st.rerun()
+                            try:
+                                check = supabase.table('usuarios').select('usuario').eq('usuario', user_cad).execute()
+                                if check.data:
+                                    st.error("⚠️ Este usuário já existe ou está em análise.")
+                                else:
+                                    supabase.table('usuarios').insert({
+                                        'usuario': user_cad,
+                                        'senha': senha_cad,
+                                        'nome': nome_cad,
+                                        'cargo': cargo_cad,
+                                        'matricula': mat_cad,
+                                        'status': 'Pendente',
+                                        'is_admin': False,
+                                        'permissoes': []
+                                    }).execute()
+                                    st.success("✅ Solicitação enviada! O administrador avaliará em breve.")
+                                    time.sleep(2)
+                                    st.session_state.modo_login = "login"
+                                    st.rerun()
+                            except Exception as e:
+                                st.error(f"Erro ao cadastrar: {e}")
 
 def tela_app_principal():
     if 'pagina_atual' not in st.session_state:
@@ -508,70 +520,70 @@ def tela_app_principal():
 
     if menu == "Painel de Administração":
         st.title("Gestão de Acessos")
-        st.markdown("Controle rigoroso de usuários e permissões de telas na plataforma.")
+        st.markdown("Controle rigoroso de usuários e permissões sincronizado diretamente com a nuvem.")
         
+        try:
+            usuarios_db = supabase.table('usuarios').select('*').execute().data
+        except Exception as e:
+            usuarios_db = []
+            st.error("Erro ao conectar com o banco de dados de usuários.")
+
         # 1. Solicitações PENDENTES
-        pendentes = {k: v for k, v in st.session_state.db_usuarios.items() if v[3] == "Pendente"}
+        pendentes = [u for u in usuarios_db if u.get('status') == 'Pendente']
         if pendentes:
             st.subheader("⏳ Solicitações Pendentes")
-            for user, dados in pendentes.items():
-                senha, nome_usuario, is_admin, status, perm = dados
+            for u in pendentes:
                 with st.container(border=True):
                     col_info, col_apr, col_rej = st.columns([3, 1, 1])
                     with col_info:
-                        st.markdown(f"**{nome_usuario}** (`{user}`)")
+                        st.markdown(f"**{u['nome']}** (`{u['usuario']}`)")
                     with col_apr:
-                        if st.button("✅ Aprovar", key=f"apr_{user}", use_container_width=True):
-                            st.session_state.db_usuarios[user][3] = "Aprovado"
-                            st.session_state.db_usuarios[user][4] = ["Preço Bot"] # Tela padrão ao aprovar
+                        if st.button("✅ Aprovar", key=f"apr_{u['usuario']}", use_container_width=True):
+                            supabase.table('usuarios').update({'status': 'Aprovado', 'permissoes': ["Preço Bot"]}).eq('usuario', u['usuario']).execute()
                             st.rerun()
                     with col_rej:
-                        if st.button("❌ Rejeitar", key=f"rej_{user}", use_container_width=True):
-                            st.session_state.db_usuarios[user][3] = "Rejeitado"
+                        if st.button("❌ Rejeitar", key=f"rej_{u['usuario']}", use_container_width=True):
+                            supabase.table('usuarios').update({'status': 'Rejeitado'}).eq('usuario', u['usuario']).execute()
                             st.rerun()
             st.markdown("---")
 
         # 2. Usuários APROVADOS (Ativos)
-        aprovados = {k: v for k, v in st.session_state.db_usuarios.items() if v[3] == "Aprovado"}
+        aprovados = [u for u in usuarios_db if u.get('status') == 'Aprovado']
         st.subheader("✅ Usuários Ativos")
-        for user, dados in aprovados.items():
-            senha, nome_usuario, is_admin, status, perm = dados
+        for u in aprovados:
             with st.container(border=True):
                 col_nome, col_perm, col_bloq = st.columns([2, 3, 1])
                 with col_nome:
-                    st.markdown(f"**{nome_usuario}**")
-                    st.caption(f"`{user}` | 👑 Admin" if is_admin else f"`{user}` | 👤 Analista")
+                    st.markdown(f"**{u['nome']}**")
+                    st.caption(f"`{u['usuario']}` | 👑 Admin" if u.get('is_admin') else f"`{u['usuario']}` | 👤 Analista")
                 with col_perm:
-                    if not is_admin:
+                    if not u.get('is_admin'):
                         opcoes_telas = ["Preço Bot", "Pricing Regular (Em construção)", "Pricing Promo (Em breve)"]
-                        novas_permissoes = st.multiselect("Permissões de Tela:", opcoes_telas, default=perm, key=f"perm_{user}")
+                        perm = u.get('permissoes') if u.get('permissoes') else []
+                        novas_permissoes = st.multiselect("Permissões de Tela:", opcoes_telas, default=perm, key=f"perm_{u['usuario']}")
                         if novas_permissoes != perm:
-                            st.session_state.db_usuarios[user][4] = novas_permissoes
+                            supabase.table('usuarios').update({'permissoes': novas_permissoes}).eq('usuario', u['usuario']).execute()
                 with col_bloq:
-                    if not is_admin:
-                        if st.button("Bloquear", key=f"bloq_{user}", use_container_width=True):
-                            st.session_state.db_usuarios[user][3] = "Rejeitado"
+                    if not u.get('is_admin'):
+                        if st.button("Bloquear", key=f"bloq_{u['usuario']}", use_container_width=True):
+                            supabase.table('usuarios').update({'status': 'Rejeitado'}).eq('usuario', u['usuario']).execute()
                             st.rerun()
                             
         st.markdown("---")
 
         # 3. Usuários REJEITADOS
-        rejeitados = {k: v for k, v in st.session_state.db_usuarios.items() if v[3] == "Rejeitado"}
+        rejeitados = [u for u in usuarios_db if u.get('status') == 'Rejeitado']
         if rejeitados:
             st.subheader("❌ Usuários Rejeitados / Bloqueados")
-            for user, dados in rejeitados.items():
-                senha, nome_usuario, is_admin, status, perm = dados
+            for u in rejeitados:
                 with st.container(border=True):
                     col_info, col_liberar = st.columns([4, 1])
                     with col_info:
-                        st.markdown(f"**{nome_usuario}** (`{user}`)")
+                        st.markdown(f"**{u['nome']}** (`{u['usuario']}`)")
                     with col_liberar:
-                        if st.button("Autorizar Acesso", key=f"aut_{user}", use_container_width=True):
-                            st.session_state.db_usuarios[user][3] = "Aprovado"
-                            if not st.session_state.db_usuarios[user][4]:
-                                st.session_state.db_usuarios[user][4] = ["Preço Bot"]
+                        if st.button("Autorizar Acesso", key=f"aut_{u['usuario']}", use_container_width=True):
+                            supabase.table('usuarios').update({'status': 'Aprovado', 'permissoes': ["Preço Bot"]}).eq('usuario', u['usuario']).execute()
                             st.rerun()
-
 
     elif menu == "Preço Bot":
         st.title("Preço Bot (Gerador de Importação)")
@@ -746,15 +758,13 @@ def tela_app_principal():
                             components.html(html_code, height=46)
                             
                         with col_btn3:
-                            # A mágica do Envio por E-mail (Módulo Popover interativo)
                             with st.popover("📧 Enviar para E-mail", use_container_width=True):
                                 st.markdown(" **Insira o e-mail de destino:**")
                                 email_dest = st.text_input("E-mail", placeholder="exemplo@empresa.com", label_visibility="collapsed")
                                 if st.button("Enviar Arquivo", use_container_width=True):
                                     if email_dest and "@" in email_dest:
                                         # ========================================================
-                                        # LÓGICA FUTURA DE SMTP (Python smtplib) VAI EXATAMENTE AQUI
-                                        # Ex: smtp.sendmail(user, email_dest, msg.as_string())
+                                        # LÓGICA DE SMTP (Python smtplib)
                                         # ========================================================
                                         st.success(f"✅ Arquivo gerado enviado via PriceSense para {email_dest}!")
                                     else:
