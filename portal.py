@@ -39,7 +39,7 @@ def aplicar_tema_nativo():
 aplicar_tema_nativo()
 
 # ================= CONFIGURAÇÃO INICIAL =================
-st.set_page_config(page_title="PriceSense Web", page_icon="💡", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="PriceSense Web", page_icon="⚡", layout="wide", initial_sidebar_state="expanded")
 
 # ================= ÍCONES SVG NATIVOS =================
 def svg_b64(svg_template, cor):
