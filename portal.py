@@ -165,6 +165,23 @@ def aplicar_css_tema():
     [data-testid="stMultiSelect"] div[data-baseweb="select"] > div {{ flex-wrap: wrap !important; }}
     [data-testid="stMultiSelect"] span[data-baseweb="tag"] {{ max-width: 100% !important; height: auto !important; }}
     [data-testid="stMultiSelect"] span[data-baseweb="tag"] span {{ white-space: normal !important; word-wrap: break-word !important; }}
+    /* Forçar quebra de linha e empilhamento nas caixinhas de Filiais (Força Bruta) */
+    div[data-baseweb="select"] > div {{
+        flex-wrap: wrap !important;
+        height: auto !important;
+        min-height: 46px !important;
+        overflow: visible !important;
+    }}
+    span[data-baseweb="tag"] {{
+        height: auto !important;
+        white-space: normal !important;
+        margin-top: 4px !important;
+        margin-bottom: 4px !important;
+    }}
+    span[data-baseweb="tag"] span {{
+        white-space: normal !important;
+        word-break: break-word !important;
+    }}
     </style>
     """
     st.markdown(css, unsafe_allow_html=True)
