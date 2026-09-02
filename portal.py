@@ -634,12 +634,15 @@ def tela_app_principal():
             col_esq, col_dir = st.columns([1, 1])
             with col_esq:
                 st.markdown("**Filtros de Loja (Cascata)**")
+                
                 lista_estados = puxar_estados_do_banco()
-                estado_selecionado = st.multiselect("Estado:", lista_estados, placeholder="Selecione os estados...")
+                estado_selecionado = st.multiselect("Estado:", lista_estados, placeholder="Selecione os estados...", wrap=True)
+                
                 lista_diretores = puxar_diretores_por_estado(estado_selecionado) if estado_selecionado else []
-                diretor_selecionado = st.multiselect("Diretor Regional (Opcional):", lista_diretores, disabled=not estado_selecionado, placeholder="Todos os diretores..." if estado_selecionado else "Aguardando estado...")
+                diretor_selecionado = st.multiselect("Diretor Regional (Opcional):", lista_diretores, disabled=not estado_selecionado, placeholder="Todos os diretores..." if estado_selecionado else "Aguardando estado...", wrap=True)
+                
                 lista_filiais = puxar_filiais(estado_selecionado, diretor_selecionado) if estado_selecionado else []
-                filiais = st.multiselect("Filial (Obrigatório):", lista_filiais, disabled=not estado_selecionado, placeholder="Aguardando estado...")
+                filiais = st.multiselect("Filial (Obrigatório):", lista_filiais, disabled=not estado_selecionado, placeholder="Aguardando estado...", wrap=True)
 
             with col_dir:
                 st.markdown("**Configurações da Campanha**")
