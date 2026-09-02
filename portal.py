@@ -154,6 +154,7 @@ def aplicar_css_tema():
     .stTextArea textarea:focus {{ border-color: {primary} !important; }}
     [data-testid="stDataFrame"] {{ background-color: transparent !important; }}
     
+    /* Cores das Tags do MultiSelect */
     [data-testid="stMultiSelect"] [data-baseweb="tag"], [data-testid="stMultiSelect"] [data-baseweb="tag"] *, [data-testid="stExpander"] [data-baseweb="tag"], [data-testid="stExpander"] [data-baseweb="tag"] * {{ background-color: {primary} !important; color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important; border-radius: 6px !important; }}
     [data-testid="stMultiSelect"] [data-baseweb="tag"] svg, [data-testid="stExpander"] [data-baseweb="tag"] svg {{ fill: #FFFFFF !important; color: #FFFFFF !important; }}
     
@@ -161,28 +162,29 @@ def aplicar_css_tema():
     .st-key-sidebar_header [data-testid="column"] {{ display: flex !important; align-items: center !important; justify-content: center !important; }}
     .st-key-sidebar_header .stButton > button {{ padding: 0 !important; height: 34px !important; width: 34px !important; border-radius: 50% !important; background-color: transparent !important; border: 1px solid {input_border} !important; color: {text_color} !important; }}
     .st-key-sidebar_header .stButton > button:hover {{ border-color: {primary} !important; }}
-    /* === FIX DEFINITIVO PARA EMPILHAR CAIXAS DE SELEÇÃO === */
-    [data-testid="stMultiSelect"] [data-baseweb="select"] {{
-        height: auto !important;
-        min-height: 46px !important;
-    }}
-    [data-testid="stMultiSelect"] [data-baseweb="select"] > div {{
+    
+    /* ========================================================
+       FIX DEFINITIVO - EMPILHAR FILIAIS (FORÇA BRUTA)
+       Sobrescreve a proteção de overflow do Streamlit Cloud
+    ======================================================== */
+    div[data-baseweb="select"] > div {{
         flex-wrap: wrap !important;
-        height: auto !important;
         overflow: visible !important;
     }}
-    [data-testid="stMultiSelect"] [data-baseweb="select"] > div > div {{
+    div[data-baseweb="select"] > div > div {{
         flex-wrap: wrap !important;
-        height: auto !important;
+        overflow: visible !important;
+        max-width: 100% !important;
     }}
-    [data-testid="stMultiSelect"] [data-baseweb="tag"] {{
+    span[data-baseweb="tag"] {{
+        max-width: 100% !important;
         height: auto !important;
-        padding: 4px !important;
-        margin: 2px !important;
+        margin-bottom: 5px !important;
     }}
-    [data-testid="stMultiSelect"] [data-baseweb="tag"] span {{
+    span[data-baseweb="tag"] span {{
         white-space: normal !important;
         word-break: break-word !important;
+        overflow: visible !important;
     }}
     </style>
     """
