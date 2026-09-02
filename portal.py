@@ -162,9 +162,9 @@ def aplicar_css_tema():
     .st-key-sidebar_header .stButton > button {{ padding: 0 !important; height: 34px !important; width: 34px !important; border-radius: 50% !important; background-color: transparent !important; border: 1px solid {input_border} !important; color: {text_color} !important; }}
     .st-key-sidebar_header .stButton > button:hover {{ border-color: {primary} !important; }}
     /* Forçar empilhamento automático das tags do MultiSelect (Filiais) */
-    [data-testid="stMultiSelect"] div[data-baseweb="select"] > div { flex-wrap: wrap !important; }
-    [data-testid="stMultiSelect"] span[data-baseweb="tag"] { max-width: 100% !important; height: auto !important; }
-    [data-testid="stMultiSelect"] span[data-baseweb="tag"] span { white-space: normal !important; word-wrap: break-word !important; }
+    [data-testid="stMultiSelect"] div[data-baseweb="select"] > div {{ flex-wrap: wrap !important; }}
+    [data-testid="stMultiSelect"] span[data-baseweb="tag"] {{ max-width: 100% !important; height: auto !important; }}
+    [data-testid="stMultiSelect"] span[data-baseweb="tag"] span {{ white-space: normal !important; word-wrap: break-word !important; }}
     </style>
     """
     st.markdown(css, unsafe_allow_html=True)
