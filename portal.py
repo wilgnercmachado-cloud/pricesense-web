@@ -321,7 +321,7 @@ def tela_login():
             st.markdown("<br>", unsafe_allow_html=True)
             
             if st.session_state.modo_login == "login":
-                usuario_input = st.text_input("Usuário", placeholder="Ex: joao.silva")
+                usuario_input = st.text_input("Usuário", placeholder="Ex: joao.castro")
                 senha_input = st.text_input("Senha", type="password", placeholder="••••••••")
                 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -359,7 +359,7 @@ def tela_login():
                 
                 nome_cad = st.text_input("Nome e Último Nome", placeholder="Ex: João Silva")
                 
-                user_cad = st.text_input("Usuário Desejado", placeholder="Ex: joao.silva ou joao_silva")
+                user_cad = st.text_input("Usuário Desejado", placeholder="Ex: joao.castro ou joao_castro")
                 st.caption("💡 *Este será o seu login. Use letras minúsculas e sem espaços.*")
                 
                 mat_cad = st.text_input("Matrícula", placeholder="Ex: 163067")
