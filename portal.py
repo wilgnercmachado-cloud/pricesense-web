@@ -154,7 +154,6 @@ def aplicar_css_tema():
     .stTextArea textarea:focus {{ border-color: {primary} !important; }}
     [data-testid="stDataFrame"] {{ background-color: transparent !important; }}
     
-    /* Cores das Tags do MultiSelect */
     [data-testid="stMultiSelect"] [data-baseweb="tag"], [data-testid="stMultiSelect"] [data-baseweb="tag"] *, [data-testid="stExpander"] [data-baseweb="tag"], [data-testid="stExpander"] [data-baseweb="tag"] * {{ background-color: {primary} !important; color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important; border-radius: 6px !important; }}
     [data-testid="stMultiSelect"] [data-baseweb="tag"] svg, [data-testid="stExpander"] [data-baseweb="tag"] svg {{ fill: #FFFFFF !important; color: #FFFFFF !important; }}
     
@@ -164,27 +163,37 @@ def aplicar_css_tema():
     .st-key-sidebar_header .stButton > button:hover {{ border-color: {primary} !important; }}
     
     /* ========================================================
-       FIX DEFINITIVO - EMPILHAR FILIAIS (FORÇA BRUTA)
-       Sobrescreve a proteção de overflow do Streamlit Cloud
+       DESTRUIDOR DE MÁSCARA E FORÇADOR DE QUEBRA (STREAMLIT 1.30+)
     ======================================================== */
-    div[data-baseweb="select"] > div {{
+    [data-testid="stMultiSelect"] div[data-baseweb="select"] > div {{
+        display: flex !important;
         flex-wrap: wrap !important;
-        overflow: visible !important;
-    }}
-    div[data-baseweb="select"] > div > div {{
-        flex-wrap: wrap !important;
-        overflow: visible !important;
-        max-width: 100% !important;
-    }}
-    span[data-baseweb="tag"] {{
-        max-width: 100% !important;
         height: auto !important;
-        margin-bottom: 5px !important;
-    }}
-    span[data-baseweb="tag"] span {{
-        white-space: normal !important;
-        word-break: break-word !important;
+        min-height: 46px !important;
+        mask-image: none !important;
+        -webkit-mask-image: none !important;
         overflow: visible !important;
+    }}
+    
+    [data-testid="stMultiSelect"] div[data-baseweb="select"] > div > div {{
+        display: flex !important;
+        flex-wrap: wrap !important;
+        height: auto !important;
+        overflow: visible !important;
+    }}
+
+    [data-testid="stMultiSelect"] span[data-baseweb="tag"] {{
+        height: auto !important;
+        white-space: normal !important;
+        padding-top: 4px !important;
+        padding-bottom: 4px !important;
+        margin-top: 4px !important;
+        margin-bottom: 4px !important;
+    }}
+    
+    [data-testid="stMultiSelect"] span[data-baseweb="tag"] span {{
+        white-space: normal !important;
+        word-wrap: break-word !important;
     }}
     </style>
     """
