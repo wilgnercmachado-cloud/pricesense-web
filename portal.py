@@ -819,8 +819,75 @@ def tela_app_principal():
         st.info("🚧 Módulo de análises analíticas de cesta em processo de migração.")
 
     elif menu == "Pricing Promo (Em breve)":
-        st.title("Pricing Promo (Validação)")
-        st.info("🚧 Módulo de leitura automática de pasta de encartes em processo de migração.")
+        st.title("Pricing Promo (Validação de Encartes)")
+        st.markdown("Módulo de inteligência para leitura e auditoria automática de preços promocionais.")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # 1. Painel de Indicadores (KPIs)
+        col1, col2, col3, col4 = st.columns(4)
+        with st.container(border=True):
+            col1.metric("Encartes Processados", "0", "Aguardando lote", delta_color="off")
+        with st.container(border=True):
+            col2.metric("Itens Extraídos", "0")
+        with st.container(border=True):
+            col3.metric("Margem Média Promo", "0.0%")
+        with st.container(border=True):
+            col4.metric("Alertas Críticos", "0", "Risco de Margem", delta_color="inverse")
+            
+        st.markdown("---")
+        
+        # 2. Área de Leitura de Encartes
+        st.subheader("📁 Leitura e Extração de Dados")
+        upload_encartes = st.file_uploader(
+            "Selecione ou arraste os PDFs/Imagens dos encartes da semana", 
+            accept_multiple_files=True, 
+            type=['pdf', 'png', 'jpg', 'jpeg']
+        )
+        
+        if upload_encartes:
+            # Simulação do motor de leitura (OCR)
+            with st.spinner("Aplicando motores de visão computacional (OCR) nos encartes..."):
+                time.sleep(2.5)
+            st.success(f"✅ {len(upload_encartes)} arquivo(s) lido(s) com sucesso. Padrões de preço identificados.")
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            # 3. Tabela de Validação de Pricing (Mockup Profissional)
+            st.subheader("🔍 Auditoria de Preços Extraídos")
+            st.caption("Verifique as margens antes de aprovar a exportação para o sistema principal.")
+            
+            dados_promo = pd.DataFrame({
+                "Cód. Produto": ["78910", "45612", "12309", "99821"],
+                "Descrição": ["Cerveja Heineken 330ml", "Arroz Tio João 5kg", "Café Pilão 500g", "Fralda Pampers M"],
+                "Preço Regular": ["R$ 6,99", "R$ 25,90", "R$ 18,50", "R$ 45,90"],
+                "Preço Encarte": ["R$ 5,49", "R$ 22,90", "R$ 15,90", "R$ 32,90"],
+                "Custo Base": ["R$ 4,80", "R$ 19,50", "R$ 14,00", "R$ 31,00"],
+                "Margem Promo": ["12.5%", "14.8%", "11.9%", "5.7%"],
+                "Status Sistema": ["Aprovado", "Aprovado", "Aprovado", "Alerta Crítico"]
+            })
+            
+            # Aplicando formatação visual na tabela baseada no Status
+            if st.session_state.tema == "Dark":
+                cor_alerta, cor_ok = 'color: #FF4B4B; font-weight: bold;', 'color: #27AE60;'
+            else:
+                cor_alerta, cor_ok = 'color: #E20000; font-weight: bold;', 'color: #107C41;'
+
+            def estilizar_status(row):
+                return [cor_alerta if row['Status Sistema'] == 'Alerta Crítico' else cor_ok if row['Status Sistema'] == 'Aprovado' else '' for _ in row]
+            
+            df_styled = dados_promo.style.apply(estilizar_status, axis=1)
+            
+            st.dataframe(df_styled, use_container_width=True, hide_index=True)
+            
+            # 4. Ações de Aprovação
+            st.markdown("<br>", unsafe_allow_html=True)
+            col_btn_export, col_btn_rejeitar, col_vazia = st.columns([2, 2, 5])
+            
+            with col_btn_export:
+                st.button("✅ Aprovar e Exportar Lote", type="primary", use_container_width=True)
+            with col_btn_rejeitar:
+                st.button("⚠️ Solicitar Revisão Comercial", use_container_width=True)
 
 if not st.session_state.splash_concluido:
     tela_carregamento()
