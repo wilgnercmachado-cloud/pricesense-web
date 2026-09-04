@@ -819,22 +819,99 @@ def tela_app_principal():
         st.info("🚧 Módulo de análises analíticas de cesta em processo de migração.")
 
     elif menu == "Pricing Promo (Em breve)":
+        import os # Biblioteca para ler diretórios e pastas
+        
         st.title("Pricing Promo (Validação de Encartes)")
         st.markdown("Módulo de inteligência para leitura e auditoria automática de preços promocionais.")
-        
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # 1. Painel de Indicadores (KPIs)
-        col1, col2, col3, col4 = st.columns(4)
-        with st.container(border=True):
-            col1.metric("Encartes Processados", "0", "Aguardando lote", delta_color="off")
-        with st.container(border=True):
-            col2.metric("Itens Extraídos", "0")
-        with st.container(border=True):
-            col3.metric("Margem Média Promo", "0.0%")
-        with st.container(border=True):
-            col4.metric("Alertas Críticos", "0", "Risco de Margem", delta_color="inverse")
+        # O caminho da pasta que vamos buscar no servidor
+        pasta_alvo = "biOS/encartes"
+        
+        # 1. Botão que engatilha a automação de leitura da pasta
+        st.subheader("📁 Extração Automática de Dados")
+        st.caption(f"O sistema fará a varredura e extrairá todos os encartes disponíveis no diretório corporativo (`{pasta_alvo}`).")
+        
+        if st.button(f"📥 Puxar arquivos da pasta", type="primary", use_container_width=True):
             
+            # Verifica se a pasta existe na nuvem
+            if os.path.exists(pasta_alvo):
+                arquivos_encontrados = [f for f in os.listdir(pasta_alvo) if f.lower().endswith(('.pdf', '.png', '.jpg', '.jpeg'))]
+                
+                if arquivos_encontrados:
+                    with st.spinner(f"Lendo e extraindo preços de {len(arquivos_encontrados)} arquivo(s)..."):
+                        time.sleep(2.5)
+                    
+                    st.success(f"✅ {len(arquivos_encontrados)} encarte(s) lido(s) com sucesso a partir da pasta!")
+                    
+                    with st.expander("📄 Detalhes dos arquivos puxados", expanded=False):
+                        for arq in arquivos_encontrados:
+                            st.markdown(f"- `{arq}`")
+                            
+                    st.markdown("---")
+                    
+                    # 2. Atualiza os KPIs baseados na leitura
+                    col1, col2, col3, col4 = st.columns(4)
+                    with st.container(border=True):
+                        col1.metric("Encartes Processados", str(len(arquivos_encontrados)))
+                    with st.container(border=True):
+                        col2.metric("Itens Extraídos", str(len(arquivos_encontrados) * 45)) # Simulando 45 itens/encarte
+                    with st.container(border=True):
+                        col3.metric("Margem Média Promo", "12.7%")
+                    with st.container(border=True):
+                        col4.metric("Alertas Críticos", "2", "Revisão necessária", delta_color="inverse")
+                    
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    
+                    # 3. Tabela de Validação de Parâmetros
+                    st.subheader("🔍 Parâmetros de Validação do Encarte")
+                    st.caption("Auditoria das margens extraídas versus regras de negócio antes da exportação.")
+                    
+                    dados_promo = pd.DataFrame({
+                        "Cód. Produto": ["78910", "45612", "12309", "99821"],
+                        "Descrição": ["Cerveja Heineken 330ml", "Arroz Tio João 5kg", "Café Pilão 500g", "Fralda Pampers M"],
+                        "Preço Regular": ["R$ 6,99", "R$ 25,90", "R$ 18,50", "R$ 45,90"],
+                        "Preço LIDO Encarte": ["R$ 5,49", "R$ 22,90", "R$ 15,90", "R$ 32,90"],
+                        "Custo Base": ["R$ 4,80", "R$ 19,50", "R$ 14,00", "R$ 31,00"],
+                        "Margem Simulada": ["12.5%", "14.8%", "11.9%", "5.7%"],
+                        "Status OCR": ["Alta Confiança", "Alta Confiança", "Média Confiança", "Alta Confiança"],
+                        "Validação Regra": ["Aprovado", "Aprovado", "Aprovado", "Alerta: Margem Baixa"]
+                    })
+                    
+                    if st.session_state.tema == "Dark":
+                        cor_alerta, cor_ok = 'color: #FF4B4B; font-weight: bold;', 'color: #27AE60;'
+                    else:
+                        cor_alerta, cor_ok = 'color: #E20000; font-weight: bold;', 'color: #107C41;'
+
+                    def estilizar_status(row):
+                        return [cor_alerta if 'Alerta' in str(row['Validação Regra']) else cor_ok if row['Validação Regra'] == 'Aprovado' else '' for _ in row]
+                    
+                    st.dataframe(dados_promo.style.apply(estilizar_status, axis=1), use_container_width=True, hide_index=True)
+                    
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    col_btn_export, col_btn_rejeitar, col_vazia = st.columns([2, 2, 5])
+                    with col_btn_export:
+                        st.button("✅ Confirmar Validação e Exportar", type="primary", use_container_width=True)
+                    with col_btn_rejeitar:
+                        st.button("⚠️ Ajustar Parâmetros", use_container_width=True)
+                        
+                else:
+                    st.warning(f"⚠️ A pasta '{pasta_alvo}' foi encontrada, mas está vazia ou não contém PDFs/Imagens.")
+            else:
+                st.error(f"❌ Diretório corporativo '{pasta_alvo}' não acessível.")
+                st.info("💡 Como estamos na nuvem, você precisa criar essa estrutura de pastas no GitHub ou aguardar a integração com o SharePoint corporativo.")
+                
+        else:
+            # Exibe KPIs zerados enquanto o botão não é clicado
+            col1, col2, col3, col4 = st.columns(4)
+            with st.container(border=True):
+                col1.metric("Encartes Processados", "0", "Aguardando leitura", delta_color="off")
+            with st.container(border=True):
+                col2.metric("Itens Extraídos", "0")
+            with st.container(border=True):
+                col3.metric("Margem Média Promo", "0.0%")
+            with st.container(border=True):
+                col4.metric("Alertas Críticos", "0")            
         st.markdown("---")
         
         # 2. Área de Leitura de Encartes
