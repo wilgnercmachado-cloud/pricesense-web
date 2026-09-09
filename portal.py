@@ -73,6 +73,7 @@ def aplicar_css_tema():
     input_bg = "rgba(20, 20, 25, 0.3)" if tema == "Dark" else "rgba(255, 255, 255, 0.6)"
     input_border = "rgba(255, 255, 255, 0.1)" if tema == "Dark" else "rgba(0, 0, 0, 0.06)"
     hover_bg = "rgba(255, 255, 255, 0.08)" if tema == "Dark" else "rgba(0, 0, 0, 0.04)"
+    
     animacao_pulse = "pulse-white" if tema == "Dark" else "pulse-blue-new"
 
     css = f"""
@@ -143,6 +144,15 @@ def aplicar_css_tema():
     
     [data-testid="stDataFrame"] {{ background-color: transparent !important; }}
     [data-testid="stMultiSelect"] [data-baseweb="tag"], [data-testid="stMultiSelect"] [data-baseweb="tag"] *, [data-testid="stExpander"] [data-baseweb="tag"], [data-testid="stExpander"] [data-baseweb="tag"] * {{ background-color: {primary} !important; color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important; border-radius: 4px !important; }}
+    
+    /* CAIXAS DE KPI DA PESQUISA DE MERCADO */
+    .kpi-card {{
+        background: {glass_bg}; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+        border: 1px solid {glass_border}; border-radius: 12px; padding: 15px; text-align: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }}
+    .kpi-title {{ font-size: 0.9rem; color: #888888; font-weight: 600; text-transform: uppercase; margin-bottom: 5px; }}
+    .kpi-value {{ font-size: 2.2rem; font-weight: 800; color: {text_color}; line-height: 1; }}
     </style>
     """
     st.markdown(css, unsafe_allow_html=True)
@@ -215,11 +225,6 @@ setInterval(() => {
 def obter_logo_svg(cor, tamanho="36px"):
     return f"<svg width='{tamanho}' height='{tamanho}' viewBox='-2 0 28 24' fill='none' stroke='{cor}' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' style='margin-right: 8px;'><path d='M11 2a7 7 0 0 1 7 7c0 2.5.5 3.5 1.5 4.5.5.5.5 1.5 0 2s-1.5.5-1.5 1V18a2 2 0 0 1-2 2h-5c-1.5 0-2.5-1-2.5-2.5v-2c0-1.5-1.5-2-3-2.5'/><circle cx='12' cy='10' r='2.5'/><path d='M12 6.5V7.5'/><path d='M12 12.5V13.5'/><path d='M8.5 10H9.5'/><path d='M14.5 10H15.5'/><path d='M9.5 7.5L10.2 8.2'/><path d='M13.8 11.8L14.5 12.5'/><path d='M9.5 12.5L10.2 11.8'/><path d='M13.8 8.2L14.5 7.5'/><path d='M8.5 10H3'/><circle cx='2' cy='10' r='1'/><path d='M10 6H4'/><circle cx='3' cy='6' r='1'/><path d='M10 14H5'/><circle cx='4' cy='14' r='1'/></svg>"
 
-def extrair_nome_empresa(nome_filial):
-    partes = str(nome_filial).split('-')
-    if len(partes) > 1: return partes[1].strip()
-    return str(nome_filial).strip()
-
 def arredondar_varejo(preco):
     if preco <= 0: return 0.0
     preco_arred = round(preco, 2); base_inteira = int(np.floor(preco_arred)); validos = []
@@ -254,18 +259,15 @@ def arredondar_atacado(preco_atacado, varejo_finalizado):
     proximo = round(preco_arred, 2) if round(preco_arred, 2) in candidatos else (round(sorted(candidatos, key=lambda x: abs(x - preco_arred))[0], 2) if candidatos else round(preco_arred, 2))
     return round(varejo_finalizado if proximo >= varejo_finalizado else proximo, 2)
 
-@st.cache_data(ttl=3600)
 def puxar_estados_do_banco():
     try: return sorted(list(set([linha['estado'] for linha in supabase.table('lojas').select('estado').execute().data])))
     except Exception: return []
 
-@st.cache_data(ttl=3600)
 def puxar_diretores_por_estado(estados_selecionados):
     if not estados_selecionados: return []
     try: return sorted(list(set([linha['diretor'] for linha in supabase.table('lojas').select('diretor').in_('estado', estados_selecionados).execute().data])))
     except Exception: return []
 
-@st.cache_data(ttl=3600)
 def puxar_filiais(estados, diretores):
     if not estados: return []
     try:
@@ -274,25 +276,9 @@ def puxar_filiais(estados, diretores):
         return sorted(list(set([linha['filial'] for linha in query.execute().data])))
     except Exception: return []
 
-@st.cache_data(ttl=3600)
 def puxar_tipos_midia():
     try: return sorted(list(set([linha['tipo_preço'] for linha in supabase.table('tipo_ofertas').select('tipo_preço').execute().data if linha['tipo_preço']])))
     except Exception: return ["ERRO AO CARREGAR"]
-
-@st.cache_data(ttl=3600)
-def carregar_dim_produto():
-    try: return pd.DataFrame(supabase.table('dim_produto').select('*').execute().data)
-    except: return pd.DataFrame()
-
-@st.cache_data(ttl=3600)
-def carregar_dim_fornecedor():
-    try: return pd.DataFrame(supabase.table('dim_fornecedor_macro').select('*').execute().data)
-    except: return pd.DataFrame()
-
-@st.cache_data(ttl=3600)
-def carregar_dim_empresa_conc():
-    try: return pd.DataFrame(supabase.table('dim_empresa_concorrente').select('*').execute().data)
-    except: return pd.DataFrame()
 
 # ================= TELAS =================
 def tela_carregamento():
@@ -434,7 +420,7 @@ def tela_app_principal():
         try: usuarios_db = supabase.table('usuarios').select('*').execute().data
         except Exception: usuarios_db = []; st.error("Erro banco.")
 
-        pendentes = [u for u in usuarios_db if u.get('status'] == 'Pendente']
+        pendentes = [u for u in usuarios_db if u.get('status') == 'Pendente']
         if pendentes:
             st.subheader("Solicitações Pendentes")
             for u in pendentes:
@@ -448,7 +434,7 @@ def tela_app_principal():
                         if st.button("Rejeitar", key=f"rej_{u['usuario']}", use_container_width=True):
                             supabase.table('usuarios').update({'status': 'Rejeitado'}).eq('usuario', u['usuario']).execute(); st.rerun()
 
-        aprovados = [u for u in usuarios_db if u.get('status'] == 'Aprovado']
+        aprovados = [u for u in usuarios_db if u.get('status') == 'Aprovado']
         st.subheader("Usuários Ativos")
         opcoes_telas_limpas = ["Preço Bot", "Pricing Regular", "Pricing Promo", "Pesquisa de Mercado"]
         for u in aprovados:
@@ -591,361 +577,17 @@ def tela_app_principal():
         st.markdown("<h1>Pricing Regular</h1>", unsafe_allow_html=True)
         st.info("Módulo de análises competitivas em migração.")
 
-    # ================= MÓDULO 4: PRICING PROMO =================
-    elif menu == "Pricing Promo":
-        import plotly.express as px
-        
-        st.markdown("<h1>Pricing Promo</h1>", unsafe_allow_html=True)
-        st.markdown("Validação inteligente de encartes, explosão de clusters e auditoria base.")
-
-        @st.cache_data(ttl=600)
-        def carregar_de_para_clusters():
-            try:
-                resp = supabase.table('filial-cluster').select('*').execute()
-                if resp.data: 
-                    return pd.DataFrame(resp.data)
-            except Exception: 
-                pass
-            return pd.DataFrame(columns=['CLUSTER', 'ID FILIAL'])
-
-        @st.cache_data(ttl=600)
-        def carregar_mapa_lojas():
-            try:
-                resp = supabase.table('lojas').select('filial').execute()
-                mapa = {}
-                if resp.data:
-                    for r in resp.data:
-                        f_id = str(r['filial']).split('-')[0].strip()
-                        mapa[f_id] = str(r['filial'])
-                return mapa
-            except Exception: 
-                return {}
-
-        df_clusters = carregar_de_para_clusters()
-        mapa_lojas = carregar_mapa_lojas()
-
-        if 'linhas_alteradas' not in st.session_state: 
-            st.session_state.linhas_alteradas = set()
-
-        st.markdown("<h2>Upload das Bases</h2>", unsafe_allow_html=True)
-        arquivos_upload = st.file_uploader("Arraste planilhas", accept_multiple_files=True, type=['xlsx', 'xls', 'csv'], label_visibility="collapsed")
-
-        if arquivos_upload:
-            nomes_arquivos = sorted([f.name for f in arquivos_upload])
-            
-            if 'promo_arquivos' not in st.session_state or st.session_state.promo_arquivos != nomes_arquivos:
-                with st.spinner("Estruturando matriz analítica e explodindo clusters..."):
-                    dfs = []
-                    for arq in arquivos_upload:
-                        try:
-                            df_temp = pd.read_csv(arq, sep=';', encoding='latin1') if arq.name.endswith('.csv') else pd.read_excel(arq)
-                            df_temp['ARQUIVO ORIGEM'] = arq.name.replace('.xlsx', '').replace('.csv', '')
-                            dfs.append(df_temp)
-                        except Exception: 
-                            pass
-                    
-                    if dfs:
-                        df_bruto = pd.concat(dfs, ignore_index=True)
-                        df_bruto.rename(columns=lambda x: str(x).strip().upper(), inplace=True)
-
-                        for col_data in ['INICIO', 'FIM']:
-                            if col_data in df_bruto.columns: 
-                                df_bruto[col_data] = pd.to_datetime(df_bruto[col_data].astype(str).str[:10], errors='coerce').dt.strftime('%d/%m/%Y')
-                        
-                        def limpar_preco(p):
-                            try: 
-                                return float(str(p).upper().replace('R$', '').replace(' ', '').replace(',', '.'))
-                            except Exception: 
-                                return 0.0
-                            
-                        if 'PRECO_PROMOCIONAL' in df_bruto.columns:
-                            df_bruto['PRECO_NUM'] = df_bruto['PRECO_PROMOCIONAL'].apply(limpar_preco)
-                        elif 'PRECO' in df_bruto.columns:
-                            df_bruto['PRECO_NUM'] = df_bruto['PRECO'].apply(limpar_preco)
-                        else:
-                            df_bruto['PRECO_NUM'] = 0.0
-
-                        if 'CLUSTER/LOJA' in df_bruto.columns and not df_clusters.empty:
-                            df_explodido = df_bruto.merge(df_clusters, left_on='CLUSTER/LOJA', right_on='CLUSTER', how='left')
-                            df_explodido['ID FILIAL'] = df_explodido['ID FILIAL'].fillna(df_explodido['CLUSTER/LOJA'])
-                            
-                            st.session_state.clusters_desconhecidos = df_explodido[df_explodido['ID FILIAL'] == df_explodido['CLUSTER/LOJA']]['CLUSTER/LOJA'].unique().tolist()
-                        else:
-                            df_explodido = df_bruto.copy()
-                            df_explodido['ID FILIAL'] = df_explodido.get('CLUSTER/LOJA', 'DESCONHECIDO')
-                            st.session_state.clusters_desconhecidos = []
-
-                        df_explodido['FILIAL ABREV'] = df_explodido['ID FILIAL'].astype(str).map(mapa_lojas).fillna(df_explodido['ID FILIAL'].astype(str))
-
-                        if 'SEQPRODUTO' in df_explodido.columns:
-                            df_limpo = df_explodido.drop_duplicates(subset=['ID FILIAL', 'SEQPRODUTO', 'PRECO_NUM']).copy()
-                            df_limpo['Status Sistema'] = df_limpo.groupby(['ID FILIAL', 'SEQPRODUTO'])['PRECO_NUM'].transform('nunique').apply(lambda x: "CRÍTICO" if x > 1 else "VÁLIDO")
-                        else:
-                            df_limpo = df_explodido.copy()
-                            df_limpo['Status Sistema'] = "VÁLIDO"
-                        
-                        df_limpo['ALTERADO_MANUAL'] = 'NÃO'
-                        
-                        d_inicio = pd.to_datetime(df_limpo['INICIO'], format='%d/%m/%Y', errors='coerce')
-                        d_fim = pd.to_datetime(df_limpo['FIM'], format='%d/%m/%Y', errors='coerce')
-                        df_limpo['MIDIA'] = np.where((d_fim - d_inicio).dt.days < 4, 1, 2)
-
-                        st.session_state.df_promo_processado = df_limpo
-                        st.session_state.promo_arquivos = nomes_arquivos
-                        st.session_state.linhas_alteradas = set()
-                        
-                        hoje_comp = pd.Timestamp.today().normalize()
-                        vencidas = df_limpo[pd.to_datetime(df_limpo['FIM'], format='%d/%m/%Y', errors='coerce').dt.date < hoje_comp.date()]['ARQUIVO ORIGEM'].unique().tolist()
-                        st.session_state.campanhas_vencidas = vencidas
-                        st.session_state.alerta_vencido_exibido = False
-
-        if 'df_promo_processado' in st.session_state and not st.session_state.df_promo_processado.empty:
-            df = st.session_state.df_promo_processado.copy()
-            st.markdown("---")
-            
-            vencidas = st.session_state.get('campanhas_vencidas', [])
-            if vencidas:
-                if not st.session_state.get('alerta_vencido_exibido', False):
-                    st.toast("Atenção: Campanhas com vigência vencida detectadas.")
-                    st.session_state.alerta_vencido_exibido = True
-                st.warning(f"Aviso de Vigência: Há campanhas anexadas com Data Fim no passado: {', '.join(vencidas)}.")
-
-            clusters_out = st.session_state.get('clusters_desconhecidos', [])
-            if clusters_out:
-                st.error(f"{len(clusters_out)} Cluster(s) não estão mapeados na arquitetura do banco de dados.")
-                with st.expander("Vincular Novo Cluster (Requer Admin)", expanded=False):
-                    with st.form("form_novo_cluster_promo"):
-                        col_c1, col_c2 = st.columns(2)
-                        novo_clust = col_c1.selectbox("Cluster Não Mapeado:", clusters_out)
-                        nova_filial = col_c2.text_input("ID da Filial correspondente (Ex: 544)")
-                        if st.form_submit_button("Enviar para Mapeamento", type="primary"):
-                            if nova_filial.strip():
-                                try:
-                                    supabase.table('solicitacoes_cluster').insert({
-                                        'cluster': novo_clust, 
-                                        'id_filial': nova_filial, 
-                                        'status': 'Pendente', 
-                                        'solicitante': st.session_state.usuario_logado
-                                    }).execute()
-                                    st.success("Solicitação de mapeamento enviada ao Administrador.")
-                                except Exception: 
-                                    st.warning("Tabela 'solicitacoes_cluster' ainda não configurada no Supabase.")
-                            else: 
-                                st.error("O ID da Filial é obrigatório.")
-
-            datas_ini_disp = ["Todas"] + sorted(df['INICIO'].dropna().unique().tolist())
-            datas_fim_disp = ["Todas"] + sorted(df['FIM'].dropna().unique().tolist())
-            campanhas_disp = ["Todas"] + sorted(df['ARQUIVO ORIGEM'].unique().tolist())
-            filiais_disp = ["Todas"] + sorted(df['FILIAL ABREV'].unique().astype(str))
-
-            col_filt, col_edit = st.columns([1.5, 1])
-            with col_filt:
-                st.markdown("<h2>Filtros Dinâmicos</h2>", unsafe_allow_html=True)
-                f_c1, f_c2 = st.columns(2)
-                f_filial = f_c1.multiselect("Filial:", filiais_disp[1:], wrap=True)
-                f_prod = f_c2.text_input("Produto (Cód):", placeholder="Código Exato")
-                
-                f_c3, f_c4, f_c5 = st.columns([1, 1, 1])
-                f_ini = f_c3.selectbox("Data Início:", datas_ini_disp)
-                f_fim = f_c4.selectbox("Data Fim:", datas_fim_disp)
-                f_status = f_c5.multiselect("Status:", ["VÁLIDO", "CRÍTICO"], default=["VÁLIDO", "CRÍTICO"])
-
-            with col_edit:
-                st.markdown("<h2>Alteração em Lote</h2>", unsafe_allow_html=True)
-                e_c1, e_c2 = st.columns(2)
-                e_camp = e_c1.selectbox("Campanha p/ Alterar:", campanhas_disp)
-                e_filial = e_c2.selectbox("Filial p/ Alterar:", filiais_disp)
-                
-                e_c3, e_c4 = st.columns(2)
-                novo_ini = e_c3.selectbox("Novo Início:", datas_ini_disp[1:]) 
-                novo_fim = e_c4.selectbox("Novo Fim:", datas_fim_disp[1:])
-                
-                st.write("")
-                if st.button("Aplicar Alteração", type="primary", use_container_width=True):
-                    mask = pd.Series(True, index=df.index)
-                    if e_camp != "Todas": 
-                        mask &= (df['ARQUIVO ORIGEM'] == e_camp)
-                    if e_filial != "Todas": 
-                        mask &= (df['FILIAL ABREV'] == e_filial)
-                        
-                    if mask.any():
-                        df.loc[mask, 'INICIO'] = novo_ini
-                        df.loc[mask, 'FIM'] = novo_fim
-                        
-                        dt_i = pd.to_datetime(novo_ini, format='%d/%m/%Y')
-                        dt_f = pd.to_datetime(novo_fim, format='%d/%m/%Y')
-                        df.loc[mask, 'MIDIA'] = 1 if (dt_f - dt_i).days < 4 else 2
-                        
-                        st.session_state.linhas_alteradas.update(df[mask].index.tolist())
-                        st.session_state.df_promo_processado = df
-                        st.rerun()
-
-            df_filtrado = df.copy()
-            if f_filial: 
-                df_filtrado = df_filtrado[df_filtrado['FILIAL ABREV'].isin(f_filial)]
-            if f_prod: 
-                df_filtrado = df_filtrado[df_filtrado['SEQPRODUTO'].astype(str).str.contains(f_prod.strip())]
-            if f_ini != "Todas": 
-                df_filtrado = df_filtrado[df_filtrado['INICIO'] == f_ini]
-            if f_fim != "Todas": 
-                df_filtrado = df_filtrado[df_filtrado['FIM'] == f_fim]
-            if f_status: 
-                df_filtrado = df_filtrado[df_filtrado['Status Sistema'].isin(f_status)]
-
-            st.markdown("<br>", unsafe_allow_html=True)
-            col_kpis, col_grafico = st.columns([2, 1.2])
-            total_linhas = len(df_filtrado)
-            críticos = df_filtrado['Status Sistema'].str.contains('CRÍTICO').sum()
-            validos = total_linhas - críticos
-            
-            with col_kpis:
-                c1, c2, c3 = st.columns(3)
-                with c1.container(border=True): 
-                    st.metric("Linhas Selecionadas", f"{total_linhas}")
-                with c2.container(border=True): 
-                    st.metric("Itens Válidos", f"{validos}")
-                with c3.container(border=True): 
-                    st.metric("Alertas Críticos", f"{críticos}")
-            
-            with col_grafico:
-                if total_linhas > 0:
-                    fig = px.pie(
-                        pd.DataFrame({"Status": ["VÁLIDO", "CRÍTICO"], "Qtd": [validos, críticos]}), 
-                        values='Qtd', names='Status', hole=0.6, color='Status', 
-                        color_discrete_map={"VÁLIDO": "#27AE60", "CRÍTICO": "#E20000"}
-                    )
-                    fig.update_layout(margin=dict(t=10, b=10, l=10, r=10), showlegend=True, height=140, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-                    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-
-            st.markdown("---")
-            st.markdown("<h2>Edição Direta na Grade</h2>", unsafe_allow_html=True)
-            
-            cols_exibicao = ['ARQUIVO ORIGEM', 'FILIAL ABREV', 'SEQPRODUTO', 'PRECO_NUM', 'INICIO', 'FIM', 'ALTERADO_MANUAL', 'Status Sistema']
-            mapa_colunas = {
-                'ARQUIVO ORIGEM': 'Campanha', 
-                'FILIAL ABREV': 'Filial Abrev', 
-                'SEQPRODUTO': 'ID Produto', 
-                'PRECO_NUM': 'Preço_Temp', 
-                'INICIO': 'Data Início', 
-                'FIM': 'Data Fim', 
-                'ALTERADO_MANUAL': 'Modificado', 
-                'Status Sistema': 'Status'
-            }
-            
-            df_vis = df_filtrado[cols_exibicao].copy().rename(columns=mapa_colunas)
-            
-            def estilizar_tabela(row):
-                if 'CRÍTICO' in str(row.get('Status', '')): 
-                    return ['background-color: #F5B7B1; color: #900C3F; font-weight: bold;'] * len(row)
-                if row.get('Modificado', '') == 'SIM': 
-                    return ['background-color: #FEF9E7; color: #7D6608; font-weight: bold;'] * len(row)
-                return [''] * len(row)
-
-            edited_df = st.data_editor(
-                df_vis.style.apply(estilizar_tabela, axis=1), 
-                column_config={
-                    "Preço_Temp": st.column_config.NumberColumn("Preço (R$)", format="R$ %.2f", min_value=0.0, step=0.01), 
-                    "Campanha": st.column_config.TextColumn(disabled=True), 
-                    "Filial Abrev": st.column_config.TextColumn(disabled=True), 
-                    "ID Produto": st.column_config.TextColumn(disabled=True), 
-                    "Data Início": st.column_config.TextColumn(disabled=True), 
-                    "Data Fim": st.column_config.TextColumn(disabled=True), 
-                    "Modificado": st.column_config.TextColumn(disabled=True), 
-                    "Status": st.column_config.TextColumn(disabled=True)
-                }, 
-                use_container_width=True, 
-                hide_index=True, 
-                height=350
-            )
-
-            if not edited_df['Preço_Temp'].equals(df_vis['Preço_Temp']):
-                diff = edited_df['Preço_Temp'] != df_vis['Preço_Temp']
-                df_memoria = st.session_state.df_promo_processado
-                
-                for idx in diff[diff].index:
-                    df_memoria.loc[idx, 'PRECO_NUM'] = edited_df.loc[idx, 'Preço_Temp']
-                    df_memoria.loc[idx, 'ALTERADO_MANUAL'] = 'SIM'
-                    
-                df_memoria['Status Sistema'] = df_memoria.groupby(['ID FILIAL', 'SEQPRODUTO'])['PRECO_NUM'].transform('nunique').apply(lambda x: "CRÍTICO" if x > 1 else "VÁLIDO")
-                st.session_state.df_promo_processado = df_memoria
-                st.rerun()
-
-            st.markdown("<br>", unsafe_allow_html=True)
-            tipo_operacao = st.selectbox("Selecione a Operação de Exportação:", ["1 - Aplicar Preço", "2 - Cancelar Preço"])
-            oper_val = "1" if "1" in tipo_operacao else "2"
-            
-            col_exp1, col_exp2 = st.columns([1, 1])
-            primary_bg = "#2424ED" if st.session_state.tema == "Light" else "#E20000"
-            primary_hover_bg = "#09096D" if st.session_state.tema == "Light" else "#CC0000"
-            
-            with col_exp1:
-                buffer = io.BytesIO()
-                with pd.ExcelWriter(buffer, engine='openpyxl') as writer: 
-                    df_vis.drop(columns=['Preço_Temp']).to_excel(writer, index=False)
-                buffer.seek(0)
-                st.download_button(
-                    "Baixar Excel da Tela", 
-                    data=buffer, 
-                    file_name=f"Auditoria_{datetime.now().strftime('%d-%m-%Y')}.xlsx", 
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
-                    type="primary", 
-                    use_container_width=True
-                )
-                
-            with col_exp2:
-                if críticos > 0: 
-                    st.error("A Cópia está bloqueada. Filtre para 'VÁLIDO' ou corrija os itens críticos.")
-                else:
-                    df_export = df_filtrado.drop_duplicates(subset=['ID FILIAL', 'SEQPRODUTO', 'PRECO_NUM']).copy()
-                    
-                    df_varejo = pd.DataFrame({
-                        'ID Filial': df_export['ID FILIAL'], 
-                        'Tipo Preço': "1", 
-                        'Midia Preço': df_export['MIDIA'], 
-                        'ID Produto': df_export['SEQPRODUTO'], 
-                        'Preço': df_export['PRECO_NUM'].apply(lambda x: f"{x:.2f}".replace('.', ',')), 
-                        'Data Início': df_export['INICIO'], 
-                        'Data Fim': df_export['FIM'], 
-                        'Similar': 'NAO', 
-                        'Tipo Oper.': "1" if "1" in tipo_operacao else "2"
-                    })
-                    
-                    df_atacado = df_varejo.copy()
-                    df_atacado['Tipo Preço'] = "2"
-                    
-                    df_import_final = pd.concat([df_varejo, df_atacado]).sort_values(by=['ID Filial', 'ID Produto', 'Tipo Preço'])
-                    txt_copy = df_import_final.to_csv(sep='\t', index=False, header=False)
-                    b64_copy = base64.b64encode(txt_copy.encode('utf-8')).decode('utf-8')
-                    
-                    components.html(f"""
-                    <style>
-                    body{{margin:0;overflow:hidden;background:transparent;}}
-                    .b{{display:flex;justify-content:center;align-items:center;width:100%;height:42px;font-family:"Inter",sans-serif;font-size:15px;font-weight:600;background-color:{primary_bg};color:#FFFFFF;border:1px solid {primary_bg};border-radius:8px;cursor:pointer;text-decoration:none;transition:all 0.2s;}}
-                    .b:hover{{background-color:{primary_hover_bg};border-color:{primary_hover_bg};}}
-                    </style>
-                    <button onclick="
-                        const t = decodeURIComponent(escape(window.atob('{b64_copy}'))); 
-                        navigator.clipboard.writeText(t).then(() => {{ 
-                            this.innerHTML = 'Copiado Base Limpa'; 
-                            this.style.backgroundColor = '#008000'; 
-                            setTimeout(() => {{ 
-                                this.innerHTML = 'Copiar Padrão Importação'; 
-                                this.style.backgroundColor = '{primary_bg}'; 
-                                this.style.borderColor = '{primary_bg}'; 
-                            }}, 2500); 
-                        }});
-                    " class="b">Copiar Padrão Importação</button>
-                    """, height=42)
-
     # ================= MÓDULO NOVO: PESQUISA DE MERCADO =================
     elif menu == "Pesquisa de Mercado":
+        import plotly.graph_objects as go
+        
         st.markdown("<h1>Pesquisa de Mercado (BI)</h1>", unsafe_allow_html=True)
         st.markdown("Análise histórica de preços e concorrência.")
 
         arquivo_pesquisa = st.file_uploader("Arraste ou selecione a base de pesquisa (CSV separado por '|')", type=['csv'])
 
         if arquivo_pesquisa:
-            with st.spinner("Limpando, Mesclando Dimensões e Processando Inteligência..."):
+            with st.spinner("Limpando e Processando Inteligência de Mercado..."):
                 try:
                     df_pesq = pd.read_csv(arquivo_pesquisa, sep='|', encoding='latin1', dtype=str)
                     df_pesq.columns = df_pesq.columns.str.strip()
@@ -972,40 +614,6 @@ def tela_app_principal():
                     if 'Vlr.Vare.Conc' in df_pesq.columns and 'CustoMedio' in df_pesq.columns:
                         df_pesq['MargemConc'] = np.where(df_pesq['Vlr.Vare.Conc'] > 0, (df_pesq['Vlr.Vare.Conc'] - df_pesq['CustoMedio']) / df_pesq['Vlr.Vare.Conc'], 0.0)
 
-                    # --- INTEGRAÇÃO COM TABELAS DIMENSÃO ---
-                    df_dim_prod = carregar_dim_produto()
-                    df_dim_forn = carregar_dim_fornecedor()
-                    df_dim_emp = carregar_dim_empresa_conc()
-
-                    # 1. Empresa Concorrente
-                    if not df_dim_emp.empty and 'filial_concorrente' in df_dim_emp.columns and 'empresa' in df_dim_emp.columns:
-                        map_empresa = dict(zip(df_dim_emp['filial_concorrente'].astype(str).str.strip(), df_dim_emp['empresa'].astype(str).str.strip()))
-                        df_pesq['EMPRESA_CONC'] = df_pesq['FILIALCONCORRENTE'].map(map_empresa).fillna(df_pesq['FILIALCONCORRENTE'].apply(extrair_nome_empresa))
-                    else:
-                        df_pesq['EMPRESA_CONC'] = df_pesq['FILIALCONCORRENTE'].apply(extrair_nome_empresa)
-
-                    # 2. Produto -> Categoria e Fornecedor
-                    if 'PRODUTO' in df_pesq.columns:
-                        df_pesq['COD_PROD'] = df_pesq['PRODUTO'].str.split('-').str[0].str.strip()
-                        if not df_dim_prod.empty:
-                            col_p_id = 'id' if 'id' in df_dim_prod.columns else ('produto' if 'produto' in df_dim_prod.columns else df_dim_prod.columns[0])
-                            map_cat = dict(zip(df_dim_prod[col_p_id].astype(str).str.strip(), df_dim_prod.get('categoria_comercial', '')))
-                            map_forn = dict(zip(df_dim_prod[col_p_id].astype(str).str.strip(), df_dim_prod.get('id_fornecedor', '')))
-                            
-                            df_pesq['CATEGORIA_COMERCIAL'] = df_pesq['COD_PROD'].map(map_cat).fillna('SEM CLASSIFICAÇÃO')
-                            df_pesq['ID_FORN'] = df_pesq['COD_PROD'].map(map_forn)
-                        else:
-                            df_pesq['CATEGORIA_COMERCIAL'] = 'SEM CLASSIFICAÇÃO'
-                            df_pesq['ID_FORN'] = None
-
-                    # 3. Fornecedor -> Grupo Empresarial
-                    if 'ID_FORN' in df_pesq.columns and not df_dim_forn.empty:
-                        col_f_id = 'id' if 'id' in df_dim_forn.columns else df_dim_forn.columns[0]
-                        map_grupo = dict(zip(df_dim_forn[col_f_id].astype(str).str.strip(), df_dim_forn.get('grupo_empresarial', '')))
-                        df_pesq['GRUPO_EMPRESARIAL'] = df_pesq['ID_FORN'].astype(str).map(map_grupo).fillna('SEM CLASSIFICAÇÃO')
-                    else:
-                        df_pesq['GRUPO_EMPRESARIAL'] = 'SEM CLASSIFICAÇÃO'
-
                     st.session_state.df_pesq_master = df_pesq
                 except Exception as e:
                     st.error(f"Erro ao processar a base. Verifique as colunas. Erro: {e}")
@@ -1013,51 +621,50 @@ def tela_app_principal():
         if 'df_pesq_master' in st.session_state and not st.session_state.df_pesq_master.empty:
             df_m = st.session_state.df_pesq_master.copy()
             
+            # Controle de Reset de Filtros
+            if 'reset_key' not in st.session_state: st.session_state.reset_key = 0
+            
             st.markdown("---")
-            # LINHA 1 DE FILTROS
-            c_f1, c_f2, c_f3, c_f4 = st.columns(4)
+            c_f1, c_f2, c_f3, c_f4, c_f5, c_f_btn = st.columns([1.5, 1.5, 2.0, 1.5, 1.5, 1.0], vertical_alignment="bottom")
+            
             produtos_lista = ["Todos"] + sorted(df_m['PRODUTO'].dropna().unique().tolist()) if 'PRODUTO' in df_m.columns else ["Todos"]
             filial_pdv_lista = ["Todas"] + sorted(df_m['FILIAL'].dropna().unique().tolist()) if 'FILIAL' in df_m.columns else ["Todas"]
-            cat_lista = ["Todas"] + sorted(df_m['CATEGORIA_COMERCIAL'].dropna().unique().tolist()) if 'CATEGORIA_COMERCIAL' in df_m.columns else ["Todas"]
-            grupo_lista = ["Todos"] + sorted(df_m['GRUPO_EMPRESARIAL'].dropna().unique().tolist()) if 'GRUPO_EMPRESARIAL' in df_m.columns else ["Todos"]
-
-            f_prod = c_f1.selectbox("PRODUTO", produtos_lista, key=f"prod_{st.session_state.reset_key}")
-            f_filial = c_f2.selectbox("FILIAL (PDV)", filial_pdv_lista, key=f"filial_{st.session_state.reset_key}")
-            f_cat = c_f3.selectbox("CATEGORIA COMERCIAL", cat_lista, key=f"cat_{st.session_state.reset_key}")
-            f_grupo = c_f4.selectbox("GRUPO EMPRESARIAL", grupo_lista, key=f"grupo_{st.session_state.reset_key}")
-
-            # LINHA 2 DE FILTROS
-            c_f5, c_f6, c_f7, c_f_btn = st.columns([1.5, 1.5, 1.5, 0.8], vertical_alignment="bottom")
-            
-            if f_filial != "Todas" and 'FILIAL' in df_m.columns: df_conc_opts = df_m[df_m['FILIAL'] == f_filial]
-            else: df_conc_opts = df_m
-                
-            filial_conc_lista = sorted(df_conc_opts['FILIALCONCORRENTE'].dropna().unique().tolist()) if 'FILIALCONCORRENTE' in df_m.columns else []
             tipo_lista = sorted(df_m['Tipo'].dropna().unique().tolist()) if 'Tipo' in df_m.columns else []
+            
             min_data = df_m['PESQUISADATA_DT'].min().date() if not df_m['PESQUISADATA_DT'].dropna().empty else datetime.now().date()
             max_data = df_m['PESQUISADATA_DT'].max().date() if not df_m['PESQUISADATA_DT'].dropna().empty else datetime.now().date()
 
-            f_conc = c_f5.multiselect("FILIAL CONCORRENTE", filial_conc_lista, placeholder="Filtre concorrentes...", key=f"conc_{st.session_state.reset_key}")
-            f_tipo = c_f6.multiselect("TIPO PREÇO", tipo_lista, placeholder="Todos os tipos...", key=f"tipo_{st.session_state.reset_key}")
-            f_periodo = c_f7.date_input("PERÍODO", [min_data, max_data], min_value=min_data, max_value=max_data, key=f"per_{st.session_state.reset_key}")
+            f_prod = c_f1.selectbox("PRODUTO", produtos_lista, key=f"prod_{st.session_state.reset_key}")
+            f_filial = c_f2.selectbox("FILIAL (PDV)", filial_pdv_lista, key=f"filial_{st.session_state.reset_key}")
+            
+            if f_filial != "Todas" and 'FILIAL' in df_m.columns:
+                df_conc_opts = df_m[df_m['FILIAL'] == f_filial]
+            else:
+                df_conc_opts = df_m
+                
+            filial_conc_lista = sorted(df_conc_opts['FILIALCONCORRENTE'].dropna().unique().tolist()) if 'FILIALCONCORRENTE' in df_m.columns else []
+            
+            f_conc = c_f3.multiselect("FILIAL CONCORRENTE", filial_conc_lista, placeholder="Filtre concorrentes...", key=f"conc_{st.session_state.reset_key}")
+            f_tipo = c_f4.multiselect("TIPO PREÇO", tipo_lista, placeholder="Todos os tipos...", key=f"tipo_{st.session_state.reset_key}")
+            f_periodo = c_f5.date_input("PERÍODO", [min_data, max_data], min_value=min_data, max_value=max_data, key=f"per_{st.session_state.reset_key}")
             
             with c_f_btn:
                 if st.button("🧹 Limpar", use_container_width=True, help="Limpar todos os filtros"):
-                    st.session_state.reset_key += 1; st.rerun()
+                    st.session_state.reset_key += 1
+                    st.rerun()
 
             # APLICAÇÃO GERAL DOS FILTROS DO USUÁRIO
             df_filt = df_m.copy()
             if f_prod != "Todos" and 'PRODUTO' in df_filt.columns: df_filt = df_filt[df_filt['PRODUTO'] == f_prod]
             if f_filial != "Todas" and 'FILIAL' in df_filt.columns: df_filt = df_filt[df_filt['FILIAL'] == f_filial]
-            if f_cat != "Todas" and 'CATEGORIA_COMERCIAL' in df_filt.columns: df_filt = df_filt[df_filt['CATEGORIA_COMERCIAL'] == f_cat]
-            if f_grupo != "Todos" and 'GRUPO_EMPRESARIAL' in df_filt.columns: df_filt = df_filt[df_filt['GRUPO_EMPRESARIAL'] == f_grupo]
             if f_conc and 'FILIALCONCORRENTE' in df_filt.columns: df_filt = df_filt[df_filt['FILIALCONCORRENTE'].isin(f_conc)]
             if f_tipo and 'Tipo' in df_filt.columns: df_filt = df_filt[df_filt['Tipo'].isin(f_tipo)]
             if len(f_periodo) == 2:
                 df_filt = df_filt[(df_filt['PESQUISADATA_DT'].dt.date >= f_periodo[0]) & (df_filt['PESQUISADATA_DT'].dt.date <= f_periodo[1])]
 
-            # CÁLCULO DOS KPIs
+            # CÁLCULO DA MODA DOS KPIs
             df_moda = df_filt.copy()
+
             if 'Tipo' in df_moda.columns:
                 mask_tipo = df_moda['Tipo'].astype(str).str.upper().str.contains('REGULAR|PROMOCAO|PROMOÇÃO|PONTO EXTRA', regex=True, na=False)
                 df_moda = df_moda[mask_tipo]
@@ -1070,46 +677,52 @@ def tela_app_principal():
             v_moda_atac = df_moda['Vlr.Atac.Conc.'].mode()[0] if not df_moda.empty and 'Vlr.Atac.Conc.' in df_moda.columns and len(df_moda['Vlr.Atac.Conc.'].mode()) > 0 else 0.0
             
             qtd_total = len(df_filt)
+            qtd_moda = len(df_moda[df_moda['Vlr.Vare.Conc'] == v_moda_var]) if v_moda_var > 0 else 0
+            
             min_varejo = df_filt['Vlr.Vare.Conc'].min() if not df_filt.empty and 'Vlr.Vare.Conc' in df_filt.columns else 0.0
             max_varejo = df_filt['Vlr.Vare.Conc'].max() if not df_filt.empty and 'Vlr.Vare.Conc' in df_filt.columns else 0.0
 
-            # DESENHO DOS MÓDULOS (KPIs + Tabela Miniatura)
+            # DESENHO DOS 5 KPIs COMPACTOS
             st.markdown("<br>", unsafe_allow_html=True)
-            col_kpis, col_tabela = st.columns([6, 4])
+            k_c1, k_c2, k_c3, k_c4, k_c5 = st.columns(5)
             
             borda_glass = "rgba(255, 255, 255, 0.1)" if st.session_state.tema == "Dark" else "rgba(0, 0, 0, 0.08)"
             texto_glass = "#FFFFFF" if st.session_state.tema == "Dark" else "#1D1D1D"
-            kpi_style = f"border: 1px solid {borda_glass}; border-radius: 10px; padding: 12px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.02); height: 100%; display: flex; flex-direction: column; justify-content: center;"
-            kpi_t_style = "font-size: 0.70rem; color: #888888; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;"
-            kpi_v_style = f"font-size: 1.7rem; font-weight: 800; color: {texto_glass}; line-height: 1;"
 
-            with col_kpis:
-                k_c1, k_c2, k_c3 = st.columns(3)
-                with k_c1: st.markdown(f"<div style='{kpi_style}'><div style='{kpi_t_style}'>MODA VAREJO</div><div style='{kpi_v_style}'>{v_moda_var:,.2f}</div></div>", unsafe_allow_html=True)
-                with k_c2: st.markdown(f"<div style='{kpi_style}'><div style='{kpi_t_style}'>MODA ATACADO</div><div style='{kpi_v_style}'>{v_moda_atac:,.2f}</div></div>", unsafe_allow_html=True)
-                with k_c3: st.markdown(f"<div style='{kpi_style}'><div style='{kpi_t_style}'>QTD. COLETAS</div><div style='{kpi_v_style}'>{qtd_total}</div></div>", unsafe_allow_html=True)
-                st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
-                k_c4, k_c5 = st.columns(2)
-                with k_c4: st.markdown(f"<div style='{kpi_style}'><div style='{kpi_t_style}'>MENOR PREÇO VAREJO</div><div style='{kpi_v_style}'>{min_varejo:,.2f}</div></div>", unsafe_allow_html=True)
-                with k_c5: st.markdown(f"<div style='{kpi_style}'><div style='{kpi_t_style}'>MAIOR PREÇO VAREJO</div><div style='{kpi_v_style}'>{max_varejo:,.2f}</div></div>", unsafe_allow_html=True)
+            kpi_style = f"border: 1px solid {borda_glass}; border-radius: 10px; padding: 10px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.02);"
+            kpi_title_style = "font-size: 0.75rem; color: #888888; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;"
+            kpi_value_style = f"font-size: 1.8rem; font-weight: 800; color: {texto_glass}; line-height: 1;"
 
-            with col_tabela:
-                if not df_filt.empty and 'EMPRESA_CONC' in df_filt.columns:
-                    st.markdown(f"<div style='font-size: 0.80rem; color: #888888; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; text-align: center;'>Preço Médio por Empresa</div>", unsafe_allow_html=True)
-                    df_resumo = df_filt.groupby('EMPRESA_CONC')[['Vlr.Vare.Conc', 'Vlr.Atac.Conc.']].mean().reset_index()
-                    df_resumo.rename(columns={'EMPRESA_CONC': 'Concorrentes', 'Vlr.Vare.Conc': 'Varejo', 'Vlr.Atac.Conc.': 'Atacado'}, inplace=True)
-                    st.dataframe(
-                        df_resumo,
-                        column_config={
-                            "Concorrentes": st.column_config.TextColumn("Concorrentes"),
-                            "Varejo": st.column_config.NumberColumn("Preço Varejo", format="R$ %.2f"),
-                            "Atacado": st.column_config.NumberColumn("Preço Atacado", format="R$ %.2f")
-                        },
-                        hide_index=True, use_container_width=True, height=160
-                    )
+            with k_c1: st.markdown(f"<div style='{kpi_style}'><div style='{kpi_title_style}'>MODA VAREJO</div><div style='{kpi_value_style}'>{v_moda_var:,.2f}</div></div>", unsafe_allow_html=True)
+            with k_c2: st.markdown(f"<div style='{kpi_style}'><div style='{kpi_title_style}'>MODA ATACADO</div><div style='{kpi_value_style}'>{v_moda_atac:,.2f}</div></div>", unsafe_allow_html=True)
+            with k_c3: st.markdown(f"<div style='{kpi_style}'><div style='{kpi_title_style}'>MENOR PREÇO VAREJO</div><div style='{kpi_value_style}'>{min_varejo:,.2f}</div></div>", unsafe_allow_html=True)
+            with k_c4: st.markdown(f"<div style='{kpi_style}'><div style='{kpi_title_style}'>MAIOR PREÇO VAREJO</div><div style='{kpi_value_style}'>{max_varejo:,.2f}</div></div>", unsafe_allow_html=True)
+            with k_c5: st.markdown(f"<div style='{kpi_style}'><div style='{kpi_title_style}'>QTD. COLETAS</div><div style='{kpi_value_style}'>{qtd_moda} / {qtd_total}</div></div>", unsafe_allow_html=True)
 
             # =======================================================
-            # GRÁFICOS HISTÓRICOS (PLOTLY)
+            # MINI-TABELA DE MÉDIA POR CONCORRENTE
+            # =======================================================
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            if not df_filt.empty and 'FILIALCONCORRENTE' in df_filt.columns:
+                st.markdown(f"<div style='font-size: 0.85rem; color: #888888; font-weight: 700; text-transform: uppercase; margin-bottom: 8px;'>Resumo: Média de Preço por Concorrente no Período</div>", unsafe_allow_html=True)
+                
+                df_resumo = df_filt.groupby('FILIALCONCORRENTE')[['Vlr.Vare.Conc', 'Vlr.Atac.Conc.']].mean().reset_index()
+                df_resumo.rename(columns={'FILIALCONCORRENTE': 'Concorrentes', 'Vlr.Vare.Conc': 'Preço Varejo', 'Vlr.Atac.Conc.': 'Preço Atacado'}, inplace=True)
+                
+                st.dataframe(
+                    df_resumo,
+                    column_config={
+                        "Concorrentes": st.column_config.TextColumn("Concorrentes"),
+                        "Preço Varejo": st.column_config.NumberColumn("Preço Varejo", format="R$ %.2f"),
+                        "Preço Atacado": st.column_config.NumberColumn("Preço Atacado", format="R$ %.2f")
+                    },
+                    hide_index=True,
+                    use_container_width=True
+                )
+
+            # =======================================================
+            # GRÁFICOS HISTÓRICOS (PLOTLY - PREMIUM APPLE STYLE)
             # =======================================================
             st.markdown("<br>", unsafe_allow_html=True)
             
@@ -1162,6 +775,7 @@ def tela_app_principal():
                     texto_titulo = "#1D1D1D" if st.session_state.tema == "Light" else "#FFFFFF"
                     grid_color = "rgba(150,150,150,0.15)"
 
+                    # 1. GRÁFICO: CONCORRENTE
                     if 'Vlr.Vare.Conc' in cols_agg or 'Vlr.Atac.Conc.' in cols_agg:
                         fig_conc = go.Figure()
                         desenhar_traco_e_flag(fig_conc, df_plot, 'Vlr.Vare.Conc', 'Varejo Concorrente', cor_varejo, orientacao_flag=-35, exibe_detalhes=True)
@@ -1179,6 +793,7 @@ def tela_app_principal():
                         )
                         with st.container(border=True): st.plotly_chart(fig_conc, use_container_width=True, config={'displayModeBar': False})
 
+                    # 2. GRÁFICO: NOSSO PDV
                     if 'Vlr. Varejo PDV' in cols_agg or 'Vlr. Atacado PDV' in cols_agg:
                         st.markdown("<br>", unsafe_allow_html=True)
                         fig_pdv = go.Figure()
@@ -1198,7 +813,7 @@ def tela_app_principal():
                         with st.container(border=True): st.plotly_chart(fig_pdv, use_container_width=True, config={'displayModeBar': False})
 
             # =======================================================
-            # MÓDULOS EXECUTIVOS DE EXTRAÇÃO
+            # MÓDULOS EXECUTIVOS DE EXTRAÇÃO (SEM EMOJIS)
             # =======================================================
             st.markdown("<br><hr>", unsafe_allow_html=True)
             st.markdown("<h2>Geração de Inteligência Competitiva</h2>", unsafe_allow_html=True)
@@ -1206,8 +821,9 @@ def tela_app_principal():
             
             c_btn1, c_btn2 = st.columns(2)
             
+            # --- MODELO 1: MODA DE MERCADO ---
             with c_btn1:
-                if st.button("Extrair Preço Moda", type="primary", use_container_width=True, key="btn_ext_moda"):
+                if st.button("Extrair Preço Moda", type="primary", use_container_width=True):
                     with st.spinner("Processando inteligência de Moda de Mercado..."):
                         time.sleep(0.5)
                         df_analise = df_filt.copy()
@@ -1250,8 +866,9 @@ def tela_app_principal():
                             
                             st.download_button("Baixar Resumo Moda (Excel)", data=buf_resumo, file_name=f"PriceSense_ModaMercado_{datetime.now().strftime('%d-%m-%Y')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="secondary", use_container_width=True)
 
+            # --- MODELO 2: MENOR PREÇO (MÍNIMO) ---
             with c_btn2:
-                if st.button("Extrair Menor Preço", type="primary", use_container_width=True, key="btn_ext_min"):
+                if st.button("Extrair Menor Preço", type="primary", use_container_width=True):
                     with st.spinner("Processando inteligência de Menor Preço Recente..."):
                         time.sleep(0.5)
                         df_menor = df_filt.copy()
@@ -1295,6 +912,111 @@ def tela_app_principal():
                             
                             st.download_button("Baixar Resumo Mínimo (Excel)", data=buf_menor, file_name=f"PriceSense_MenorPreco_{datetime.now().strftime('%d-%m-%Y')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="secondary", use_container_width=True)
 
+            # =======================================================
+            # MÓDULOS EXECUTIVOS DE EXTRAÇÃO (SEM EMOJIS)
+            # =======================================================
+            st.markdown("<br><hr>", unsafe_allow_html=True)
+            st.markdown("<h2>Geração de Inteligência Competitiva</h2>", unsafe_allow_html=True)
+            st.markdown("<p style='color: #888;'>Selecione abaixo o modelo analítico que deseja processar sobre a base filtrada.</p>", unsafe_allow_html=True)
+            
+            c_btn1, c_btn2 = st.columns(2)
+            
+            # --- MODELO 1: MODA DE MERCADO ---
+            with c_btn1:
+                if st.button("Extrair Preço Moda", type="primary", use_container_width=True):
+                    with st.spinner("Processando inteligência de Moda de Mercado..."):
+                        time.sleep(0.5)
+                        df_analise = df_filt.copy()
+                        
+                        if 'Tipo' in df_analise.columns:
+                            m_tipo = df_analise['Tipo'].astype(str).str.upper().str.contains('REGULAR|PROMOCAO|PROMOÇÃO|PONTO EXTRA', regex=True, na=False)
+                            df_analise = df_analise[m_tipo]
+
+                        if 'CustoMedio' in df_analise.columns and 'MargemConc' in df_analise.columns:
+                            m_margem = (df_analise['CustoMedio'] <= 0.09) | ((df_analise['MargemConc'] >= -0.30) & (df_analise['MargemConc'] <= 0.60))
+                            df_analise = df_analise[m_margem]
+
+                        if df_analise.empty:
+                            st.warning("Nenhum dado válido após aplicar os filtros de Tipo e Margem (-30% a +60%).")
+                        elif not {'FILIAL', 'PRODUTO', 'FILIALCONCORRENTE', 'Vlr.Vare.Conc', 'Vlr.Atac.Conc.'}.issubset(df_analise.columns):
+                            st.error("A base não contém as colunas necessárias para este cálculo.")
+                        else:
+                            def calc_modas(g):
+                                counts = g['Vlr.Vare.Conc'].value_counts()
+                                if counts.empty: return pd.Series({'Moda Varejo': 0.0, 'Moda Atacado': 0.0, 'Frequência Máxima': 0})
+                                m_var = counts.index[0]
+                                freq = counts.iloc[0]
+                                m_atac_serie = g[g['Vlr.Vare.Conc'] == m_var]['Vlr.Atac.Conc.'].mode()
+                                m_atac = m_atac_serie.iloc[0] if not m_atac_serie.empty else 0.0
+                                return pd.Series({'Moda Varejo': m_var, 'Moda Atacado': m_atac, 'Frequência Máxima': freq})
+
+                            df_modas_conc = df_analise.groupby(['FILIAL', 'PRODUTO', 'FILIALCONCORRENTE']).apply(calc_modas).reset_index()
+                            idx_max = df_modas_conc.groupby(['FILIAL', 'PRODUTO'])['Frequência Máxima'].idxmax()
+                            df_final = df_modas_conc.loc[idx_max].reset_index(drop=True)
+                            
+                            df_final.rename(columns={'FILIAL': 'Filial', 'PRODUTO': 'Produto', 'FILIALCONCORRENTE': 'Concorrente Moda'}, inplace=True)
+                            df_final = df_final[['Filial', 'Produto', 'Moda Varejo', 'Moda Atacado', 'Frequência Máxima', 'Concorrente Moda']].sort_values(by=['Filial', 'Produto'])
+
+                            st.success("Moda de Mercado gerada com sucesso!")
+                            st.dataframe(df_final, use_container_width=True, hide_index=True)
+
+                            buf_resumo = io.BytesIO()
+                            with pd.ExcelWriter(buf_resumo, engine='openpyxl') as w: df_final.to_excel(w, index=False)
+                            buf_resumo.seek(0)
+                            
+                            st.download_button("Baixar Resumo Moda (Excel)", data=buf_resumo, file_name=f"PriceSense_ModaMercado_{datetime.now().strftime('%d-%m-%Y')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="secondary", use_container_width=True)
+
+            # --- MODELO 2: MENOR PREÇO (MÍNIMO) ---
+            with c_btn2:
+                if st.button("Extrair Menor Preço", type="primary", use_container_width=True):
+                    with st.spinner("Processando inteligência de Menor Preço Recente..."):
+                        time.sleep(0.5)
+                        df_menor = df_filt.copy()
+                        
+                        # Exclui "3-VALIDADE" explicitamente da regra de menor preço
+                        if 'Tipo' in df_menor.columns:
+                            df_menor = df_menor[~df_menor['Tipo'].astype(str).str.upper().str.contains('VALIDADE', na=False)]
+
+                        if df_menor.empty:
+                            st.warning("Nenhum dado válido após aplicar os filtros (Removido Tipo 'VALIDADE').")
+                        elif not {'FILIAL', 'PRODUTO', 'FILIALCONCORRENTE', 'Vlr.Vare.Conc', 'Vlr.Atac.Conc.', 'CustoMedio', 'PESQUISADATA_DT'}.issubset(df_menor.columns):
+                            st.error("A base não contém as colunas necessárias para este cálculo.")
+                        else:
+                            # 1. Encontra a última coleta de cada concorrente
+                            df_menor = df_menor.sort_values(by='PESQUISADATA_DT', ascending=False)
+                            df_recentes = df_menor.drop_duplicates(subset=['FILIAL', 'PRODUTO', 'FILIALCONCORRENTE'], keep='first')
+                            
+                            # 2. Encontra o menor Varejo entre as últimas coletas do Produto/Filial
+                            df_recentes = df_recentes.sort_values(by='Vlr.Vare.Conc', ascending=True)
+                            df_final_menor = df_recentes.drop_duplicates(subset=['FILIAL', 'PRODUTO'], keep='first')
+                            
+                            map_cols_menor = {
+                                'FILIAL': 'Filial',
+                                'PRODUTO': 'Produto',
+                                'CustoMedio': 'Custo Médio',
+                                'Vlr.Vare.Conc': 'Menor Varejo',
+                                'Vlr.Atac.Conc.': 'Menor Atacado',
+                                'MargemConc': 'Margem Mercado (Menor)',
+                                'Tipo': 'Tipo',
+                                'PESQUISADATA': 'Data Pesquisa',
+                                'FILIALCONCORRENTE': 'Concorrente Menor'
+                            }
+                            
+                            df_final_menor = df_final_menor.rename(columns=map_cols_menor)[list(map_cols_menor.values())]
+                            # Formata a margem apenas para não ficar dizimas enormes
+                            df_final_menor['Margem Mercado (Menor)'] = df_final_menor['Margem Mercado (Menor)'].apply(lambda x: round(x * 100, 2) if pd.notnull(x) else 0.0)
+                            df_final_menor = df_final_menor.sort_values(by=['Filial', 'Produto'])
+
+                            st.success("Menor Preço gerado com sucesso!")
+                            st.dataframe(df_final_menor, use_container_width=True, hide_index=True)
+
+                            buf_menor = io.BytesIO()
+                            with pd.ExcelWriter(buf_menor, engine='openpyxl') as w: df_final_menor.to_excel(w, index=False)
+                            buf_menor.seek(0)
+                            
+                            st.download_button("Baixar Resumo Mínimo (Excel)", data=buf_menor, file_name=f"PriceSense_MenorPreco_{datetime.now().strftime('%d-%m-%Y')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="secondary", use_container_width=True)
+
+# Garantia de margem de escape na parte inferior
 st.write("<br><br><br><br>", unsafe_allow_html=True)
 
 if not st.session_state.splash_concluido: 
