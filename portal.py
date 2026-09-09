@@ -1019,6 +1019,354 @@ def tela_app_principal():
 # Garantia de margem de escape na parte inferior
 st.write("<br><br><br><br>", unsafe_allow_html=True)
 
+# ================= MÓDULO 4: PRICING PROMO =================
+    elif menu == "Pricing Promo":
+        import plotly.express as px
+        
+        st.markdown("<h1>Pricing Promo</h1>", unsafe_allow_html=True)
+        st.markdown("Validação inteligente de encartes, explosão de clusters e auditoria base.")
+
+        @st.cache_data(ttl=600)
+        def carregar_de_para_clusters():
+            try:
+                resp = supabase.table('filial-cluster').select('*').execute()
+                if resp.data: 
+                    return pd.DataFrame(resp.data)
+            except Exception: 
+                pass
+            return pd.DataFrame(columns=['CLUSTER', 'ID FILIAL'])
+
+        @st.cache_data(ttl=600)
+        def carregar_mapa_lojas():
+            try:
+                resp = supabase.table('lojas').select('filial').execute()
+                mapa = {}
+                if resp.data:
+                    for r in resp.data:
+                        f_id = str(r['filial']).split('-')[0].strip()
+                        mapa[f_id] = str(r['filial'])
+                return mapa
+            except Exception: 
+                return {}
+
+        df_clusters = carregar_de_para_clusters()
+        mapa_lojas = carregar_mapa_lojas()
+
+        if 'linhas_alteradas' not in st.session_state: 
+            st.session_state.linhas_alteradas = set()
+
+        st.markdown("<h2>Upload das Bases</h2>", unsafe_allow_html=True)
+        arquivos_upload = st.file_uploader("Arraste planilhas", accept_multiple_files=True, type=['xlsx', 'xls', 'csv'], label_visibility="collapsed")
+
+        if arquivos_upload:
+            nomes_arquivos = sorted([f.name for f in arquivos_upload])
+            
+            if 'promo_arquivos' not in st.session_state or st.session_state.promo_arquivos != nomes_arquivos:
+                with st.spinner("Estruturando matriz analítica e explodindo clusters..."):
+                    dfs = []
+                    for arq in arquivos_upload:
+                        try:
+                            df_temp = pd.read_csv(arq, sep=';', encoding='latin1') if arq.name.endswith('.csv') else pd.read_excel(arq)
+                            df_temp['ARQUIVO ORIGEM'] = arq.name.replace('.xlsx', '').replace('.csv', '')
+                            dfs.append(df_temp)
+                        except Exception: 
+                            pass
+                    
+                    if dfs:
+                        df_bruto = pd.concat(dfs, ignore_index=True)
+                        df_bruto.rename(columns=lambda x: str(x).strip().upper(), inplace=True)
+
+                        for col_data in ['INICIO', 'FIM']:
+                            if col_data in df_bruto.columns: 
+                                df_bruto[col_data] = pd.to_datetime(df_bruto[col_data].astype(str).str[:10], errors='coerce').dt.strftime('%d/%m/%Y')
+                        
+                        def limpar_preco(p):
+                            try: 
+                                return float(str(p).upper().replace('R$', '').replace(' ', '').replace(',', '.'))
+                            except Exception: 
+                                return 0.0
+                            
+                        if 'PRECO_PROMOCIONAL' in df_bruto.columns:
+                            df_bruto['PRECO_NUM'] = df_bruto['PRECO_PROMOCIONAL'].apply(limpar_preco)
+                        elif 'PRECO' in df_bruto.columns:
+                            df_bruto['PRECO_NUM'] = df_bruto['PRECO'].apply(limpar_preco)
+                        else:
+                            df_bruto['PRECO_NUM'] = 0.0
+
+                        if 'CLUSTER/LOJA' in df_bruto.columns and not df_clusters.empty:
+                            df_explodido = df_bruto.merge(df_clusters, left_on='CLUSTER/LOJA', right_on='CLUSTER', how='left')
+                            df_explodido['ID FILIAL'] = df_explodido['ID FILIAL'].fillna(df_explodido['CLUSTER/LOJA'])
+                            
+                            st.session_state.clusters_desconhecidos = df_explodido[df_explodido['ID FILIAL'] == df_explodido['CLUSTER/LOJA']]['CLUSTER/LOJA'].unique().tolist()
+                        else:
+                            df_explodido = df_bruto.copy()
+                            df_explodido['ID FILIAL'] = df_explodido.get('CLUSTER/LOJA', 'DESCONHECIDO')
+                            st.session_state.clusters_desconhecidos = []
+
+                        df_explodido['FILIAL ABREV'] = df_explodido['ID FILIAL'].astype(str).map(mapa_lojas).fillna(df_explodido['ID FILIAL'].astype(str))
+
+                        if 'SEQPRODUTO' in df_explodido.columns:
+                            df_limpo = df_explodido.drop_duplicates(subset=['ID FILIAL', 'SEQPRODUTO', 'PRECO_NUM']).copy()
+                            df_limpo['Status Sistema'] = df_limpo.groupby(['ID FILIAL', 'SEQPRODUTO'])['PRECO_NUM'].transform('nunique').apply(lambda x: "CRÍTICO" if x > 1 else "VÁLIDO")
+                        else:
+                            df_limpo = df_explodido.copy()
+                            df_limpo['Status Sistema'] = "VÁLIDO"
+                        
+                        df_limpo['ALTERADO_MANUAL'] = 'NÃO'
+                        
+                        d_inicio = pd.to_datetime(df_limpo['INICIO'], format='%d/%m/%Y', errors='coerce')
+                        d_fim = pd.to_datetime(df_limpo['FIM'], format='%d/%m/%Y', errors='coerce')
+                        df_limpo['MIDIA'] = np.where((d_fim - d_inicio).dt.days < 4, 1, 2)
+
+                        st.session_state.df_promo_processado = df_limpo
+                        st.session_state.promo_arquivos = nomes_arquivos
+                        st.session_state.linhas_alteradas = set()
+                        
+                        hoje_comp = pd.Timestamp.today().normalize()
+                        vencidas = df_limpo[pd.to_datetime(df_limpo['FIM'], format='%d/%m/%Y', errors='coerce').dt.date < hoje_comp.date()]['ARQUIVO ORIGEM'].unique().tolist()
+                        st.session_state.campanhas_vencidas = vencidas
+                        st.session_state.alerta_vencido_exibido = False
+
+        if 'df_promo_processado' in st.session_state and not st.session_state.df_promo_processado.empty:
+            df = st.session_state.df_promo_processado.copy()
+            st.markdown("---")
+            
+            vencidas = st.session_state.get('campanhas_vencidas', [])
+            if vencidas:
+                if not st.session_state.get('alerta_vencido_exibido', False):
+                    st.toast("Atenção: Campanhas com vigência vencida detectadas.")
+                    st.session_state.alerta_vencido_exibido = True
+                st.warning(f"Aviso de Vigência: Há campanhas anexadas com Data Fim no passado: {', '.join(vencidas)}.")
+
+            clusters_out = st.session_state.get('clusters_desconhecidos', [])
+            if clusters_out:
+                st.error(f"{len(clusters_out)} Cluster(s) não estão mapeados na arquitetura do banco de dados.")
+                with st.expander("Vincular Novo Cluster (Requer Admin)", expanded=False):
+                    with st.form("form_novo_cluster_promo"):
+                        col_c1, col_c2 = st.columns(2)
+                        novo_clust = col_c1.selectbox("Cluster Não Mapeado:", clusters_out)
+                        nova_filial = col_c2.text_input("ID da Filial correspondente (Ex: 544)")
+                        if st.form_submit_button("Enviar para Mapeamento", type="primary"):
+                            if nova_filial.strip():
+                                try:
+                                    supabase.table('solicitacoes_cluster').insert({
+                                        'cluster': novo_clust, 
+                                        'id_filial': nova_filial, 
+                                        'status': 'Pendente', 
+                                        'solicitante': st.session_state.usuario_logado
+                                    }).execute()
+                                    st.success("Solicitação de mapeamento enviada ao Administrador.")
+                                except Exception: 
+                                    st.warning("Tabela 'solicitacoes_cluster' ainda não configurada no Supabase.")
+                            else: 
+                                st.error("O ID da Filial é obrigatório.")
+
+            datas_ini_disp = ["Todas"] + sorted(df['INICIO'].dropna().unique().tolist())
+            datas_fim_disp = ["Todas"] + sorted(df['FIM'].dropna().unique().tolist())
+            campanhas_disp = ["Todas"] + sorted(df['ARQUIVO ORIGEM'].unique().tolist())
+            filiais_disp = ["Todas"] + sorted(df['FILIAL ABREV'].unique().astype(str))
+
+            col_filt, col_edit = st.columns([1.5, 1])
+            with col_filt:
+                st.markdown("<h2>Filtros Dinâmicos</h2>", unsafe_allow_html=True)
+                f_c1, f_c2 = st.columns(2)
+                f_filial = f_c1.multiselect("Filial:", filiais_disp[1:], wrap=True)
+                f_prod = f_c2.text_input("Produto (Cód):", placeholder="Código Exato")
+                
+                f_c3, f_c4, f_c5 = st.columns([1, 1, 1])
+                f_ini = f_c3.selectbox("Data Início:", datas_ini_disp)
+                f_fim = f_c4.selectbox("Data Fim:", datas_fim_disp)
+                f_status = f_c5.multiselect("Status:", ["VÁLIDO", "CRÍTICO"], default=["VÁLIDO", "CRÍTICO"])
+
+            with col_edit:
+                st.markdown("<h2>Alteração em Lote</h2>", unsafe_allow_html=True)
+                e_c1, e_c2 = st.columns(2)
+                e_camp = e_c1.selectbox("Campanha p/ Alterar:", campanhas_disp)
+                e_filial = e_c2.selectbox("Filial p/ Alterar:", filiais_disp)
+                
+                e_c3, e_c4 = st.columns(2)
+                novo_ini = e_c3.selectbox("Novo Início:", datas_ini_disp[1:]) 
+                novo_fim = e_c4.selectbox("Novo Fim:", datas_fim_disp[1:])
+                
+                st.write("")
+                if st.button("Aplicar Alteração", type="primary", use_container_width=True):
+                    mask = pd.Series(True, index=df.index)
+                    if e_camp != "Todas": 
+                        mask &= (df['ARQUIVO ORIGEM'] == e_camp)
+                    if e_filial != "Todas": 
+                        mask &= (df['FILIAL ABREV'] == e_filial)
+                        
+                    if mask.any():
+                        df.loc[mask, 'INICIO'] = novo_ini
+                        df.loc[mask, 'FIM'] = novo_fim
+                        
+                        dt_i = pd.to_datetime(novo_ini, format='%d/%m/%Y')
+                        dt_f = pd.to_datetime(novo_fim, format='%d/%m/%Y')
+                        df.loc[mask, 'MIDIA'] = 1 if (dt_f - dt_i).days < 4 else 2
+                        
+                        st.session_state.linhas_alteradas.update(df[mask].index.tolist())
+                        st.session_state.df_promo_processado = df
+                        st.rerun()
+
+            df_filtrado = df.copy()
+            if f_filial: 
+                df_filtrado = df_filtrado[df_filtrado['FILIAL ABREV'].isin(f_filial)]
+            if f_prod: 
+                df_filtrado = df_filtrado[df_filtrado['SEQPRODUTO'].astype(str).str.contains(f_prod.strip())]
+            if f_ini != "Todas": 
+                df_filtrado = df_filtrado[df_filtrado['INICIO'] == f_ini]
+            if f_fim != "Todas": 
+                df_filtrado = df_filtrado[df_filtrado['FIM'] == f_fim]
+            if f_status: 
+                df_filtrado = df_filtrado[df_filtrado['Status Sistema'].isin(f_status)]
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            col_kpis, col_grafico = st.columns([2, 1.2])
+            total_linhas = len(df_filtrado)
+            críticos = df_filtrado['Status Sistema'].str.contains('CRÍTICO').sum()
+            validos = total_linhas - críticos
+            
+            with col_kpis:
+                c1, c2, c3 = st.columns(3)
+                with c1.container(border=True): 
+                    st.metric("Linhas Selecionadas", f"{total_linhas}")
+                with c2.container(border=True): 
+                    st.metric("Itens Válidos", f"{validos}")
+                with c3.container(border=True): 
+                    st.metric("Alertas Críticos", f"{críticos}")
+            
+            with col_grafico:
+                if total_linhas > 0:
+                    fig = px.pie(
+                        pd.DataFrame({"Status": ["VÁLIDO", "CRÍTICO"], "Qtd": [validos, críticos]}), 
+                        values='Qtd', names='Status', hole=0.6, color='Status', 
+                        color_discrete_map={"VÁLIDO": "#27AE60", "CRÍTICO": "#E20000"}
+                    )
+                    fig.update_layout(margin=dict(t=10, b=10, l=10, r=10), showlegend=True, height=140, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+                    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+
+            st.markdown("---")
+            st.markdown("<h2>Edição Direta na Grade</h2>", unsafe_allow_html=True)
+            
+            cols_exibicao = ['ARQUIVO ORIGEM', 'FILIAL ABREV', 'SEQPRODUTO', 'PRECO_NUM', 'INICIO', 'FIM', 'ALTERADO_MANUAL', 'Status Sistema']
+            mapa_colunas = {
+                'ARQUIVO ORIGEM': 'Campanha', 
+                'FILIAL ABREV': 'Filial Abrev', 
+                'SEQPRODUTO': 'ID Produto', 
+                'PRECO_NUM': 'Preço_Temp', 
+                'INICIO': 'Data Início', 
+                'FIM': 'Data Fim', 
+                'ALTERADO_MANUAL': 'Modificado', 
+                'Status Sistema': 'Status'
+            }
+            
+            df_vis = df_filtrado[cols_exibicao].copy().rename(columns=mapa_colunas)
+            
+            def estilizar_tabela(row):
+                if 'CRÍTICO' in str(row.get('Status', '')): 
+                    return ['background-color: #F5B7B1; color: #900C3F; font-weight: bold;'] * len(row)
+                if row.get('Modificado', '') == 'SIM': 
+                    return ['background-color: #FEF9E7; color: #7D6608; font-weight: bold;'] * len(row)
+                return [''] * len(row)
+
+            edited_df = st.data_editor(
+                df_vis.style.apply(estilizar_tabela, axis=1), 
+                column_config={
+                    "Preço_Temp": st.column_config.NumberColumn("Preço (R$)", format="R$ %.2f", min_value=0.0, step=0.01), 
+                    "Campanha": st.column_config.TextColumn(disabled=True), 
+                    "Filial Abrev": st.column_config.TextColumn(disabled=True), 
+                    "ID Produto": st.column_config.TextColumn(disabled=True), 
+                    "Data Início": st.column_config.TextColumn(disabled=True), 
+                    "Data Fim": st.column_config.TextColumn(disabled=True), 
+                    "Modificado": st.column_config.TextColumn(disabled=True), 
+                    "Status": st.column_config.TextColumn(disabled=True)
+                }, 
+                use_container_width=True, 
+                hide_index=True, 
+                height=350
+            )
+
+            if not edited_df['Preço_Temp'].equals(df_vis['Preço_Temp']):
+                diff = edited_df['Preço_Temp'] != df_vis['Preço_Temp']
+                df_memoria = st.session_state.df_promo_processado
+                
+                for idx in diff[diff].index:
+                    df_memoria.loc[idx, 'PRECO_NUM'] = edited_df.loc[idx, 'Preço_Temp']
+                    df_memoria.loc[idx, 'ALTERADO_MANUAL'] = 'SIM'
+                    
+                df_memoria['Status Sistema'] = df_memoria.groupby(['ID FILIAL', 'SEQPRODUTO'])['PRECO_NUM'].transform('nunique').apply(lambda x: "CRÍTICO" if x > 1 else "VÁLIDO")
+                st.session_state.df_promo_processado = df_memoria
+                st.rerun()
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            tipo_operacao = st.selectbox("Selecione a Operação de Exportação:", ["1 - Aplicar Preço", "2 - Cancelar Preço"])
+            oper_val = "1" if "1" in tipo_operacao else "2"
+            
+            col_exp1, col_exp2 = st.columns([1, 1])
+            primary_bg = "#2424ED" if st.session_state.tema == "Light" else "#E20000"
+            primary_hover_bg = "#09096D" if st.session_state.tema == "Light" else "#CC0000"
+            
+            with col_exp1:
+                buffer = io.BytesIO()
+                with pd.ExcelWriter(buffer, engine='openpyxl') as writer: 
+                    df_vis.drop(columns=['Preço_Temp']).to_excel(writer, index=False)
+                buffer.seek(0)
+                st.download_button(
+                    "Baixar Excel da Tela", 
+                    data=buffer, 
+                    file_name=f"Auditoria_{datetime.now().strftime('%d-%m-%Y')}.xlsx", 
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+                    type="primary", 
+                    use_container_width=True
+                )
+                
+            with col_exp2:
+                if críticos > 0: 
+                    st.error("A Cópia está bloqueada. Filtre para 'VÁLIDO' ou corrija os itens críticos.")
+                else:
+                    df_export = df_filtrado.drop_duplicates(subset=['ID FILIAL', 'SEQPRODUTO', 'PRECO_NUM']).copy()
+                    
+                    df_varejo = pd.DataFrame({
+                        'ID Filial': df_export['ID FILIAL'], 
+                        'Tipo Preço': "1", 
+                        'Midia Preço': df_export['MIDIA'], 
+                        'ID Produto': df_export['SEQPRODUTO'], 
+                        'Preço': df_export['PRECO_NUM'].apply(lambda x: f"{x:.2f}".replace('.', ',')), 
+                        'Data Início': df_export['INICIO'], 
+                        'Data Fim': df_export['FIM'], 
+                        'Similar': 'NAO', 
+                        'Tipo Oper.': "1" if "1" in tipo_operacao else "2"
+                    })
+                    
+                    df_atacado = df_varejo.copy()
+                    df_atacado['Tipo Preço'] = "2"
+                    
+                    df_import_final = pd.concat([df_varejo, df_atacado]).sort_values(by=['ID Filial', 'ID Produto', 'Tipo Preço'])
+                    txt_copy = df_import_final.to_csv(sep='\t', index=False, header=False)
+                    b64_copy = base64.b64encode(txt_copy.encode('utf-8')).decode('utf-8')
+                    
+                    components.html(f"""
+                    <style>
+                    body{{margin:0;overflow:hidden;background:transparent;}}
+                    .b{{display:flex;justify-content:center;align-items:center;width:100%;height:42px;font-family:"Inter",sans-serif;font-size:15px;font-weight:600;background-color:{primary_bg};color:#FFFFFF;border:1px solid {primary_bg};border-radius:8px;cursor:pointer;text-decoration:none;transition:all 0.2s;}}
+                    .b:hover{{background-color:{primary_hover_bg};border-color:{primary_hover_bg};}}
+                    </style>
+                    <button onclick="
+                        const t = decodeURIComponent(escape(window.atob('{b64_copy}'))); 
+                        navigator.clipboard.writeText(t).then(() => {{ 
+                            this.innerHTML = 'Copiado Base Limpa'; 
+                            this.style.backgroundColor = '#008000'; 
+                            setTimeout(() => {{ 
+                                this.innerHTML = 'Copiar Padrão Importação'; 
+                                this.style.backgroundColor = '{primary_bg}'; 
+                                this.style.borderColor = '{primary_bg}'; 
+                            }}, 2500); 
+                        }});
+                    " class="b">Copiar Padrão Importação</button>
+                    """, height=42)
+        else: 
+            st.info("Sistema aguardando input analítico.")
+
 if not st.session_state.splash_concluido: 
     tela_carregamento()
 elif not st.session_state.logado: 
