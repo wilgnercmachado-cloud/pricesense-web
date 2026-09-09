@@ -5,7 +5,3 @@ supabase
 openpyxl
 plotly.graph_objects
 PIL
-base64
-io
-time
-datetime
