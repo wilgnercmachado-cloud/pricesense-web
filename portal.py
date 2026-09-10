@@ -700,28 +700,6 @@ def tela_app_principal():
             with k_c5: st.markdown(f"<div style='{kpi_style}'><div style='{kpi_title_style}'>QTD. COLETAS</div><div style='{kpi_value_style}'>{qtd_moda} / {qtd_total}</div></div>", unsafe_allow_html=True)
 
             # =======================================================
-            # MINI-TABELA DE MÉDIA POR CONCORRENTE
-            # =======================================================
-            st.markdown("<br>", unsafe_allow_html=True)
-            
-            if not df_filt.empty and 'FILIALCONCORRENTE' in df_filt.columns:
-                st.markdown(f"<div style='font-size: 0.85rem; color: #888888; font-weight: 700; text-transform: uppercase; margin-bottom: 8px;'>Resumo: Média de Preço por Concorrente no Período</div>", unsafe_allow_html=True)
-                
-                df_resumo = df_filt.groupby('FILIALCONCORRENTE')[['Vlr.Vare.Conc', 'Vlr.Atac.Conc.']].mean().reset_index()
-                df_resumo.rename(columns={'FILIALCONCORRENTE': 'Concorrentes', 'Vlr.Vare.Conc': 'Preço Varejo', 'Vlr.Atac.Conc.': 'Preço Atacado'}, inplace=True)
-                
-                st.dataframe(
-                    df_resumo,
-                    column_config={
-                        "Concorrentes": st.column_config.TextColumn("Concorrentes"),
-                        "Preço Varejo": st.column_config.NumberColumn("Preço Varejo", format="R$ %.2f"),
-                        "Preço Atacado": st.column_config.NumberColumn("Preço Atacado", format="R$ %.2f")
-                    },
-                    hide_index=True,
-                    use_container_width=True
-                )
-
-            # =======================================================
             # GRÁFICOS HISTÓRICOS (PLOTLY - PREMIUM APPLE STYLE)
             # =======================================================
             st.markdown("<br>", unsafe_allow_html=True)
@@ -900,110 +878,6 @@ def tela_app_principal():
                             }
                             
                             df_final_menor = df_final_menor.rename(columns=map_cols_menor)[list(map_cols_menor.values())]
-                            df_final_menor['Margem Mercado (Menor)'] = df_final_menor['Margem Mercado (Menor)'].apply(lambda x: round(x * 100, 2) if pd.notnull(x) else 0.0)
-                            df_final_menor = df_final_menor.sort_values(by=['Filial', 'Produto'])
-
-                            st.success("Menor Preço gerado com sucesso!")
-                            st.dataframe(df_final_menor, use_container_width=True, hide_index=True)
-
-                            buf_menor = io.BytesIO()
-                            with pd.ExcelWriter(buf_menor, engine='openpyxl') as w: df_final_menor.to_excel(w, index=False)
-                            buf_menor.seek(0)
-                            
-                            st.download_button("Baixar Resumo Mínimo (Excel)", data=buf_menor, file_name=f"PriceSense_MenorPreco_{datetime.now().strftime('%d-%m-%Y')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="secondary", use_container_width=True)
-
-            # =======================================================
-            # MÓDULOS EXECUTIVOS DE EXTRAÇÃO (SEM EMOJIS)
-            # =======================================================
-            st.markdown("<br><hr>", unsafe_allow_html=True)
-            st.markdown("<h2>Geração de Inteligência Competitiva</h2>", unsafe_allow_html=True)
-            st.markdown("<p style='color: #888;'>Selecione abaixo o modelo analítico que deseja processar sobre a base filtrada.</p>", unsafe_allow_html=True)
-            
-            c_btn1, c_btn2 = st.columns(2)
-            
-            # --- MODELO 1: MODA DE MERCADO ---
-            with c_btn1:
-                if st.button("Extrair Preço Moda", type="primary", use_container_width=True):
-                    with st.spinner("Processando inteligência de Moda de Mercado..."):
-                        time.sleep(0.5)
-                        df_analise = df_filt.copy()
-                        
-                        if 'Tipo' in df_analise.columns:
-                            m_tipo = df_analise['Tipo'].astype(str).str.upper().str.contains('REGULAR|PROMOCAO|PROMOÇÃO|PONTO EXTRA', regex=True, na=False)
-                            df_analise = df_analise[m_tipo]
-
-                        if 'CustoMedio' in df_analise.columns and 'MargemConc' in df_analise.columns:
-                            m_margem = (df_analise['CustoMedio'] <= 0.09) | ((df_analise['MargemConc'] >= -0.30) & (df_analise['MargemConc'] <= 0.60))
-                            df_analise = df_analise[m_margem]
-
-                        if df_analise.empty:
-                            st.warning("Nenhum dado válido após aplicar os filtros de Tipo e Margem (-30% a +60%).")
-                        elif not {'FILIAL', 'PRODUTO', 'FILIALCONCORRENTE', 'Vlr.Vare.Conc', 'Vlr.Atac.Conc.'}.issubset(df_analise.columns):
-                            st.error("A base não contém as colunas necessárias para este cálculo.")
-                        else:
-                            def calc_modas(g):
-                                counts = g['Vlr.Vare.Conc'].value_counts()
-                                if counts.empty: return pd.Series({'Moda Varejo': 0.0, 'Moda Atacado': 0.0, 'Frequência Máxima': 0})
-                                m_var = counts.index[0]
-                                freq = counts.iloc[0]
-                                m_atac_serie = g[g['Vlr.Vare.Conc'] == m_var]['Vlr.Atac.Conc.'].mode()
-                                m_atac = m_atac_serie.iloc[0] if not m_atac_serie.empty else 0.0
-                                return pd.Series({'Moda Varejo': m_var, 'Moda Atacado': m_atac, 'Frequência Máxima': freq})
-
-                            df_modas_conc = df_analise.groupby(['FILIAL', 'PRODUTO', 'FILIALCONCORRENTE']).apply(calc_modas).reset_index()
-                            idx_max = df_modas_conc.groupby(['FILIAL', 'PRODUTO'])['Frequência Máxima'].idxmax()
-                            df_final = df_modas_conc.loc[idx_max].reset_index(drop=True)
-                            
-                            df_final.rename(columns={'FILIAL': 'Filial', 'PRODUTO': 'Produto', 'FILIALCONCORRENTE': 'Concorrente Moda'}, inplace=True)
-                            df_final = df_final[['Filial', 'Produto', 'Moda Varejo', 'Moda Atacado', 'Frequência Máxima', 'Concorrente Moda']].sort_values(by=['Filial', 'Produto'])
-
-                            st.success("Moda de Mercado gerada com sucesso!")
-                            st.dataframe(df_final, use_container_width=True, hide_index=True)
-
-                            buf_resumo = io.BytesIO()
-                            with pd.ExcelWriter(buf_resumo, engine='openpyxl') as w: df_final.to_excel(w, index=False)
-                            buf_resumo.seek(0)
-                            
-                            st.download_button("Baixar Resumo Moda (Excel)", data=buf_resumo, file_name=f"PriceSense_ModaMercado_{datetime.now().strftime('%d-%m-%Y')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="secondary", use_container_width=True)
-
-            # --- MODELO 2: MENOR PREÇO (MÍNIMO) ---
-            with c_btn2:
-                if st.button("Extrair Menor Preço", type="primary", use_container_width=True):
-                    with st.spinner("Processando inteligência de Menor Preço Recente..."):
-                        time.sleep(0.5)
-                        df_menor = df_filt.copy()
-                        
-                        # Exclui "3-VALIDADE" explicitamente da regra de menor preço
-                        if 'Tipo' in df_menor.columns:
-                            df_menor = df_menor[~df_menor['Tipo'].astype(str).str.upper().str.contains('VALIDADE', na=False)]
-
-                        if df_menor.empty:
-                            st.warning("Nenhum dado válido após aplicar os filtros (Removido Tipo 'VALIDADE').")
-                        elif not {'FILIAL', 'PRODUTO', 'FILIALCONCORRENTE', 'Vlr.Vare.Conc', 'Vlr.Atac.Conc.', 'CustoMedio', 'PESQUISADATA_DT'}.issubset(df_menor.columns):
-                            st.error("A base não contém as colunas necessárias para este cálculo.")
-                        else:
-                            # 1. Encontra a última coleta de cada concorrente
-                            df_menor = df_menor.sort_values(by='PESQUISADATA_DT', ascending=False)
-                            df_recentes = df_menor.drop_duplicates(subset=['FILIAL', 'PRODUTO', 'FILIALCONCORRENTE'], keep='first')
-                            
-                            # 2. Encontra o menor Varejo entre as últimas coletas do Produto/Filial
-                            df_recentes = df_recentes.sort_values(by='Vlr.Vare.Conc', ascending=True)
-                            df_final_menor = df_recentes.drop_duplicates(subset=['FILIAL', 'PRODUTO'], keep='first')
-                            
-                            map_cols_menor = {
-                                'FILIAL': 'Filial',
-                                'PRODUTO': 'Produto',
-                                'CustoMedio': 'Custo Médio',
-                                'Vlr.Vare.Conc': 'Menor Varejo',
-                                'Vlr.Atac.Conc.': 'Menor Atacado',
-                                'MargemConc': 'Margem Mercado (Menor)',
-                                'Tipo': 'Tipo',
-                                'PESQUISADATA': 'Data Pesquisa',
-                                'FILIALCONCORRENTE': 'Concorrente Menor'
-                            }
-                            
-                            df_final_menor = df_final_menor.rename(columns=map_cols_menor)[list(map_cols_menor.values())]
-                            # Formata a margem apenas para não ficar dizimas enormes
                             df_final_menor['Margem Mercado (Menor)'] = df_final_menor['Margem Mercado (Menor)'].apply(lambda x: round(x * 100, 2) if pd.notnull(x) else 0.0)
                             df_final_menor = df_final_menor.sort_values(by=['Filial', 'Produto'])
 
