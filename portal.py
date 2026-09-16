@@ -86,10 +86,20 @@ def aplicar_css_tema():
     h3 {{ font-size: 0.85rem !important; font-weight: 700 !important; letter-spacing: 0.05em !important; text-transform: uppercase !important; color: #888888 !important; margin-bottom: 0.5rem !important; margin-top: 1rem !important; }}
 
     [data-testid="stSidebar"], [data-testid="collapsedControl"], [data-testid="stSidebarCollapseButton"], [data-testid="stToolbar"] {{ display: none !important; }}
-    header[data-testid="stHeader"] {{ display: none !important; height: 0px !important; min-height: 0px !important; }}
+    header[data-testid="stHeader"] {{ display: none !important; height: 0px !important; min-height: 0px !important; margin: 0 !important; padding: 0 !important; }}
 
-    .block-container {{ padding: 1.5rem 3rem 5rem 3rem !important; max-width: 1500px !important; margin-top: 0 !important; }}
-    @media (max-width: 767px) {{ .block-container {{ padding: 1.5rem 1rem 5rem 1rem !important; }} }}
+    /* ========== ALINHAMENTO GLOBAL PREMIUM (GRUDADO NO TETO) ========== */
+    .block-container {{ 
+        padding-top: 0rem !important; 
+        padding-bottom: 5rem !important; 
+        padding-left: 3rem !important; 
+        padding-right: 3rem !important; 
+        max-width: 1500px !important; 
+        margin-top: -6.5rem !important; /* Subida agressiva para matar qualquer resquício de espaço */
+    }}
+    @media (max-width: 767px) {{ .block-container {{ padding-top: 0rem !important; margin-top: -4rem !important; padding-left: 1.5rem !important; padding-right: 1.5rem !important; }} }}
+    /* ================================================================== */
+    
     .stApp {{ background-color: {bg_color} !important; color: {text_color} !important; }}
 
     @keyframes pulse-white {{ 0% {{ text-shadow: 0 0 10px rgba(255,255,255,0.4); transform: scale(0.99); }} 50% {{ text-shadow: 0 0 20px rgba(255,255,255,0.8); transform: scale(1.01); }} 100% {{ text-shadow: 0 0 10px rgba(255,255,255,0.4); transform: scale(0.99); }} }}
@@ -949,17 +959,56 @@ def tela_app_principal():
 
     # ================= MÓDULO NOVO: PESQUISA DE MERCADO =================
     elif menu == "Pesquisa de Mercado":
+        import plotly.graph_objects as go
+        
         st.markdown("<h1>Pesquisa de Mercado (BI)</h1>", unsafe_allow_html=True)
         st.markdown("Análise histórica de preços e concorrência.")
+        st.info("💡 **Instrução:** Extraia a pesquisa da **rotina 1067** (aba *'pesquisa extração'*). Indique um período de **no mínimo 20 dias** para montar o preço moda de mercado com precisão.")
 
-        arquivo_pesquisa = st.file_uploader("Arraste ou selecione a base de pesquisa (CSV separado por '|')", type=['csv'])
+        arquivo_pesquisa = st.file_uploader("Arraste ou selecione a base de pesquisa (CSV separado por '|' ou formato Excel)", type=['csv', 'xlsx', 'xls'])
 
         if arquivo_pesquisa:
             with st.spinner("Limpando, Mesclando Dimensões e Processando Inteligência..."):
                 try:
-                    df_pesq = pd.read_csv(arquivo_pesquisa, sep='|', encoding='latin1', dtype=str)
-                    df_pesq.columns = df_pesq.columns.str.strip()
+                    # 1. Leitura Dinâmica (Trata CSV com Pipe ou Excel nativo)
+                    if arquivo_pesquisa.name.endswith('.csv'):
+                        df_pesq = pd.read_csv(arquivo_pesquisa, sep='|', encoding='latin1', dtype=str)
+                    else:
+                        df_pesq = pd.read_excel(arquivo_pesquisa, dtype=str)
                     
+                    # 2. Padronização Absoluta de Cabeçalhos
+                    df_pesq.columns = [str(c).strip().upper() for c in df_pesq.columns]
+                    
+                    mapa_colunas = {
+                        'CUSTOMEDIO': 'CustoMedio',
+                        'CUSTO MEDIO': 'CustoMedio',
+                        'VLR. VAREJO PDV': 'Vlr. Varejo PDV',
+                        'VLR. ATACADO PDV': 'Vlr. Atacado PDV',
+                        'VLR. VAREJO CONC.': 'Vlr.Vare.Conc',
+                        'VLR. VAREJO CONC': 'Vlr.Vare.Conc',
+                        'VLR.VARE.CONC': 'Vlr.Vare.Conc',
+                        'VLR.VARE.CONC.': 'Vlr.Vare.Conc',
+                        'VLR. ATACADO CONC.': 'Vlr.Atac.Conc.',
+                        'VLR. ATACADO CONC': 'Vlr.Atac.Conc.',
+                        'VLR.ATAC.CONC': 'Vlr.Atac.Conc.',
+                        'VLR.ATAC.CONC.': 'Vlr.Atac.Conc.',
+                        'TIPO': 'Tipo',
+                        'TIPO PRECO': 'Tipo',
+                        'TIPO PREÇO': 'Tipo'
+                    }
+                    df_pesq.rename(columns=mapa_colunas, inplace=True)
+
+                    # 3. Trava de Colunas Obrigatórias
+                    colunas_obrigatorias = ['FILIAL', 'FILIALCONCORRENTE', 'PESQUISADATA', 'CustoMedio', 'Vlr. Varejo PDV', 'Vlr. Atacado PDV', 'Vlr.Vare.Conc', 'Vlr.Atac.Conc.', 'PRODUTO', 'Tipo']
+                    colunas_faltantes = [c for c in colunas_obrigatorias if c not in df_pesq.columns]
+                    
+                    if colunas_faltantes:
+                        raise ValueError(f"O arquivo não contém colunas obrigatórias da rotina 1067. Faltam: {', '.join(colunas_faltantes)}")
+
+                    # 4. Remoção da linha lixo de "Total" (Caso venha do Excel exportado cru)
+                    df_pesq = df_pesq[~df_pesq['FILIAL'].astype(str).str.upper().str.contains('TOTAL', na=False)]
+
+                    # 5. Parsing Financeiro
                     def converter_para_float(val):
                         try:
                             if pd.isna(val) or str(val).strip() == '': return 0.0
@@ -1018,12 +1067,19 @@ def tela_app_principal():
 
                     st.session_state.df_pesq_master = df_pesq
                 except Exception as e:
-                    st.error(f"Erro ao processar a base. Verifique as colunas. Erro: {e}")
+                    st.error(f"Erro ao processar a base. Verifique o arquivo. Detalhe: {e}")
 
         if 'df_pesq_master' in st.session_state and not st.session_state.df_pesq_master.empty:
             df_m = st.session_state.df_pesq_master.copy()
             
             st.markdown("---")
+            
+            # ESPAÇO RESERVADO PARA O LETREIRO (TICKER)
+            ticker_placeholder = st.empty()
+            st.markdown("<div style='margin-bottom: 5px;'></div>", unsafe_allow_html=True)
+            
+            # LINHA 1 DE FILTROS
+            c_f1, c_f2, c_f3, c_f4 = st.columns(4)
             # LINHA 1 DE FILTROS
             c_f1, c_f2, c_f3, c_f4 = st.columns(4)
             produtos_lista = ["Todos"] + sorted(df_m['PRODUTO'].dropna().unique().tolist()) if 'PRODUTO' in df_m.columns else ["Todos"]
@@ -1071,6 +1127,44 @@ def tela_app_principal():
             if len(f_periodo) == 2:
                 df_filt = df_filt[(df_filt['PESQUISADATA_DT'].dt.date >= f_periodo[0]) & (df_filt['PESQUISADATA_DT'].dt.date <= f_periodo[1])]
 
+            # =======================================================
+            # INJEÇÃO DO LETREIRO (STOCK TICKER)
+            # =======================================================
+            if not df_filt.empty and 'EMPRESA_CONC' in df_filt.columns and 'Vlr.Vare.Conc' in df_filt.columns:
+                # Remove VALIDADE do Ticker para pegar o menor preço real
+                df_tk = df_filt[~df_filt['Tipo'].astype(str).str.upper().str.contains('VALIDADE', na=False)] if 'Tipo' in df_filt.columns else df_filt
+                
+                if not df_tk.empty:
+                    # Ordena pela data mais recente e pelo menor preço
+                    df_tk = df_tk.sort_values(by=['PESQUISADATA_DT', 'Vlr.Vare.Conc'], ascending=[False, True])
+                    # Mantém apenas o registro do menor preço na data mais recente por concorrente
+                    df_tk = df_tk.drop_duplicates(subset=['EMPRESA_CONC'], keep='first')
+                    
+                    cor_varejo_tk = "#2424ED" if st.session_state.tema == "Light" else "#4A90E2"
+                    cor_atacado_tk = "#E20000" if st.session_state.tema == "Light" else "#FF4B4B"
+                    t_bg = "rgba(255, 255, 255, 0.55)" if st.session_state.tema == "Light" else "rgba(25, 25, 30, 0.4)"
+                    t_border = "rgba(0, 0, 0, 0.08)" if st.session_state.tema == "Light" else "rgba(255, 255, 255, 0.08)"
+                    t_text = "#1D1D1D" if st.session_state.tema == "Light" else "#FFFFFF"
+                    
+                    itens_html = ""
+                    for _, row in df_tk.iterrows():
+                        empresa = str(row['EMPRESA_CONC']).upper()
+                        var = f"R$ {row['Vlr.Vare.Conc']:,.2f}".replace('.', ',')
+                        atac = f"R$ {row['Vlr.Atac.Conc.']:,.2f}".replace('.', ',') if 'Vlr.Atac.Conc.' in row and row['Vlr.Atac.Conc.'] > 0 else "-"
+                        
+                        # ATENÇÃO: Tudo na mesma linha para o Streamlit não achar que é bloco de código Markdown
+                        itens_html += f"<div style='display: inline-block; margin-right: 60px; font-family: Inter, sans-serif; font-size: 14px; color: {t_text};'><span style='font-weight: 800; text-transform: uppercase;'>{empresa}</span> <span style='color: #888; font-size: 11px; margin-left: 8px;'>VAREJO:</span> <span style='color: {cor_varejo_tk}; font-weight: 800;'>{var}</span> <span style='color: #888; font-size: 11px; margin-left: 8px;'>ATACADO:</span> <span style='color: {cor_atacado_tk}; font-weight: 800;'>{atac}</span></div>"
+                    
+                    # --- VELOCIDADE ATUALIZADA (Lento e Suave) ---
+                    velocidade = max(40, len(df_tk) * 8) 
+                    
+                    # ATENÇÃO: O HTML/CSS inteiro comprimido
+                    html_ticker = f"<style>.ticker-wrap {{ width: 100%; overflow: hidden; background: {t_bg}; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid {t_border}; border-radius: 10px; padding: 12px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.02); display: flex; align-items: center; }} .ticker-move {{ display: inline-block; white-space: nowrap; padding-left: 100%; animation: ticker-anim {velocidade}s linear infinite; }} .ticker-move:hover {{ animation-play-state: paused; cursor: default; }} @keyframes ticker-anim {{ 0% {{ transform: translate3d(0, 0, 0); }} 100% {{ transform: translate3d(-100%, 0, 0); }} }}</style><div class='ticker-wrap'><div class='ticker-move'>{itens_html}</div></div>"
+                    
+                    # Renderiza o HTML no espaço reservado lá em cima
+                    ticker_placeholder.markdown(html_ticker, unsafe_allow_html=True)
+            # =======================================================
+
             # CÁLCULO DOS KPIs
             df_moda = df_filt.copy()
             if 'Tipo' in df_moda.columns:
@@ -1081,10 +1175,19 @@ def tela_app_principal():
                 mask_margem = (df_moda['CustoMedio'] <= 0.09) | ((df_moda['MargemConc'] >= -0.30) & (df_moda['MargemConc'] <= 0.60))
                 df_moda = df_moda[mask_margem]
 
-            v_moda_var = df_moda['Vlr.Vare.Conc'].mode()[0] if not df_moda.empty and 'Vlr.Vare.Conc' in df_moda.columns and len(df_moda['Vlr.Vare.Conc'].mode()) > 0 else 0.0
-            v_moda_atac = df_moda['Vlr.Atac.Conc.'].mode()[0] if not df_moda.empty and 'Vlr.Atac.Conc.' in df_moda.columns and len(df_moda['Vlr.Atac.Conc.'].mode()) > 0 else 0.0
+            # NOVO MOTOR DA MODA (Extraindo Preço e Frequência simultaneamente)
+            if not df_moda.empty and 'Vlr.Vare.Conc' in df_moda.columns:
+                counts = df_moda['Vlr.Vare.Conc'].value_counts()
+                if not counts.empty:
+                    v_moda_var = counts.index[0]
+                    qtd_moda = counts.iloc[0]  # <-- Captura exata de quantas vezes o Preço Moda apareceu
+                    m_atac_serie = df_moda[df_moda['Vlr.Vare.Conc'] == v_moda_var]['Vlr.Atac.Conc.'].mode()
+                    v_moda_atac = m_atac_serie.iloc[0] if not m_atac_serie.empty else 0.0
+                else:
+                    v_moda_var, v_moda_atac, qtd_moda = 0.0, 0.0, 0
+            else:
+                v_moda_var, v_moda_atac, qtd_moda = 0.0, 0.0, 0
             
-            qtd_total = len(df_filt)
             min_varejo = df_filt['Vlr.Vare.Conc'].min() if not df_filt.empty and 'Vlr.Vare.Conc' in df_filt.columns else 0.0
             max_varejo = df_filt['Vlr.Vare.Conc'].max() if not df_filt.empty and 'Vlr.Vare.Conc' in df_filt.columns else 0.0
 
@@ -1102,11 +1205,28 @@ def tela_app_principal():
                 k_c1, k_c2, k_c3 = st.columns(3)
                 with k_c1: st.markdown(f"<div style='{kpi_style}'><div style='{kpi_t_style}'>MODA VAREJO</div><div style='{kpi_v_style}'>{v_moda_var:,.2f}</div></div>", unsafe_allow_html=True)
                 with k_c2: st.markdown(f"<div style='{kpi_style}'><div style='{kpi_t_style}'>MODA ATACADO</div><div style='{kpi_v_style}'>{v_moda_atac:,.2f}</div></div>", unsafe_allow_html=True)
-                with k_c3: st.markdown(f"<div style='{kpi_style}'><div style='{kpi_t_style}'>QTD. COLETAS</div><div style='{kpi_v_style}'>{qtd_total}</div></div>", unsafe_allow_html=True)
+                with k_c3: st.markdown(f"<div style='{kpi_style}'><div style='{kpi_t_style}'>QTD. COLETAS</div><div style='{kpi_v_style}'>{qtd_moda}</div></div>", unsafe_allow_html=True)
                 st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
                 k_c4, k_c5 = st.columns(2)
-                with k_c4: st.markdown(f"<div style='{kpi_style}'><div style='{kpi_t_style}'>MENOR PREÇO VAREJO</div><div style='{kpi_v_style}'>{min_varejo:,.2f}</div></div>", unsafe_allow_html=True)
-                with k_c5: st.markdown(f"<div style='{kpi_style}'><div style='{kpi_t_style}'>MAIOR PREÇO VAREJO</div><div style='{kpi_v_style}'>{max_varejo:,.2f}</div></div>", unsafe_allow_html=True)
+                with k_c4: 
+                    st.markdown(f"<div style='{kpi_style}'><div style='{kpi_t_style}'>MENOR PREÇO VAREJO</div><div style='{kpi_v_style}'>{min_varejo:,.2f}</div></div>", unsafe_allow_html=True)
+                    if not df_filt.empty and 'Vlr.Vare.Conc' in df_filt.columns and min_varejo > 0:
+                        idx_min = df_filt['Vlr.Vare.Conc'].idxmin()
+                        linha_min = df_filt.loc[idx_min]
+                        dt_min = linha_min['PESQUISADATA'] if 'PESQUISADATA' in linha_min else linha_min['PESQUISADATA_DT'].strftime('%d/%m/%Y')
+                        conc_min = linha_min['FILIALCONCORRENTE']
+                        with st.popover("🔍 Ver Origem", use_container_width=True):
+                            st.markdown(f"**Data:** {dt_min}<br>**Concorrente:** {conc_min}", unsafe_allow_html=True)
+                            
+                with k_c5: 
+                    st.markdown(f"<div style='{kpi_style}'><div style='{kpi_t_style}'>MAIOR PREÇO VAREJO</div><div style='{kpi_v_style}'>{max_varejo:,.2f}</div></div>", unsafe_allow_html=True)
+                    if not df_filt.empty and 'Vlr.Vare.Conc' in df_filt.columns and max_varejo > 0:
+                        idx_max = df_filt['Vlr.Vare.Conc'].idxmax()
+                        linha_max = df_filt.loc[idx_max]
+                        dt_max = linha_max['PESQUISADATA'] if 'PESQUISADATA' in linha_max else linha_max['PESQUISADATA_DT'].strftime('%d/%m/%Y')
+                        conc_max = linha_max['FILIALCONCORRENTE']
+                        with st.popover("🔍 Ver Origem", use_container_width=True):
+                            st.markdown(f"**Data:** {dt_max}<br>**Concorrente:** {conc_max}", unsafe_allow_html=True)
 
             with col_tabela:
                 if not df_filt.empty and 'EMPRESA_CONC' in df_filt.columns:
@@ -1132,12 +1252,14 @@ def tela_app_principal():
                 cols_agg = [c for c in ['Vlr. Varejo PDV', 'Vlr. Atacado PDV', 'Vlr.Vare.Conc', 'Vlr.Atac.Conc.'] if c in df_filt.columns]
 
                 if cols_agg:
-                    df_plot = df_filt.groupby('PESQUISADATA_DT')[cols_agg].mean().reset_index()
+                    # ALTERAÇÃO: Agrupamento por MÍNIMO (min) em vez de MÉDIA (mean)
+                    df_plot = df_filt.groupby('PESQUISADATA_DT')[cols_agg].min().reset_index()
                     df_plot = df_plot.sort_values('PESQUISADATA_DT')
                     df_plot['DATA_STR'] = df_plot['PESQUISADATA_DT'].dt.strftime('%d/%m/%Y')
                     
                     if 'FILIALCONCORRENTE' in df_filt.columns and 'Vlr.Vare.Conc' in df_filt.columns:
-                        df_hov = df_filt.groupby(['PESQUISADATA_DT', 'FILIALCONCORRENTE'])['Vlr.Vare.Conc'].mean().reset_index()
+                        # O Hover agora também busca o menor preço de cada concorrente no dia
+                        df_hov = df_filt.groupby(['PESQUISADATA_DT', 'FILIALCONCORRENTE'])['Vlr.Vare.Conc'].min().reset_index()
                         df_hov['conc_str'] = df_hov['FILIALCONCORRENTE'].str[:30] + ": <b>R$ " + df_hov['Vlr.Vare.Conc'].apply(lambda x: f"{x:,.2f}".replace('.', ',')) + "</b>"
                         df_hov_str = df_hov.groupby('PESQUISADATA_DT')['conc_str'].apply(lambda x: '<br>'.join(x)).reset_index(name='HOVER_CONC')
                         df_plot = pd.merge(df_plot, df_hov_str, on='PESQUISADATA_DT', how='left')
@@ -1152,7 +1274,7 @@ def tela_app_principal():
                     def desenhar_traco_e_flag(fig, df, coluna, nome_label, cor, orientacao_flag, exibe_detalhes=False):
                         if coluna in df.columns and not df[coluna].isnull().all():
                             custom_data = df['HOVER_CONC'] if exibe_detalhes and 'HOVER_CONC' in df.columns else [''] * len(df)
-                            hover_temp = f"R$ %{{y:,.2f}}<br><br><span style='font-size:12px;color:#888;'>Detalhes Média Concorrentes:</span><br><span style='font-size:14px; font-weight: 500;'>%{{customdata}}</span><extra></extra>" if exibe_detalhes else f"R$ %{{y:,.2f}}<extra></extra>"
+                            hover_temp = f"R$ %{{y:,.2f}}<br><br><span style='font-size:12px;color:#888;'>Detalhes Mínimo Concorrentes:</span><br><span style='font-size:14px; font-weight: 500;'>%{{customdata}}</span><extra></extra>" if exibe_detalhes else f"R$ %{{y:,.2f}}<extra></extra>"
                             
                             fig.add_trace(go.Scatter(
                                 x=df['DATA_STR'], y=df[coluna], mode='lines+markers+text',
@@ -1173,7 +1295,7 @@ def tela_app_principal():
                                 bgcolor=cor, borderpad=3, borderwidth=1, opacity=0.95, bordercolor='white'
                             )
 
-                    titulo_graf = f"Evolução de Preços - {f_prod}" if f_prod != "Todos" else "Evolução Média de Preços (Visão Geral)"
+                    titulo_graf = f"Evolução do Menor Preço - {f_prod}" if f_prod != "Todos" else "Evolução do Menor Preço (Visão Geral)"
                     texto_titulo = "#1D1D1D" if st.session_state.tema == "Light" else "#FFFFFF"
                     grid_color = "rgba(150,150,150,0.15)"
 
