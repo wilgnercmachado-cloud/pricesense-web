@@ -784,60 +784,27 @@ def tela_app_principal():
             campanhas_disp = ["Todas"] + sorted(df['ARQUIVO ORIGEM'].unique().tolist())
             filiais_disp = ["Todas"] + sorted(df['FILIAL ABREV'].unique().astype(str))
 
-            col_filt, col_edit = st.columns([1.5, 1])
-            with col_filt:
-                st.markdown("<h2>Filtros Dinâmicos</h2>", unsafe_allow_html=True)
-                f_c1, f_c2 = st.columns(2)
-                f_filial = f_c1.multiselect("Filial:", filiais_disp[1:], wrap=True)
-                f_prod = f_c2.text_input("Produto (Cód):", placeholder="Código Exato")
-                
-                f_c3, f_c4, f_c5 = st.columns([1, 1, 1])
-                f_ini = f_c3.selectbox("Data Início:", datas_ini_disp)
-                f_fim = f_c4.selectbox("Data Fim:", datas_fim_disp)
-                status_unicos = sorted(df['Status Sistema'].dropna().unique().tolist())
-                f_status = f_c5.multiselect("Status:", status_unicos, default=status_unicos)
-
-            with col_edit:
-                st.markdown("<h2>Alteração em Lote</h2>", unsafe_allow_html=True)
-                e_c1, e_c2 = st.columns(2)
-                e_camp = e_c1.selectbox("Campanha p/ Alterar:", campanhas_disp)
-                e_filial = e_c2.selectbox("Filial p/ Alterar:", filiais_disp)
-                
-                e_c3, e_c4 = st.columns(2)
-                novo_ini = e_c3.selectbox("Novo Início:", datas_ini_disp[1:]) 
-                novo_fim = e_c4.selectbox("Novo Fim:", datas_fim_disp[1:])
-                
-                st.write("")
-                if st.button("Aplicar Alteração", type="primary", use_container_width=True):
-                    mask = pd.Series(True, index=df.index)
-                    if e_camp != "Todas": 
-                        mask &= (df['ARQUIVO ORIGEM'] == e_camp)
-                    if e_filial != "Todas": 
-                        mask &= (df['FILIAL ABREV'] == e_filial)
-                        
-                    if mask.any():
-                        df.loc[mask, 'INICIO'] = novo_ini
-                        df.loc[mask, 'FIM'] = novo_fim
-                        
-                        dt_i = pd.to_datetime(novo_ini, format='%d/%m/%Y')
-                        dt_f = pd.to_datetime(novo_fim, format='%d/%m/%Y')
-                        df.loc[mask, 'MIDIA'] = 1 if (dt_f - dt_i).days < 4 else 2
-                        
-                        st.session_state.linhas_alteradas.update(df[mask].index.tolist())
-                        st.session_state.df_promo_processado = df
-                        st.rerun()
+            # ================= NOVA ESTRUTURA DE FILTROS =================
+            st.markdown("<h2>Filtros Dinâmicos</h2>", unsafe_allow_html=True)
+            f_c1, f_c2, f_c3 = st.columns(3)
+            f_camp = f_c1.selectbox("Campanha:", campanhas_disp)
+            f_filial = f_c2.multiselect("Filial:", filiais_disp[1:], wrap=True)
+            f_prod = f_c3.text_input("Produto (Cód):", placeholder="Código Exato")
+            
+            f_c4, f_c5, f_c6 = st.columns(3)
+            f_ini = f_c4.selectbox("Data Início:", datas_ini_disp)
+            f_fim = f_c5.selectbox("Data Fim:", datas_fim_disp)
+            
+            status_unicos = sorted(df['Status Sistema'].dropna().unique().tolist())
+            f_status = f_c6.multiselect("Status:", status_unicos, default=status_unicos)
 
             df_filtrado = df.copy()
-            if f_filial: 
-                df_filtrado = df_filtrado[df_filtrado['FILIAL ABREV'].isin(f_filial)]
-            if f_prod: 
-                df_filtrado = df_filtrado[df_filtrado['SEQPRODUTO'].astype(str).str.contains(f_prod.strip())]
-            if f_ini != "Todas": 
-                df_filtrado = df_filtrado[df_filtrado['INICIO'] == f_ini]
-            if f_fim != "Todas": 
-                df_filtrado = df_filtrado[df_filtrado['FIM'] == f_fim]
-            if f_status: 
-                df_filtrado = df_filtrado[df_filtrado['Status Sistema'].isin(f_status)]
+            if f_camp != "Todas": df_filtrado = df_filtrado[df_filtrado['ARQUIVO ORIGEM'] == f_camp]
+            if f_filial: df_filtrado = df_filtrado[df_filtrado['FILIAL ABREV'].isin(f_filial)]
+            if f_prod: df_filtrado = df_filtrado[df_filtrado['SEQPRODUTO'].astype(str).str.contains(f_prod.strip())]
+            if f_ini != "Todas": df_filtrado = df_filtrado[df_filtrado['INICIO'] == f_ini]
+            if f_fim != "Todas": df_filtrado = df_filtrado[df_filtrado['FIM'] == f_fim]
+            if f_status: df_filtrado = df_filtrado[df_filtrado['Status Sistema'].isin(f_status)]
 
             st.markdown("<br>", unsafe_allow_html=True)
             col_kpis, col_grafico = st.columns([2, 1.2])
@@ -847,12 +814,9 @@ def tela_app_principal():
             
             with col_kpis:
                 c1, c2, c3 = st.columns(3)
-                with c1.container(border=True): 
-                    st.metric("Linhas Selecionadas", f"{total_linhas}")
-                with c2.container(border=True): 
-                    st.metric("Itens Válidos", f"{validos}")
-                with c3.container(border=True): 
-                    st.metric("Alertas Críticos", f"{críticos}")
+                with c1.container(border=True): st.metric("Linhas Selecionadas", f"{total_linhas}")
+                with c2.container(border=True): st.metric("Itens Válidos", f"{validos}")
+                with c3.container(border=True): st.metric("Alertas Críticos", f"{críticos}")
             
             with col_grafico:
                 if total_linhas > 0:
@@ -862,8 +826,9 @@ def tela_app_principal():
                         color_discrete_map={"VÁLIDO": "#27AE60", "CRÍTICO": "#E20000"}
                     )
                     fig.update_layout(margin=dict(t=10, b=10, l=10, r=10), showlegend=True, height=140, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-                    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+                    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}, key="pie_promo_status")
 
+            # ================= EDIÇÃO E POP-UP INTELIGENTE =================
             st.markdown("---")
             st.markdown("<h2>Edição Direta na Grade</h2>", unsafe_allow_html=True)
             
@@ -888,6 +853,48 @@ def tela_app_principal():
                     return ['background-color: #FEF9E7; color: #7D6608; font-weight: bold;'] * len(row)
                 return [''] * len(row)
 
+            # --- POP-UP MODAL ---
+            @st.dialog("⚠️ Alteração de Data Detectada")
+            def modal_confirmar_datas(idx_real, campanha, n_ini, n_fim, n_preco):
+                st.write(f"Modificou a data de um produto da campanha **{campanha}**.")
+                st.markdown(f"**Novo Período Inserido:** {n_ini} até {n_fim}")
+                st.write("Deseja replicar esta data para **TODA** a campanha ou alterar **APENAS** este artigo?")
+                
+                c_todas, c_uma, c_canc = st.columns(3)
+                if c_todas.button("TODA a Campanha", type="primary", use_container_width=True):
+                    df_mem = st.session_state.df_promo_processado
+                    df_mem.loc[idx_real, 'PRECO_NUM'] = n_preco
+                    
+                    mask_camp = df_mem['ARQUIVO ORIGEM'] == campanha
+                    df_mem.loc[mask_camp, 'INICIO'] = n_ini
+                    df_mem.loc[mask_camp, 'FIM'] = n_fim
+                    df_mem.loc[mask_camp, 'ALTERADO_MANUAL'] = 'SIM'
+                    
+                    df_mem['Status Sistema'] = validar_status_conflitos(df_mem)
+                    st.session_state.df_promo_processado = df_mem
+                    st.session_state.pending_promo_edit = False
+                    st.rerun()
+                    
+                if c_uma.button("APENAS este item", use_container_width=True):
+                    df_mem = st.session_state.df_promo_processado
+                    df_mem.loc[idx_real, 'PRECO_NUM'] = n_preco
+                    df_mem.loc[idx_real, 'INICIO'] = n_ini
+                    df_mem.loc[idx_real, 'FIM'] = n_fim
+                    df_mem.loc[idx_real, 'ALTERADO_MANUAL'] = 'SIM'
+                    
+                    df_mem['Status Sistema'] = validar_status_conflitos(df_mem)
+                    st.session_state.df_promo_processado = df_mem
+                    st.session_state.pending_promo_edit = False
+                    st.rerun()
+
+                if c_canc.button("Desfazer / Cancelar", use_container_width=True):
+                    st.session_state.pending_promo_edit = False
+                    st.rerun()
+
+            # Variável de Controle de Estado
+            if 'pending_promo_edit' not in st.session_state: st.session_state.pending_promo_edit = False
+
+            # --- GRADE INTERATIVA (SEM TRAVA DE ALTURA) ---
             edited_df = st.data_editor(
                 df_vis.style.apply(estilizar_tabela, axis=1), 
                 column_config={
@@ -901,27 +908,44 @@ def tela_app_principal():
                     "Status": st.column_config.TextColumn(disabled=True)
                 }, 
                 use_container_width=True, 
-                hide_index=True, 
-                height=350
+                hide_index=True
             )
 
-            if not edited_df['Preço_Temp'].equals(df_vis['Preço_Temp']) or not edited_df['Data Início'].equals(df_vis['Data Início']) or not edited_df['Data Fim'].equals(df_vis['Data Fim']):
+            # --- DETECTOR DE ALTERAÇÃO ---
+            if not st.session_state.pending_promo_edit and (not edited_df['Preço_Temp'].equals(df_vis['Preço_Temp']) or not edited_df['Data Início'].equals(df_vis['Data Início']) or not edited_df['Data Fim'].equals(df_vis['Data Fim'])):
                 diff_preco = edited_df['Preço_Temp'] != df_vis['Preço_Temp']
                 diff_ini = edited_df['Data Início'] != df_vis['Data Início']
                 diff_fim = edited_df['Data Fim'] != df_vis['Data Fim']
                 diff = diff_preco | diff_ini | diff_fim
                 
-                df_memoria = st.session_state.df_promo_processado
+                idx_modificado = diff[diff].index[0]
                 
-                for idx in diff[diff].index:
-                    if diff_preco.loc[idx]: df_memoria.loc[idx, 'PRECO_NUM'] = edited_df.loc[idx, 'Preço_Temp']
-                    if diff_ini.loc[idx]: df_memoria.loc[idx, 'INICIO'] = edited_df.loc[idx, 'Data Início']
-                    if diff_fim.loc[idx]: df_memoria.loc[idx, 'FIM'] = edited_df.loc[idx, 'Data Fim']
-                    df_memoria.loc[idx, 'ALTERADO_MANUAL'] = 'SIM'
-                    
-                df_memoria['Status Sistema'] = validar_status_conflitos(df_memoria)
-                st.session_state.df_promo_processado = df_memoria
-                st.rerun()
+                # SE ALTEROU DATA: Prepara dados e engatilha o Modal Pop-up!
+                if diff_ini.loc[idx_modificado] or diff_fim.loc[idx_modificado]:
+                    st.session_state.pending_promo_edit = True
+                    st.session_state.promo_edit_data = {
+                        'idx': idx_modificado,
+                        'campanha': df_vis.loc[idx_modificado, 'Campanha'],
+                        'ini': edited_df.loc[idx_modificado, 'Data Início'],
+                        'fim': edited_df.loc[idx_modificado, 'Data Fim'],
+                        'preco': edited_df.loc[idx_modificado, 'Preço_Temp']
+                    }
+                    st.rerun()
+                else:
+                    # SE ALTEROU SÓ PREÇO: Salva silenciosamente
+                    df_memoria = st.session_state.df_promo_processado
+                    for idx in diff[diff].index:
+                        if diff_preco.loc[idx]: df_memoria.loc[idx, 'PRECO_NUM'] = edited_df.loc[idx, 'Preço_Temp']
+                        df_memoria.loc[idx, 'ALTERADO_MANUAL'] = 'SIM'
+                        
+                    df_memoria['Status Sistema'] = validar_status_conflitos(df_memoria)
+                    st.session_state.df_promo_processado = df_memoria
+                    st.rerun()
+
+            # Dispara a abertura do Modal Pop-up após o recarregamento
+            if st.session_state.pending_promo_edit:
+                dados = st.session_state.promo_edit_data
+                modal_confirmar_datas(dados['idx'], dados['campanha'], dados['ini'], dados['fim'], dados['preco'])
 
             st.markdown("<br>", unsafe_allow_html=True)
             tipo_operacao = st.selectbox("Selecione a Operação de Exportação:", ["1 - Aplicar Preço", "2 - Cancelar Preço"])
@@ -1147,9 +1171,24 @@ def tela_app_principal():
             # APLICAÇÃO GERAL DOS FILTROS DO USUÁRIO
             df_filt = df_m.copy()
             
-            # REGRA GLOBAL ABSOLUTA: Eliminar qualquer pesquisa <= 0.09
+            # 1. REGRA GLOBAL ABSOLUTA: Eliminar preços zerados ou irreais (<= 0.09)
             if 'Vlr.Vare.Conc' in df_filt.columns:
                 df_filt = df_filt[df_filt['Vlr.Vare.Conc'] > 0.09]
+
+            # 2. FILTRO INTELIGENTE ANTI-ANOMALIAS (Erros Grotescos de Digitação)
+            if not df_filt.empty and 'Vlr.Vare.Conc' in df_filt.columns:
+                # A. Corte por Margem Extrema (-60%)
+                if 'CustoMedio' in df_filt.columns and 'MargemConc' in df_filt.columns:
+                    mask_margem = (df_filt['CustoMedio'] <= 0.09) | (df_filt['MargemConc'] >= -0.60)
+                    df_filt = df_filt[mask_margem]
+                
+                # B. Corte por Desvio da Mediana (Dupla Proteção)
+                if 'PRODUTO' in df_filt.columns:
+                    # Calcula o preço central histórico do produto
+                    mediana_prod = df_filt.groupby('PRODUTO')['Vlr.Vare.Conc'].transform('median')
+                    # Aceita apenas preços que sejam no mínimo 40% e no máximo 300% do valor normal
+                    mask_anomalia = (df_filt['Vlr.Vare.Conc'] >= (mediana_prod * 0.40)) & (df_filt['Vlr.Vare.Conc'] <= (mediana_prod * 3.0))
+                    df_filt = df_filt[mask_anomalia]
 
             if f_prod != "Todos" and 'PRODUTO' in df_filt.columns: df_filt = df_filt[df_filt['PRODUTO'] == f_prod]
             if f_filial != "Todas" and 'FILIAL' in df_filt.columns: df_filt = df_filt[df_filt['FILIAL'] == f_filial]
