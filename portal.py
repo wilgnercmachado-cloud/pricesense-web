@@ -644,6 +644,32 @@ def tela_app_principal():
         df_clusters = carregar_de_para_clusters()
         mapa_lojas = carregar_mapa_lojas()
 
+        # MOTOR INTELIGENTE DE RESOLUÇÃO DE CONFLITOS
+        def validar_status_conflitos(df_alvo):
+            df_temp = df_alvo.copy()
+            df_temp['DT_I'] = pd.to_datetime(df_temp['INICIO'], format='%d/%m/%Y', errors='coerce')
+            df_temp['DT_F'] = pd.to_datetime(df_temp['FIM'], format='%d/%m/%Y', errors='coerce')
+            
+            # Ordenar garante que a linha do tempo seja lida cronologicamente
+            df_temp = df_temp.sort_values(by=['ID FILIAL', 'SEQPRODUTO', 'DT_I'])
+            
+            # Regra 1: Preços Diferentes exatos no mesmo período
+            df_temp['QTD_PRECOS'] = df_temp.groupby(['ID FILIAL', 'SEQPRODUTO', 'INICIO', 'FIM'])['PRECO_NUM'].transform('nunique')
+            
+            # Regra 2: Sobreposição de Campanhas (Datas conflitantes)
+            df_temp['FIM_MAX_ANT'] = df_temp.groupby(['ID FILIAL', 'SEQPRODUTO'])['DT_F'].transform(lambda x: x.shift().cummax())
+            df_temp['SOBREPOSTO'] = df_temp['DT_I'] <= df_temp['FIM_MAX_ANT']
+            # O transform('any') marca TODO o grupo (Filial+Produto) se houver qualquer colisão de datas neles
+            df_temp['TEM_CONFLITO_DATA'] = df_temp.groupby(['ID FILIAL', 'SEQPRODUTO'])['SOBREPOSTO'].transform('any')
+            
+            def definir_status(r):
+                if r['TEM_CONFLITO_DATA']: return "CRÍTICO - CONFLITO DATAS"
+                if r['QTD_PRECOS'] > 1: return "CRÍTICO - PREÇO DIVERGENTE"
+                return "VÁLIDO"
+                
+            df_temp['Status Sistema'] = df_temp.apply(definir_status, axis=1)
+            return df_temp.sort_index()['Status Sistema']
+
         if 'linhas_alteradas' not in st.session_state: 
             st.session_state.linhas_alteradas = set()
 
@@ -698,8 +724,8 @@ def tela_app_principal():
                         df_explodido['FILIAL ABREV'] = df_explodido['ID FILIAL'].astype(str).map(mapa_lojas).fillna(df_explodido['ID FILIAL'].astype(str))
 
                         if 'SEQPRODUTO' in df_explodido.columns:
-                            df_limpo = df_explodido.drop_duplicates(subset=['ID FILIAL', 'SEQPRODUTO', 'PRECO_NUM']).copy()
-                            df_limpo['Status Sistema'] = df_limpo.groupby(['ID FILIAL', 'SEQPRODUTO'])['PRECO_NUM'].transform('nunique').apply(lambda x: "CRÍTICO" if x > 1 else "VÁLIDO")
+                            df_limpo = df_explodido.drop_duplicates(subset=['ID FILIAL', 'SEQPRODUTO', 'PRECO_NUM', 'INICIO', 'FIM']).copy()
+                            df_limpo['Status Sistema'] = validar_status_conflitos(df_limpo)
                         else:
                             df_limpo = df_explodido.copy()
                             df_limpo['Status Sistema'] = "VÁLIDO"
@@ -768,7 +794,8 @@ def tela_app_principal():
                 f_c3, f_c4, f_c5 = st.columns([1, 1, 1])
                 f_ini = f_c3.selectbox("Data Início:", datas_ini_disp)
                 f_fim = f_c4.selectbox("Data Fim:", datas_fim_disp)
-                f_status = f_c5.multiselect("Status:", ["VÁLIDO", "CRÍTICO"], default=["VÁLIDO", "CRÍTICO"])
+                status_unicos = sorted(df['Status Sistema'].dropna().unique().tolist())
+                f_status = f_c5.multiselect("Status:", status_unicos, default=status_unicos)
 
             with col_edit:
                 st.markdown("<h2>Alteração em Lote</h2>", unsafe_allow_html=True)
@@ -868,8 +895,8 @@ def tela_app_principal():
                     "Campanha": st.column_config.TextColumn(disabled=True), 
                     "Filial Abrev": st.column_config.TextColumn(disabled=True), 
                     "ID Produto": st.column_config.TextColumn(disabled=True), 
-                    "Data Início": st.column_config.TextColumn(disabled=True), 
-                    "Data Fim": st.column_config.TextColumn(disabled=True), 
+                    "Data Início": st.column_config.TextColumn("Data Início (Edite p/ resolver)"), 
+                    "Data Fim": st.column_config.TextColumn("Data Fim (Edite p/ resolver)"), 
                     "Modificado": st.column_config.TextColumn(disabled=True), 
                     "Status": st.column_config.TextColumn(disabled=True)
                 }, 
@@ -878,15 +905,21 @@ def tela_app_principal():
                 height=350
             )
 
-            if not edited_df['Preço_Temp'].equals(df_vis['Preço_Temp']):
-                diff = edited_df['Preço_Temp'] != df_vis['Preço_Temp']
+            if not edited_df['Preço_Temp'].equals(df_vis['Preço_Temp']) or not edited_df['Data Início'].equals(df_vis['Data Início']) or not edited_df['Data Fim'].equals(df_vis['Data Fim']):
+                diff_preco = edited_df['Preço_Temp'] != df_vis['Preço_Temp']
+                diff_ini = edited_df['Data Início'] != df_vis['Data Início']
+                diff_fim = edited_df['Data Fim'] != df_vis['Data Fim']
+                diff = diff_preco | diff_ini | diff_fim
+                
                 df_memoria = st.session_state.df_promo_processado
                 
                 for idx in diff[diff].index:
-                    df_memoria.loc[idx, 'PRECO_NUM'] = edited_df.loc[idx, 'Preço_Temp']
+                    if diff_preco.loc[idx]: df_memoria.loc[idx, 'PRECO_NUM'] = edited_df.loc[idx, 'Preço_Temp']
+                    if diff_ini.loc[idx]: df_memoria.loc[idx, 'INICIO'] = edited_df.loc[idx, 'Data Início']
+                    if diff_fim.loc[idx]: df_memoria.loc[idx, 'FIM'] = edited_df.loc[idx, 'Data Fim']
                     df_memoria.loc[idx, 'ALTERADO_MANUAL'] = 'SIM'
                     
-                df_memoria['Status Sistema'] = df_memoria.groupby(['ID FILIAL', 'SEQPRODUTO'])['PRECO_NUM'].transform('nunique').apply(lambda x: "CRÍTICO" if x > 1 else "VÁLIDO")
+                df_memoria['Status Sistema'] = validar_status_conflitos(df_memoria)
                 st.session_state.df_promo_processado = df_memoria
                 st.rerun()
 
@@ -916,7 +949,7 @@ def tela_app_principal():
                 if críticos > 0: 
                     st.error("A Cópia está bloqueada. Filtre para 'VÁLIDO' ou corrija os itens críticos.")
                 else:
-                    df_export = df_filtrado.drop_duplicates(subset=['ID FILIAL', 'SEQPRODUTO', 'PRECO_NUM']).copy()
+                    df_export = df_filtrado.drop_duplicates(subset=['ID FILIAL', 'SEQPRODUTO', 'PRECO_NUM', 'INICIO', 'FIM']).copy()
                     
                     df_varejo = pd.DataFrame({
                         'ID Filial': df_export['ID FILIAL'], 
