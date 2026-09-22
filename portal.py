@@ -975,22 +975,40 @@ def tela_app_principal():
                 else:
                     df_export = df_filtrado.drop_duplicates(subset=['ID FILIAL', 'SEQPRODUTO', 'PRECO_NUM', 'INICIO', 'FIM']).copy()
                     
-                    df_varejo = pd.DataFrame({
-                        'ID Filial': df_export['ID FILIAL'], 
-                        'Tipo Preço': "1", 
-                        'Midia Preço': df_export['MIDIA'], 
-                        'ID Produto': df_export['SEQPRODUTO'], 
-                        'Preço': df_export['PRECO_NUM'].apply(lambda x: f"{x:.2f}".replace('.', ',')), 
-                        'Data Início': df_export['INICIO'], 
-                        'Data Fim': df_export['FIM'], 
-                        'Similar': 'NAO', 
-                        'Tipo Oper.': "1" if "1" in tipo_operacao else "2"
-                    })
+                    # CÁLCULO DINÂMICO DA MÍDIA (Garante a precisão +1 dia inclusivo)
+                    # Mesmo que o usuário mude a data na tabela, a cópia fará a reclassificação automática!
+                    d_ini = pd.to_datetime(df_export['INICIO'], format='%d/%m/%Y', errors='coerce')
+                    d_fim = pd.to_datetime(df_export['FIM'], format='%d/%m/%Y', errors='coerce')
+                    df_export['MIDIA_CALCULADA'] = np.where((d_fim - d_ini).dt.days + 1 >= 4, 2, 1)
                     
+                    if "1" in tipo_operacao:
+                        # FORMATO 1: APLICAR PREÇO (8 Colunas)
+                        df_varejo = pd.DataFrame({
+                            'Filial': df_export['ID FILIAL'], 
+                            'Tipo_Preco': "1", 
+                            'Tipo_Midia': df_export['MIDIA_CALCULADA'], 
+                            'Motivo_Midia': 7, 
+                            'Produto': df_export['SEQPRODUTO'], 
+                            'Preco': df_export['PRECO_NUM'].apply(lambda x: f"{x:.2f}".replace('.', ',')), 
+                            'Inicio': df_export['INICIO'], 
+                            'Fim': df_export['FIM']
+                        })
+                    else:
+                        # FORMATO 2: CANCELAR PREÇO (4 Colunas - Corrigido para trazer a Mídia calculada)
+                        df_varejo = pd.DataFrame({
+                            'Filial': df_export['ID FILIAL'], 
+                            'Tipo_Preco': "1", 
+                            'Tipo_Midia': df_export['MIDIA_CALCULADA'], 
+                            'Produto': df_export['SEQPRODUTO']
+                        })
+                    
+                    # Duplica para a visão de Atacado
                     df_atacado = df_varejo.copy()
-                    df_atacado['Tipo Preço'] = "2"
+                    df_atacado['Tipo_Preco'] = "2"
                     
-                    df_import_final = pd.concat([df_varejo, df_atacado]).sort_values(by=['ID Filial', 'ID Produto', 'Tipo Preço'])
+                    # Junta tudo e ordena para a importação
+                    df_import_final = pd.concat([df_varejo, df_atacado]).sort_values(by=['Filial', 'Produto', 'Tipo_Preco'])
+                    
                     txt_copy = df_import_final.to_csv(sep='\t', index=False, header=False)
                     b64_copy = base64.b64encode(txt_copy.encode('utf-8')).decode('utf-8')
                     
