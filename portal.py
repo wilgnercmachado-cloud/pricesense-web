@@ -647,27 +647,39 @@ def tela_app_principal():
         # MOTOR INTELIGENTE DE RESOLUÇÃO DE CONFLITOS
         def validar_status_conflitos(df_alvo):
             df_temp = df_alvo.copy()
-            df_temp['DT_I'] = pd.to_datetime(df_temp['INICIO'], format='%d/%m/%Y', errors='coerce')
-            df_temp['DT_F'] = pd.to_datetime(df_temp['FIM'], format='%d/%m/%Y', errors='coerce')
             
-            # Ordenar garante que a linha do tempo seja lida cronologicamente
-            df_temp = df_temp.sort_values(by=['ID FILIAL', 'SEQPRODUTO', 'DT_I'])
+            # 1. Converte rigorosamente para Data Matemática
+            df_temp['DT_I_MATH'] = pd.to_datetime(df_temp['INICIO'], format='%d/%m/%Y', errors='coerce')
+            df_temp['DT_F_MATH'] = pd.to_datetime(df_temp['FIM'], format='%d/%m/%Y', errors='coerce')
             
-            # Regra 1: Preços Diferentes exatos no mesmo período
-            df_temp['QTD_PRECOS'] = df_temp.groupby(['ID FILIAL', 'SEQPRODUTO', 'INICIO', 'FIM'])['PRECO_NUM'].transform('nunique')
+            # 2. Ordena a linha do tempo cronologicamente
+            df_temp = df_temp.sort_values(by=['ID FILIAL', 'SEQPRODUTO', 'DT_I_MATH'])
             
-            # Regra 2: Sobreposição de Campanhas (Datas conflitantes)
-            df_temp['FIM_MAX_ANT'] = df_temp.groupby(['ID FILIAL', 'SEQPRODUTO'])['DT_F'].transform(lambda x: x.shift().cummax())
-            df_temp['SOBREPOSTO'] = df_temp['DT_I'] <= df_temp['FIM_MAX_ANT']
-            # O transform('any') marca TODO o grupo (Filial+Produto) se houver qualquer colisão de datas neles
-            df_temp['TEM_CONFLITO_DATA'] = df_temp.groupby(['ID FILIAL', 'SEQPRODUTO'])['SOBREPOSTO'].transform('any')
+            # Regra 1: CRÍTICO - ERRO DE PREÇO (Mesmo produto, MESMA CAMPANHA, mesma filial, mesmo período = preços diferentes)
+            df_temp['QTD_PRECOS'] = df_temp.groupby(['ID FILIAL', 'SEQPRODUTO', 'CAMPANHA', 'INICIO', 'FIM'])['PRECO_NUM'].transform('nunique')
+            
+            # Regra 2: CRÍTICO - CONFLITOS DE DATAS (Mesmo produto, mesma filial, cruzamento de datas entre campanhas distintas)
+            df_temp['FIM_MAX_ANT'] = df_temp.groupby(['ID FILIAL', 'SEQPRODUTO'])['DT_F_MATH'].transform(lambda x: x.shift().cummax())
+            df_temp['SOU_INVASOR'] = df_temp['DT_I_MATH'] <= df_temp['FIM_MAX_ANT']
+            
+            df_temp['INI_PROXIMO'] = df_temp.groupby(['ID FILIAL', 'SEQPRODUTO'])['DT_I_MATH'].shift(-1)
+            df_temp['FUI_INVADIDO'] = df_temp['DT_F_MATH'] >= df_temp['INI_PROXIMO']
+            
+            df_temp['TEM_CONFLITO_DATA'] = df_temp['SOU_INVASOR'] | df_temp['FUI_INVADIDO']
             
             def definir_status(r):
-                if r['TEM_CONFLITO_DATA']: return "CRÍTICO - CONFLITO DATAS"
-                if r['QTD_PRECOS'] > 1: return "CRÍTICO - PREÇO DIVERGENTE"
+                # Prioridade 1: Preços divergentes dentro da MESMA campanha
+                if r['QTD_PRECOS'] > 1: return "CRÍTICO - ERRO DE PREÇO"
+                # Prioridade 2: Cruzamento de datas (Campanhas distintas sobrepostas)
+                if r['TEM_CONFLITO_DATA']: return "CRÍTICO - CONFLITOS DE DATAS"
                 return "VÁLIDO"
                 
             df_temp['Status Sistema'] = df_temp.apply(definir_status, axis=1)
+            
+            # Limpa as colunas auxiliares de cálculo
+            cols_limpar = ['DT_I_MATH', 'DT_F_MATH', 'FIM_MAX_ANT', 'SOU_INVASOR', 'INI_PROXIMO', 'FUI_INVADIDO', 'QTD_PRECOS', 'TEM_CONFLITO_DATA']
+            df_temp.drop(columns=cols_limpar, inplace=True, errors='ignore')
+            
             return df_temp.sort_index()['Status Sistema']
 
         if 'linhas_alteradas' not in st.session_state: 
@@ -693,6 +705,12 @@ def tela_app_principal():
                     if dfs:
                         df_bruto = pd.concat(dfs, ignore_index=True)
                         df_bruto.rename(columns=lambda x: str(x).strip().upper(), inplace=True)
+                        
+                        # --- ESCUDO ANTI-ERRO HUMANO ---
+                        if 'INICIO' not in df_bruto.columns or 'FIM' not in df_bruto.columns:
+                            st.error("⚠️ ALERTA: O arquivo não possui colunas de data ('INICIO' e 'FIM'). Você anexou um arquivo de Pesquisa na aba de Promoções por engano?")
+                            st.stop() # Para o processamento aqui suavemente
+                        # -------------------------------
 
                         for col_data in ['INICIO', 'FIM']:
                             if col_data in df_bruto.columns: 
@@ -779,25 +797,41 @@ def tela_app_principal():
                             else: 
                                 st.error("O ID da Filial é obrigatório.")
 
-            datas_ini_disp = ["Todas"] + sorted(df['INICIO'].dropna().unique().tolist())
-            datas_fim_disp = ["Todas"] + sorted(df['FIM'].dropna().unique().tolist())
-            campanhas_disp = ["Todas"] + sorted(df['ARQUIVO ORIGEM'].unique().tolist())
-            filiais_disp = ["Todas"] + sorted(df['FILIAL ABREV'].unique().astype(str))
-
-            # ================= NOVA ESTRUTURA DE FILTROS =================
+            # ================= NOVA ESTRUTURA DE FILTROS (CASCATA) =================
             st.markdown("<h2>Filtros Dinâmicos</h2>", unsafe_allow_html=True)
+            
             f_c1, f_c2, f_c3 = st.columns(3)
+            
+            # 1. Filtro Mestre (Campanha - que na sua base chama-se ARQUIVO ORIGEM)
+            campanhas_disp = ["Todas"] + sorted(df['ARQUIVO ORIGEM'].dropna().unique().tolist())
             f_camp = f_c1.selectbox("Campanha:", campanhas_disp)
-            f_filial = f_c2.multiselect("Filial:", filiais_disp[1:], wrap=True)
+            
+            # --- MOTOR DA CASCATA ---
+            # Se uma campanha for escolhida, os próximos filtros só leem as opções dela!
+            if f_camp != "Todas":
+                df_opcoes = df[df['ARQUIVO ORIGEM'] == f_camp]
+            else:
+                df_opcoes = df.copy()
+            # ------------------------
+            
+            # 2. Filtros Subordinados (Bebem da fonte filtrada 'df_opcoes')
+            filiais_disp = sorted(df_opcoes['FILIAL ABREV'].dropna().unique().astype(str).tolist())
+            f_filial = f_c2.multiselect("Filial:", filiais_disp, wrap=True)
+            
             f_prod = f_c3.text_input("Produto (Cód):", placeholder="Código Exato")
             
             f_c4, f_c5, f_c6 = st.columns(3)
+            
+            datas_ini_disp = ["Todas"] + sorted(df_opcoes['INICIO'].dropna().unique().tolist())
             f_ini = f_c4.selectbox("Data Início:", datas_ini_disp)
+            
+            datas_fim_disp = ["Todas"] + sorted(df_opcoes['FIM'].dropna().unique().tolist())
             f_fim = f_c5.selectbox("Data Fim:", datas_fim_disp)
             
-            status_unicos = sorted(df['Status Sistema'].dropna().unique().tolist())
+            status_unicos = sorted(df_opcoes['Status Sistema'].dropna().unique().tolist())
             f_status = f_c6.multiselect("Status:", status_unicos, default=status_unicos)
 
+            # 3. Aplicação Definitiva (Aplica todas as escolhas para gerar a tabela da tela)
             df_filtrado = df.copy()
             if f_camp != "Todas": df_filtrado = df_filtrado[df_filtrado['ARQUIVO ORIGEM'] == f_camp]
             if f_filial: df_filtrado = df_filtrado[df_filtrado['FILIAL ABREV'].isin(f_filial)]
@@ -805,6 +839,7 @@ def tela_app_principal():
             if f_ini != "Todas": df_filtrado = df_filtrado[df_filtrado['INICIO'] == f_ini]
             if f_fim != "Todas": df_filtrado = df_filtrado[df_filtrado['FIM'] == f_fim]
             if f_status: df_filtrado = df_filtrado[df_filtrado['Status Sistema'].isin(f_status)]
+            # =========================================================================
 
             st.markdown("<br>", unsafe_allow_html=True)
             col_kpis, col_grafico = st.columns([2, 1.2])
@@ -1032,17 +1067,58 @@ def tela_app_principal():
                     " class="b">Copiar Padrão Importação</button>
                     """, height=42)
 
-    # ================= MÓDULO NOVO: PESQUISA DE MERCADO =================
     elif menu == "Pesquisa de Mercado":
-        import plotly.graph_objects as go
-        
         st.markdown("<h1>Pesquisa de Mercado (BI)</h1>", unsafe_allow_html=True)
         st.markdown("Análise histórica de preços e concorrência.")
         st.info("💡 **Instrução:** Extraia a pesquisa da **rotina 1067** (aba *'pesquisa extração'*). Indique um período de **no mínimo 20 dias** para montar o preço moda de mercado com precisão.")
 
+        # ================= MOTOR DE DIMENSÕES (SUPABASE) =================
+        @st.cache_data(ttl=600)
+        def carregar_dimensoes_produtos():
+            try:
+                # Puxa os dados do Supabase
+                resp_prod = supabase.table('dim_produto').select('*').execute()
+                resp_forn = supabase.table('dim_fornecedor').select('*').execute()
+                
+                if not resp_prod.data or not resp_forn.data:
+                    return pd.DataFrame()
+                
+                df_p = pd.DataFrame(resp_prod.data)
+                df_f = pd.DataFrame(resp_forn.data)
+                
+                # Exibe as colunas reais no terminal/logs para sabermos os nomes exatos se precisar
+                # st.write("Colunas dim_produto:", df_p.columns.tolist())
+                # st.write("Colunas dim_fornecedor:", df_f.columns.tolist())
+                
+                # Padroniza todas as colunas para minúsculas para evitar erros de digitação (ex: Id_Produto vs id_produto)
+                df_p.columns = [c.lower().strip() for c in df_p.columns]
+                df_f.columns = [c.lower().strip() for c in df_f.columns]
+                
+                # Converte os IDs estritamente para string sem casas decimais para garantir o match exato
+                df_p['id_produto'] = df_p['id_produto'].astype(str).str.split('.').str[0].str.strip()
+                df_p['id_fornecedor'] = df_p['id_fornecedor'].astype(str).str.split('.').str[0].str.strip()
+                df_f['id_fornecedor'] = df_f['id_fornecedor'].astype(str).str.split('.').str[0].str.strip()
+                
+                # Realiza o merge utilizando strings em ambos os lados
+                df_dim = pd.merge(df_p, df_f, on='id_fornecedor', how='left')
+                return df_dim
+            except Exception as e:
+                st.error(f"❌ Erro no motor de dimensões: {e}")
+                return pd.DataFrame()
+        # =================================================================
+
         arquivo_pesquisa = st.file_uploader("Arraste ou selecione a base de pesquisa (CSV separado por '|' ou formato Excel)", type=['csv', 'xlsx', 'xls'])
 
+        # =====================================================================
+        # ⚡ SISTEMA DE CACHE INTELIGENTE (ALTA PERFORMANCE) ⚡
+        # =====================================================================
+        precisa_processar = False
         if arquivo_pesquisa:
+            # Só autoriza o processamento se o ficheiro for diferente do que já está na memória
+            if st.session_state.get('arquivo_pesquisa_nome') != arquivo_pesquisa.name:
+                precisa_processar = True
+                
+        if precisa_processar:
             with st.spinner("Limpando, Mesclando Dimensões e Processando Inteligência..."):
                 try:
                     # 1. Leitura Dinâmica (Trata CSV com Pipe ou Excel nativo)
@@ -1072,6 +1148,89 @@ def tela_app_principal():
                         'TIPO PREÇO': 'Tipo'
                     }
                     df_pesq.rename(columns=mapa_colunas, inplace=True)
+
+                    # =======================================================
+                    # 2.5 ENRIQUECIMENTO DE DADOS: MAPA NUMÉRICO ABSOLUTO E REGEX
+                    # =======================================================
+                    if 'PRODUTO' in df_pesq.columns:
+                        import time
+                        
+                        # 1. Extração Balística de Números (Regex pega SÓ os dígitos do código, ignora letras e espaços)
+                        df_pesq['CHAVE_NUM'] = df_pesq['PRODUTO'].astype(str).str.extract(r'(\d+)')[0]
+                        df_pesq['CHAVE_NUM'] = pd.to_numeric(df_pesq['CHAVE_NUM'], errors='coerce')
+                        
+                        codigos_validos = df_pesq['CHAVE_NUM'].dropna().astype(int).unique().tolist()
+                        
+                        if codigos_validos:
+                            with st.status(f"🔄 Extraindo {len(codigos_validos)} produtos da nuvem...", expanded=True) as status:
+                                dados_produtos = []
+                                for i in range(0, len(codigos_validos), 300):
+                                    lote = codigos_validos[i:i + 300]
+                                    try:
+                                        resp = supabase.table('dim_produto').select('id_produto, id_fornecedor, categoria_comercial').in_('id_produto', lote).execute()
+                                        if resp.data: dados_produtos.extend(resp.data)
+                                    except Exception:
+                                        pass
+                                    time.sleep(0.05)
+                                
+                                if dados_produtos:
+                                    df_p = pd.DataFrame(dados_produtos)
+                                    df_p['CHAVE_NUM'] = pd.to_numeric(df_p['id_produto'], errors='coerce')
+                                    df_p['FORN_NUM'] = pd.to_numeric(df_p['id_fornecedor'], errors='coerce')
+                                    
+                                    forn_validos = df_p['FORN_NUM'].dropna().astype(int).unique().tolist()
+                                    dados_fornecedores = []
+                                    
+                                    if forn_validos:
+                                        status.update(label=f"🔄 Buscando {len(forn_validos)} fornecedores...", state="running")
+                                        for i in range(0, len(forn_validos), 300):
+                                            lote_f = forn_validos[i:i + 300]
+                                            try:
+                                                resp_f = supabase.table('dim_fornecedor').select('id_fornecedor, nome_grupo_empresarial').in_('id_fornecedor', lote_f).execute()
+                                                if resp_f.data: dados_fornecedores.extend(resp_f.data)
+                                            except Exception:
+                                                pass
+                                            time.sleep(0.05)
+                                    
+                                    df_f = pd.DataFrame(dados_fornecedores) if dados_fornecedores else pd.DataFrame(columns=['id_fornecedor', 'nome_grupo_empresarial'])
+                                    if not df_f.empty:
+                                        df_f['FORN_NUM'] = pd.to_numeric(df_f['id_fornecedor'], errors='coerce')
+                                        dict_forn = dict(zip(df_f['FORN_NUM'], df_f['nome_grupo_empresarial']))
+                                        df_p['nome_grupo_empresarial'] = df_p['FORN_NUM'].map(dict_forn)
+                                    else:
+                                        df_p['nome_grupo_empresarial'] = "SEM CLASSIFICAÇÃO"
+                                        
+                                    # 3. Criação dos Dicionários Numéricos Puros
+                                    dict_cat = dict(zip(df_p['CHAVE_NUM'], df_p['categoria_comercial']))
+                                    dict_grp = dict(zip(df_p['CHAVE_NUM'], df_p['nome_grupo_empresarial']))
+                                    
+                                    # 4. DESTRUIÇÃO de qualquer coluna antiga que possa estar a confundir o filtro
+                                    cols_drop = [c for c in df_pesq.columns if str(c).strip().upper() in ['CATEGORIA_COMERCIAL', 'GRUPO_EMPRESARIAL', 'CATEGORIA COMERCIAL', 'GRUPO EMPRESARIAL']]
+                                    df_pesq.drop(columns=cols_drop, inplace=True, errors='ignore')
+                                    
+                                    # 5. Mapeia Exatamente
+                                    df_pesq['CATEGORIA_COMERCIAL'] = df_pesq['CHAVE_NUM'].map(dict_cat).fillna("SEM CLASSIFICAÇÃO")
+                                    df_pesq['GRUPO_EMPRESARIAL'] = df_pesq['CHAVE_NUM'].map(dict_grp).fillna("SEM CLASSIFICAÇÃO")
+                                    
+                                    # 6. A GRANDE JOGADA: Cria as colunas com E sem espaço, para o seu UI nunca falhar!
+                                    df_pesq['CATEGORIA COMERCIAL'] = df_pesq['CATEGORIA_COMERCIAL']
+                                    df_pesq['GRUPO EMPRESARIAL'] = df_pesq['GRUPO_EMPRESARIAL']
+                                    
+                                    # 7. Diagnóstico em Ecrã (Raio-X)
+                                    linhas_sucesso = df_pesq[df_pesq['CATEGORIA_COMERCIAL'] != "SEM CLASSIFICAÇÃO"]
+                                    qtd = len(linhas_sucesso)
+                                    
+                                    status.update(label=f"🎯 SUCESSO ABSOLUTO! {qtd} linhas classificadas na base.", state="complete", expanded=True)
+                                    
+                                    # Mostra uma prova real no ecrã para você validar com os seus próprios olhos
+                                    if qtd > 0:
+                                        status.write("🔍 **Prova Real - Amostra dos Dados Cruzados:**")
+                                        status.dataframe(linhas_sucesso[['PRODUTO', 'CATEGORIA COMERCIAL', 'GRUPO EMPRESARIAL']].head(3))
+                                    else:
+                                        status.write("⚠️ Alerta: Os dicionários cruzaram, mas todos ficaram vazios. O Supabase tem os campos preenchidos lá dentro?")
+                        
+                        df_pesq.drop(columns=['CHAVE_NUM'], inplace=True, errors='ignore')
+                    # =======================================================
 
                     # 3. Trava de Colunas Obrigatórias
                     colunas_obrigatorias = ['FILIAL', 'FILIALCONCORRENTE', 'PESQUISADATA', 'CustoMedio', 'Vlr. Varejo PDV', 'Vlr. Atacado PDV', 'Vlr.Vare.Conc', 'Vlr.Atac.Conc.', 'PRODUTO', 'Tipo']
@@ -1106,41 +1265,26 @@ def tela_app_principal():
                     if 'Vlr.Vare.Conc' in df_pesq.columns and 'CustoMedio' in df_pesq.columns:
                         df_pesq['MargemConc'] = np.where(df_pesq['Vlr.Vare.Conc'] > 0, (df_pesq['Vlr.Vare.Conc'] - df_pesq['CustoMedio']) / df_pesq['Vlr.Vare.Conc'], 0.0)
 
-                    # --- INTEGRAÇÃO COM TABELAS DIMENSÃO ---
-                    df_dim_prod = carregar_dim_produto()
-                    df_dim_forn = carregar_dim_fornecedor()
+                    # --- INTEGRAÇÃO COM TABELAS DIMENSÃO (APENAS CONCORRENTE) ---
                     df_dim_emp = carregar_dim_empresa_conc()
 
-                    # 1. Empresa Concorrente
+                    # 1. Empresa Concorrente (Mantemos isto porque o seu Letreiro/Ticker precisa)
                     if not df_dim_emp.empty and 'filial_concorrente' in df_dim_emp.columns and 'empresa' in df_dim_emp.columns:
                         map_empresa = dict(zip(df_dim_emp['filial_concorrente'].astype(str).str.strip(), df_dim_emp['empresa'].astype(str).str.strip()))
                         df_pesq['EMPRESA_CONC'] = df_pesq['FILIALCONCORRENTE'].map(map_empresa).fillna(df_pesq['FILIALCONCORRENTE'].apply(extrair_nome_empresa))
                     else:
                         df_pesq['EMPRESA_CONC'] = df_pesq['FILIALCONCORRENTE'].apply(extrair_nome_empresa)
 
-                    # 2. Produto -> Categoria e Fornecedor
-                    if 'PRODUTO' in df_pesq.columns:
-                        df_pesq['COD_PROD'] = df_pesq['PRODUTO'].str.split('-').str[0].str.strip()
-                        if not df_dim_prod.empty:
-                            col_p_id = 'id' if 'id' in df_dim_prod.columns else ('produto' if 'produto' in df_dim_prod.columns else df_dim_prod.columns[0])
-                            map_cat = dict(zip(df_dim_prod[col_p_id].astype(str).str.strip(), df_dim_prod.get('categoria_comercial', '')))
-                            map_forn = dict(zip(df_dim_prod[col_p_id].astype(str).str.strip(), df_dim_prod.get('id_fornecedor', '')))
-                            
-                            df_pesq['CATEGORIA_COMERCIAL'] = df_pesq['COD_PROD'].map(map_cat).fillna('SEM CLASSIFICAÇÃO')
-                            df_pesq['ID_FORN'] = df_pesq['COD_PROD'].map(map_forn)
-                        else:
-                            df_pesq['CATEGORIA_COMERCIAL'] = 'SEM CLASSIFICAÇÃO'
-                            df_pesq['ID_FORN'] = None
+                    # ATENÇÃO: As antigas etapas 2 (Produto) e 3 (Fornecedor) foram DESTRUÍDAS aqui.
+                    # O nosso Motor Supabase (Bloco 2.5) já faz isso lá em cima de forma 100% à prova de balas!
 
-                    # 3. Fornecedor -> Grupo Empresarial
-                    if 'ID_FORN' in df_pesq.columns and not df_dim_forn.empty:
-                        col_f_id = 'id' if 'id' in df_dim_forn.columns else df_dim_forn.columns[0]
-                        map_grupo = dict(zip(df_dim_forn[col_f_id].astype(str).str.strip(), df_dim_forn.get('grupo_empresarial', '')))
-                        df_pesq['GRUPO_EMPRESARIAL'] = df_pesq['ID_FORN'].astype(str).map(map_grupo).fillna('SEM CLASSIFICAÇÃO')
-                    else:
-                        df_pesq['GRUPO_EMPRESARIAL'] = 'SEM CLASSIFICAÇÃO'
+                    # ATENÇÃO: As antigas etapas 2 (Produto) e 3 (Fornecedor) foram DESTRUÍDAS aqui.
+                    # O nosso Motor Supabase (Bloco 2.5) já faz isso lá em cima de forma 100% à prova de balas!
 
                     st.session_state.df_pesq_master = df_pesq
+                    
+                    # A MÁGICA DA VELOCIDADE: Avisa o sistema que este ficheiro já foi processado!
+                    st.session_state.arquivo_pesquisa_nome = arquivo_pesquisa.name
                 except Exception as e:
                     st.error(f"Erro ao processar a base. Verifique o arquivo. Detalhe: {e}")
 
