@@ -1107,7 +1107,7 @@ def tela_app_principal():
                 return pd.DataFrame()
         # =================================================================
 
-        arquivo_pesquisa = st.file_uploader("Arraste ou selecione a base de pesquisa (CSV separado por '|' ou formato Excel)", type=['csv', 'xlsx', 'xls'])
+        arquivo_pesquisa = st.file_uploader("Arraste a base compactada (ZIP) ou normal (CSV/Excel)", type=['zip', 'csv', 'xlsx', 'xls'])
 
         # =====================================================================
         # ⚡ SISTEMA DE CACHE INTELIGENTE (ALTA PERFORMANCE) ⚡
@@ -1121,11 +1121,31 @@ def tela_app_principal():
         if precisa_processar:
             with st.spinner("Limpando, Mesclando Dimensões e Processando Inteligência..."):
                 try:
-                    # 1. Leitura Dinâmica (Trata CSV com Pipe ou Excel nativo)
-                    if arquivo_pesquisa.name.endswith('.csv'):
+                    import zipfile
+                    
+                    # 1. Leitura Dinâmica Inteligente (Trata ZIP, CSV com Pipe ou Excel nativo)
+                    if arquivo_pesquisa.name.endswith('.zip'):
+                        # Abre o arquivo compactado na memória
+                        with zipfile.ZipFile(arquivo_pesquisa) as z:
+                            # Procura o primeiro arquivo CSV ou Excel que estiver dentro da pasta zipada
+                            alvo = next((n for n in z.namelist() if n.endswith(('.csv', '.xlsx', '.xls'))), None)
+                            
+                            if not alvo:
+                                raise ValueError("O arquivo ZIP está vazio ou não contém planilhas CSV/Excel compatíveis.")
+                            
+                            # Lê o conteúdo extraído sem guardar no computador
+                            with z.open(alvo) as f:
+                                if alvo.endswith('.csv'):
+                                    df_pesq = pd.read_csv(f, sep='|', encoding='latin1', dtype=str)
+                                else:
+                                    df_pesq = pd.read_excel(f, dtype=str)
+                                    
+                    elif arquivo_pesquisa.name.endswith('.csv'):
                         df_pesq = pd.read_csv(arquivo_pesquisa, sep='|', encoding='latin1', dtype=str)
                     else:
                         df_pesq = pd.read_excel(arquivo_pesquisa, dtype=str)
+                    
+                    # 2. Padronização Absoluta de Cabeçalhos
                     
                     # 2. Padronização Absoluta de Cabeçalhos
                     df_pesq.columns = [str(c).strip().upper() for c in df_pesq.columns]
@@ -1571,7 +1591,7 @@ def tela_app_principal():
             # =======================================================
             # MÓDULOS EXECUTIVOS DE EXTRAÇÃO (SEM EMOJIS)
             # =======================================================
-            import time  # <--- A SOLUÇÃO ESTÁ AQUI: Carrega o relógio em segurança!
+            import time
             
             st.markdown("<br><hr>", unsafe_allow_html=True)
             st.markdown("<h2>Geração de Inteligência Competitiva</h2>", unsafe_allow_html=True)
@@ -1596,7 +1616,7 @@ def tela_app_principal():
 
                         if df_analise.empty:
                             st.warning("Nenhum dado válido após aplicar os filtros de Tipo e Margem (-30% a +60%).")
-                        elif not {'FILIAL', 'PRODUTO', 'FILIALCONCORRENTE', 'Vlr.Vare.Conc', 'Vlr.Atac.Conc.'}.issubset(df_analise.columns):
+                        elif not {'FILIAL', 'GRUPO_EMPRESARIAL', 'CATEGORIA_COMERCIAL', 'PRODUTO', 'FILIALCONCORRENTE', 'Vlr.Vare.Conc', 'Vlr.Atac.Conc.'}.issubset(df_analise.columns):
                             st.error("A base não contém as colunas necessárias para este cálculo.")
                         else:
                             def calc_modas(g):
@@ -1608,12 +1628,13 @@ def tela_app_principal():
                                 m_atac = m_atac_serie.iloc[0] if not m_atac_serie.empty else 0.0
                                 return pd.Series({'Moda Varejo': m_var, 'Moda Atacado': m_atac, 'Frequência Máxima': freq})
 
-                            df_modas_conc = df_analise.groupby(['FILIAL', 'PRODUTO', 'FILIALCONCORRENTE']).apply(calc_modas).reset_index()
+                            # Agrupa mantendo Grupo e Categoria
+                            df_modas_conc = df_analise.groupby(['FILIAL', 'GRUPO_EMPRESARIAL', 'CATEGORIA_COMERCIAL', 'PRODUTO', 'FILIALCONCORRENTE']).apply(calc_modas).reset_index()
                             idx_max = df_modas_conc.groupby(['FILIAL', 'PRODUTO'])['Frequência Máxima'].idxmax()
                             df_final = df_modas_conc.loc[idx_max].reset_index(drop=True)
                             
-                            df_final.rename(columns={'FILIAL': 'Filial', 'PRODUTO': 'Produto', 'FILIALCONCORRENTE': 'Concorrente Moda'}, inplace=True)
-                            df_final = df_final[['Filial', 'Produto', 'Moda Varejo', 'Moda Atacado', 'Frequência Máxima', 'Concorrente Moda']].sort_values(by=['Filial', 'Produto'])
+                            df_final.rename(columns={'FILIAL': 'Filial', 'GRUPO_EMPRESARIAL': 'Grupo Empresarial', 'CATEGORIA_COMERCIAL': 'Categoria Comercial', 'PRODUTO': 'Produto', 'FILIALCONCORRENTE': 'Concorrente Moda'}, inplace=True)
+                            df_final = df_final[['Filial', 'Grupo Empresarial', 'Categoria Comercial', 'Produto', 'Moda Varejo', 'Moda Atacado', 'Frequência Máxima', 'Concorrente Moda']].sort_values(by=['Filial', 'Produto'])
 
                             st.success("Moda de Mercado gerada com sucesso!")
                             st.dataframe(df_final, use_container_width=True, hide_index=True)
@@ -1621,7 +1642,6 @@ def tela_app_principal():
                             buf_resumo = io.BytesIO()
                             with pd.ExcelWriter(buf_resumo, engine='openpyxl') as w: df_final.to_excel(w, index=False)
                             buf_resumo.seek(0)
-                            
                             st.download_button("Baixar Resumo Moda (Excel)", data=buf_resumo, file_name=f"PriceSense_ModaMercado_{datetime.now().strftime('%d-%m-%Y')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="secondary", use_container_width=True)
 
             # --- MODELO 2: MENOR PREÇO (RECENTE) ---
@@ -1636,7 +1656,7 @@ def tela_app_principal():
 
                         if df_menor.empty:
                             st.warning("Nenhum dado válido após aplicar os filtros (Removido Tipo 'VALIDADE').")
-                        elif not {'FILIAL', 'PRODUTO', 'FILIALCONCORRENTE', 'Vlr.Vare.Conc', 'Vlr.Atac.Conc.', 'CustoMedio', 'PESQUISADATA_DT'}.issubset(df_menor.columns):
+                        elif not {'FILIAL', 'GRUPO_EMPRESARIAL', 'CATEGORIA_COMERCIAL', 'PRODUTO', 'FILIALCONCORRENTE', 'Vlr.Vare.Conc', 'Vlr.Atac.Conc.', 'CustoMedio', 'PESQUISADATA_DT'}.issubset(df_menor.columns):
                             st.error("A base não contém as colunas necessárias para este cálculo.")
                         else:
                             df_menor = df_menor.sort_values(by='PESQUISADATA_DT', ascending=False)
@@ -1647,6 +1667,8 @@ def tela_app_principal():
                             
                             map_cols_menor = {
                                 'FILIAL': 'Filial',
+                                'GRUPO_EMPRESARIAL': 'Grupo Empresarial',
+                                'CATEGORIA_COMERCIAL': 'Categoria Comercial',
                                 'PRODUTO': 'Produto',
                                 'CustoMedio': 'Custo Médio',
                                 'Vlr.Vare.Conc': 'Menor Varejo',
@@ -1667,7 +1689,6 @@ def tela_app_principal():
                             buf_menor = io.BytesIO()
                             with pd.ExcelWriter(buf_menor, engine='openpyxl') as w: df_final_menor.to_excel(w, index=False)
                             buf_menor.seek(0)
-                            
                             st.download_button("Baixar Resumo Mínimo (Excel)", data=buf_menor, file_name=f"PriceSense_MenorPreco_{datetime.now().strftime('%d-%m-%Y')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="secondary", use_container_width=True)
 
             # --- MODELO 3: MENOR PREÇO HISTÓRICO ---
@@ -1686,7 +1707,7 @@ def tela_app_principal():
 
                         if df_hist.empty:
                             st.warning("Nenhum dado válido após aplicar os filtros (Tipo 'VALIDADE' removido e Margem -50% a +60%).")
-                        elif not {'FILIAL', 'PRODUTO', 'FILIALCONCORRENTE', 'Vlr.Vare.Conc', 'Vlr.Atac.Conc.', 'CustoMedio', 'Vlr. Varejo PDV', 'Vlr. Atacado PDV', 'Tipo', 'PESQUISADATA'}.issubset(df_hist.columns):
+                        elif not {'FILIAL', 'GRUPO_EMPRESARIAL', 'CATEGORIA_COMERCIAL', 'PRODUTO', 'FILIALCONCORRENTE', 'Vlr.Vare.Conc', 'Vlr.Atac.Conc.', 'CustoMedio', 'Vlr. Varejo PDV', 'Vlr. Atacado PDV', 'Tipo', 'PESQUISADATA'}.issubset(df_hist.columns):
                             st.error("A base não contém as colunas necessárias para este cálculo.")
                         else:
                             df_hist = df_hist.sort_values(by='Vlr.Vare.Conc', ascending=True)
@@ -1694,6 +1715,8 @@ def tela_app_principal():
                             
                             map_cols_hist = {
                                 'FILIAL': 'Filial',
+                                'GRUPO_EMPRESARIAL': 'Grupo Empresarial',
+                                'CATEGORIA_COMERCIAL': 'Categoria Comercial',
                                 'PRODUTO': 'Produto',
                                 'CustoMedio': 'Custo Médio',
                                 'Vlr. Varejo PDV': 'Vlr. Varejo PDV',
@@ -1714,7 +1737,6 @@ def tela_app_principal():
                             buf_hist = io.BytesIO()
                             with pd.ExcelWriter(buf_hist, engine='openpyxl') as w: df_final_hist.to_excel(w, index=False)
                             buf_hist.seek(0)
-                            
                             st.download_button("Baixar Histórico (Excel)", data=buf_hist, file_name=f"PriceSense_MenorHistorico_{datetime.now().strftime('%d-%m-%Y')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="secondary", use_container_width=True)
 
             # --- MODELO 4: MERCADO TOTAL ---
@@ -1724,14 +1746,13 @@ def tela_app_principal():
                         time.sleep(0.5)
                         df_base_mt = df_filt.copy()
 
-                        # Corte Global do Mercado Total (-40% a +60%)
                         if 'CustoMedio' in df_base_mt.columns and 'MargemConc' in df_base_mt.columns:
                             m_margem_mt = (df_base_mt['CustoMedio'] <= 0.09) | ((df_base_mt['MargemConc'] >= -0.40) & (df_base_mt['MargemConc'] <= 0.60))
                             df_base_mt = df_base_mt[m_margem_mt]
 
                         if df_base_mt.empty:
                             st.warning("Nenhum dado válido após aplicar filtro de Margem (-40% a +60%).")
-                        elif not {'FILIAL', 'PRODUTO', 'FILIALCONCORRENTE', 'Vlr.Vare.Conc', 'Vlr.Atac.Conc.', 'CustoMedio', 'Tipo', 'PESQUISADATA_DT', 'PESQUISADATA'}.issubset(df_base_mt.columns):
+                        elif not {'FILIAL', 'GRUPO_EMPRESARIAL', 'CATEGORIA_COMERCIAL', 'PRODUTO', 'FILIALCONCORRENTE', 'Vlr.Vare.Conc', 'Vlr.Atac.Conc.', 'CustoMedio', 'Tipo', 'PESQUISADATA_DT', 'PESQUISADATA'}.issubset(df_base_mt.columns):
                             st.error("A base não contém as colunas necessárias para o Mercado Total.")
                         else:
                             # 1. VISÃO RECENTE (SEM VALIDADE)
@@ -1739,8 +1760,9 @@ def tela_app_principal():
                             df_rec = df_rec[~df_rec['Tipo'].astype(str).str.upper().str.contains('VALIDADE', na=False)]
                             df_rec = df_rec.sort_values(by='PESQUISADATA_DT', ascending=False).drop_duplicates(subset=['FILIAL', 'PRODUTO', 'FILIALCONCORRENTE'], keep='first')
                             df_rec = df_rec.sort_values(by='Vlr.Vare.Conc', ascending=True).drop_duplicates(subset=['FILIAL', 'PRODUTO'], keep='first')
-                            df_rec = df_rec[['FILIAL', 'PRODUTO', 'CustoMedio', 'Vlr.Vare.Conc', 'Vlr.Atac.Conc.', 'Tipo', 'PESQUISADATA', 'FILIALCONCORRENTE']]
+                            df_rec = df_rec[['FILIAL', 'GRUPO_EMPRESARIAL', 'CATEGORIA_COMERCIAL', 'PRODUTO', 'CustoMedio', 'Vlr.Vare.Conc', 'Vlr.Atac.Conc.', 'Tipo', 'PESQUISADATA', 'FILIALCONCORRENTE']]
                             df_rec.rename(columns={
+                                'GRUPO_EMPRESARIAL': 'Grupo Empresarial', 'CATEGORIA_COMERCIAL': 'Categoria Comercial',
                                 'CustoMedio': 'Custo Médio', 'Vlr.Vare.Conc': 'Menor Varejo (Recente)', 'Vlr.Atac.Conc.': 'Menor Atacado (Recente)', 
                                 'PESQUISADATA': 'Data Pesquisa', 'FILIALCONCORRENTE': 'Concorrente Menor (Recente)'
                             }, inplace=True)
@@ -1780,9 +1802,8 @@ def tela_app_principal():
                             df_mt = pd.merge(df_mt, df_md_final, on=['FILIAL', 'PRODUTO'], how='outer')
                             df_mt.rename(columns={'FILIAL': 'Filial', 'PRODUTO': 'Produto'}, inplace=True)
                             
-                            # Formatação Final
                             colunas_finais = [
-                                'Filial', 'Produto', 'Custo Médio', 
+                                'Filial', 'Grupo Empresarial', 'Categoria Comercial', 'Produto', 'Custo Médio', 
                                 'Menor Varejo (Recente)', 'Menor Atacado (Recente)', 'Tipo', 'Data Pesquisa', 'Concorrente Menor (Recente)', 
                                 'Menor Varejo (Histórico)', 'Menor Atacado (Histórico)', 'Tipo (Histórico)', 'Concorrente Menor (Histórico)', 
                                 'Moda Varejo', 'Moda Atacado', 'Frequência', 'Concorrente Moda'
@@ -1796,7 +1817,6 @@ def tela_app_principal():
                             buf_mt = io.BytesIO()
                             with pd.ExcelWriter(buf_mt, engine='openpyxl') as w: df_mt.to_excel(w, index=False)
                             buf_mt.seek(0)
-                            
                             st.download_button("Baixar Mercado Total (Excel)", data=buf_mt, file_name=f"PriceSense_MercadoTotal_{datetime.now().strftime('%d-%m-%Y')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="secondary", use_container_width=True)
 
 # Garantia de margem de escape na parte inferior
