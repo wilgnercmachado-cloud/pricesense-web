@@ -1571,6 +1571,8 @@ def tela_app_principal():
             # =======================================================
             # MÓDULOS EXECUTIVOS DE EXTRAÇÃO (SEM EMOJIS)
             # =======================================================
+            import time  # <--- A SOLUÇÃO ESTÁ AQUI: Carrega o relógio em segurança!
+            
             st.markdown("<br><hr>", unsafe_allow_html=True)
             st.markdown("<h2>Geração de Inteligência Competitiva</h2>", unsafe_allow_html=True)
             st.markdown("<p style='color: #888;'>Selecione abaixo o modelo analítico que deseja processar sobre a base filtrada.</p>", unsafe_allow_html=True)
