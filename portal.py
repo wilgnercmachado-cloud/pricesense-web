@@ -558,6 +558,7 @@ def tela_app_principal():
             elif not filiais or not texto_colado.strip(): st.error("Selecione filial e insira dados.")
             else:
                 with st.spinner('Aplicando regras...'):
+                    import time # <--- A MÁGICA: Carrega o relógio para este botão!
                     time.sleep(0.5); linhas = texto_colado.strip().split('\n'); dados_importacao = []
                     for filial in filiais:
                         id_fil = filial.split(" - ")[0]
