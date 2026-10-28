@@ -13,7 +13,7 @@ from core import db
 
 BUCKET = "relatorios"
 TAMANHO_MAXIMO_MB = 300        # HTML original (limite do upload no Streamlit)
-LIMITE_STORAGE_MB = 50         # arquivo compactado (limite por arquivo do plano gratuito do Supabase)
+PARTE_MB = 45                  # o Supabase gratuito aceita até 50 MB por arquivo: arquivos maiores viram partes
 GZIP = b"\x1f\x8b"
 VISIBILIDADES = ["Todos", "Selecionados", "Admins"]
 ROTULO_VISIBILIDADE = {
@@ -79,12 +79,30 @@ def baixar_compactado(caminho: str, versao: str) -> bytes:
 def _validar_tamanho(conteudo: bytes) -> bytes:
     if len(conteudo) > TAMANHO_MAXIMO_MB * 1024 * 1024:
         raise ErroRelatorio(f"O arquivo passa de {TAMANHO_MAXIMO_MB} MB.")
-    gz = compactar(conteudo)
-    if len(gz) > LIMITE_STORAGE_MB * 1024 * 1024:
-        raise ErroRelatorio(
-            f"Mesmo compactado, o arquivo ficou com {len(gz) / 1024 / 1024:.0f} MB, acima do limite de "
-            f"{LIMITE_STORAGE_MB} MB por arquivo do Supabase. Reduza os dados embutidos no HTML.")
-    return gz
+    return compactar(conteudo)
+
+
+def _caminhos(base: str, partes: int) -> list[str]:
+    """Parte 0 usa o caminho base; as seguintes recebem o sufixo .1, .2..."""
+    return [base] + [f"{base}.{i}" for i in range(1, partes)]
+
+
+def _dividir(gz: bytes) -> list[bytes]:
+    passo = PARTE_MB * 1024 * 1024
+    return [gz[i:i + passo] for i in range(0, len(gz), passo)] or [b""]
+
+
+@st.cache_data(ttl=1800, show_spinner=False, max_entries=64)
+def links_assinados(base: str, partes: int, versao: str) -> list[str]:
+    """Links temporários (1 h) para o navegador baixar o arquivo direto do Supabase."""
+    links = []
+    for caminho in _caminhos(base, partes):
+        resp = db.sb().storage.from_(BUCKET).create_signed_url(caminho, 3600)
+        url = resp.get("signedURL") or resp.get("signedUrl") or resp.get("signed_url")
+        if url.startswith("/"):
+            url = st.secrets["SUPABASE_URL"].rstrip("/") + "/storage/v1" + url
+        links.append(url)
+    return links
 
 
 # ---------------------------------------------------------------- permissões
@@ -114,64 +132,75 @@ def _enviar(caminho: str, gz: bytes) -> None:
     )
 
 
-def publicar(meta: dict, conteudo: bytes, autor_login: str, autor_nome: str) -> str:
+def _enviar_partes(base: str, gz: bytes, progresso=None) -> int:
+    pedacos = _dividir(gz)
+    for i, (caminho, pedaco) in enumerate(zip(_caminhos(base, len(pedacos)), pedacos)):
+        if progresso:
+            progresso(i, len(pedacos))
+        _enviar(caminho, pedaco)
+    return len(pedacos)
+
+
+def _remover(caminhos: list[str]) -> None:
+    if not caminhos:
+        return
+    try:
+        db.sb().storage.from_(BUCKET).remove(caminhos)
+    except Exception:
+        pass
+
+
+def publicar(meta: dict, conteudo: bytes, autor_login: str, autor_nome: str, progresso=None) -> str:
     gz = _validar_tamanho(conteudo)
     rid = str(uuid.uuid4())
     caminho = f"{datetime.now():%Y/%m}/{rid}.html.gz"
     try:
-        _enviar(caminho, gz)
+        partes = _enviar_partes(caminho, gz, progresso)
     except Exception as exc:
+        _remover(_caminhos(caminho, len(_dividir(gz))))
         raise ErroRelatorio(f"Não foi possível enviar o arquivo para o Storage: {exc}") from exc
     registro = {
-        "id": rid, **meta, "arquivo_path": caminho, "tamanho_bytes": len(conteudo),
+        "id": rid, **meta, "arquivo_path": caminho, "partes": partes, "tamanho_bytes": len(conteudo),
         "autor_usuario": autor_login, "autor_nome": autor_nome, "versao": 1,
         "criado_em": _agora(), "atualizado_em": _agora(),
     }
     try:
         db.sb().table("relatorios").insert(registro).execute()
     except Exception as exc:
-        try:
-            db.sb().storage.from_(BUCKET).remove([caminho])
-        except Exception:
-            pass
+        _remover(_caminhos(caminho, partes))
         raise ErroRelatorio(f"Não foi possível registrar o relatório: {exc}") from exc
     limpar_cache()
     return rid
 
 
-def atualizar(rel: dict, meta: dict, conteudo: bytes | None = None) -> None:
+def atualizar(rel: dict, meta: dict, conteudo: bytes | None = None, progresso=None) -> None:
     campos = {**meta, "atualizado_em": _agora()}
-    caminho_antigo = None
+    sobras: list[str] = []
     if conteudo is not None:
         gz = _validar_tamanho(conteudo)
-        caminho = rel["arquivo_path"]
-        if not caminho.endswith(".gz"):
-            caminho_antigo = caminho
-            caminho = posixpath.join(posixpath.dirname(caminho), f"{rel['id']}.html.gz")
+        antigo, partes_antigas = rel["arquivo_path"], int(rel.get("partes") or 1)
+        caminho = antigo if antigo.endswith(".gz") else posixpath.join(posixpath.dirname(antigo), f"{rel['id']}.html.gz")
         try:
-            _enviar(caminho, gz)
+            partes = _enviar_partes(caminho, gz, progresso)
         except Exception as exc:
             raise ErroRelatorio(f"Não foi possível enviar o novo arquivo: {exc}") from exc
+        novos = set(_caminhos(caminho, partes))
+        sobras = [c for c in _caminhos(antigo, partes_antigas) if c not in novos]
         campos["arquivo_path"] = caminho
+        campos["partes"] = partes
         campos["tamanho_bytes"] = len(conteudo)
         campos["versao"] = int(rel.get("versao") or 1) + 1
     try:
         db.sb().table("relatorios").update(campos).eq("id", rel["id"]).execute()
     except Exception as exc:
         raise ErroRelatorio(f"Não foi possível salvar as alterações: {exc}") from exc
-    if caminho_antigo:
-        try:
-            db.sb().storage.from_(BUCKET).remove([caminho_antigo])
-        except Exception:
-            pass
+    _remover(sobras)
+    links_assinados.clear()
     limpar_cache()
 
 
 def excluir(rel: dict) -> None:
-    try:
-        db.sb().storage.from_(BUCKET).remove([rel["arquivo_path"]])
-    except Exception:
-        pass
+    _remover(_caminhos(rel["arquivo_path"], int(rel.get("partes") or 1)))
     db.sb().table("relatorios").delete().eq("id", rel["id"]).execute()
     limpar_cache()
 
