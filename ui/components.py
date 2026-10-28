@@ -214,14 +214,59 @@ ligar(); setInterval(ligar, 800);
 </script>""", height=0, width=0)
 
 
-def relatorio_html(conteudo: str, altura: int) -> None:
-    """Exibe um relatório HTML isolado num iframe sem acesso ao app (sandbox sem same-origin)."""
+def relatorio_html(gz: bytes, altura: int, nome_arquivo: str | None = None) -> None:
+    """Exibe um relatório HTML compactado (gzip).
+
+    O navegador descompacta o arquivo, então só o tamanho compactado trafega.
+    O relatório roda num iframe com sandbox sem same-origin: scripts funcionam, mas não acessam o app.
+    """
     t = theme.tokens()
-    srcdoc = html.escape(conteudo, quote=True)
-    components.html(
-        f"<!doctype html><html><head><style>html,body{{margin:0;height:100%;background:transparent}}"
-        f"iframe{{display:block;width:100%;height:100%;border:1px solid {t['line']};border-radius:10px;background:#fff}}</style></head>"
-        f"<body><iframe title='Relatório' sandbox='allow-scripts allow-popups allow-popups-to-escape-sandbox allow-downloads allow-modals allow-forms' "
-        f"srcdoc=\"{srcdoc}\"></iframe></body></html>",
-        height=altura, scrolling=False,
-    )
+    b64 = base64.b64encode(gz).decode("ascii")
+    barra = 46 if nome_arquivo else 0
+    botao = (f"<div class='bar'><span id='info'>Carregando relatório</span>"
+             f"<button id='dl' type='button' disabled>Baixar HTML</button></div>") if nome_arquivo else \
+        "<div class='bar' style='display:none'><span id='info'></span></div>"
+    components.html(f"""<!doctype html><html><head><meta charset="utf-8"><style>
+html,body{{margin:0;height:100%;background:transparent;font:14px 'Archivo','Helvetica Neue',Arial,sans-serif;color:{t['ink']}}}
+.bar{{height:{barra}px;display:flex;align-items:center;justify-content:space-between;gap:12px}}
+.bar span{{color:{t['muted']};font-size:13px}}
+button{{height:38px;padding:0 16px;border-radius:8px;border:1px solid {t['line']};background:{t['raised']};color:{t['ink']};
+font:500 14px 'Archivo','Helvetica Neue',Arial,sans-serif;cursor:pointer}}
+button:hover:not(:disabled){{border-color:{t['primary']};color:{t['primary']}}}
+button:disabled{{opacity:.5;cursor:default}}
+.box{{height:calc(100% - {barra}px);border:1px solid {t['line']};border-radius:10px;overflow:hidden;background:#fff;position:relative}}
+.msg{{position:absolute;inset:0;display:grid;place-items:center;color:#5A6372;font-size:15px}}
+iframe{{display:block;width:100%;height:100%;border:0}}
+</style></head><body>
+{botao}
+<div class="box"><div class="msg" id="msg">Abrindo o relatório…</div>
+<iframe id="f" title="Relatório" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-downloads allow-modals allow-forms"></iframe></div>
+<script>
+const B64 = "{b64}";
+(async () => {{
+  const msg = document.getElementById('msg'), info = document.getElementById('info');
+  try {{
+    const bin = atob(B64), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+    const blob = new Blob([await new Response(stream).arrayBuffer()], {{type: 'text/html;charset=utf-8'}});
+    const texto = await blob.text();
+    document.getElementById('f').srcdoc = texto;
+    msg.remove();
+    const tam = blob.size >= 1048576 ? (blob.size / 1048576).toFixed(1).replace('.', ',') + ' MB'
+                                      : Math.max(1, Math.round(blob.size / 1024)) + ' KB';
+    if (info) info.textContent = 'Relatório de ' + tam;
+    const dl = document.getElementById('dl');
+    if (dl) {{
+      dl.disabled = false;
+      dl.onclick = () => {{
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = {json.dumps(nome_arquivo or "relatorio.html")};
+        document.body.appendChild(a); a.click(); setTimeout(() => {{ URL.revokeObjectURL(a.href); a.remove(); }}, 2000);
+      }};
+    }}
+  }} catch (e) {{
+    msg.textContent = 'Não foi possível abrir o relatório neste navegador: ' + e;
+  }}
+}})();
+</script></body></html>""", height=altura + barra, scrolling=False)
