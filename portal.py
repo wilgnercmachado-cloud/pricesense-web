@@ -33,14 +33,6 @@ except db.ConfigError:
     st.stop()
 
 
-def _alternar_tema() -> None:
-    st.session_state.tema = "Light" if theme.modo() == "Dark" else "Dark"
-    theme.aplicar()  # grava as cores novas antes de trocar de página, para o navegador recebê-las já na próxima execução
-    anterior = st.session_state.get("_pagina_anterior")
-    destino = next((pg for pg in p.values() if pg.url_path == anterior), p["inicio"])
-    st.switch_page(destino)
-
-
 def _sair() -> None:
     state.encerrar_sessao()
     st.query_params.clear()
@@ -81,9 +73,6 @@ conta = [p["perfil"]]
 if admin_on:
     p["admin"] = st.Page(admin.render, title="Administração", icon=":material/admin_panel_settings:", url_path="admin")
     conta.append(p["admin"])
-escuro = theme.modo() == "Dark"
-conta.append(st.Page(_alternar_tema, title="Tema claro" if escuro else "Tema escuro",
-                     icon=":material/light_mode:" if escuro else ":material/dark_mode:", url_path="tema"))
 p["sair"] = st.Page(_sair, title="Sair", icon=":material/logout:", url_path="sair")
 conta.append(p["sair"])
 
@@ -99,6 +88,15 @@ navegacao[state.primeiro_nome()] = conta
 conta.append(st.Page(login.render, title="Entrar", url_path="entrar", visibility="hidden"))
 
 pagina = st.navigation(navegacao, position="top")
-if pagina.url_path not in ("tema", "sair", "entrar"):
-    st.session_state._pagina_anterior = pagina.url_path
+
+# Botão de tema fixo no canto superior direito + menus que abrem ao passar o mouse.
+with st.container(key="ps_tema"):
+    escuro = theme.modo() == "Dark"
+    if st.button("", icon=":material/light_mode:" if escuro else ":material/dark_mode:", type="tertiary",
+                 key="ps_tema_btn", help="Modo claro" if escuro else "Modo escuro"):
+        st.session_state.tema = "Light" if escuro else "Dark"
+        theme.aplicar()  # grava as cores antes do rerun, para a troca ser imediata
+        st.rerun()
+    ui.menu_ao_passar_mouse()
+
 pagina.run()
