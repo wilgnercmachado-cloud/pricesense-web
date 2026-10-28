@@ -72,7 +72,7 @@ def _formulario(rel: dict | None) -> None:
         if st.toggle(f"Pré-visualizar ({f'{mb:.1f}'.replace('.', ',')} MB)", key=f"pub_prev_{sufixo}"):
             with st.spinner("Compactando para a pré-visualização"):
                 gz = reports.compactar(conteudo)
-            ui.relatorio_html(gz, 560)
+            ui.relatorio_html(gz, 560, barra=False)
 
     erros = []
     if not titulo.strip():
