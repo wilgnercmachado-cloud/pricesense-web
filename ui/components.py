@@ -214,15 +214,17 @@ ligar(); setInterval(ligar, 800);
 </script>""", height=0, width=0)
 
 
-def relatorio_html(gz: bytes, altura: int, nome_arquivo: str | None = None, barra: bool = True) -> None:
-    """Exibe um relatório HTML compactado (gzip).
+def relatorio_html(gz: bytes | None = None, altura: int = 860, nome_arquivo: str | None = None, barra: bool = True,
+                   links: list[str] | None = None) -> None:
+    """Exibe um relatório HTML (gzip ou texto puro).
 
-    O navegador descompacta o arquivo, então só o tamanho compactado trafega.
+    Com `links`, o navegador baixa as partes direto do Supabase (nada passa pelo servidor do Streamlit).
+    Com `gz`, o conteúdo vai embutido (usado na pré-visualização). O navegador descompacta.
     O relatório roda num iframe com sandbox sem same-origin: scripts funcionam, mas não acessam o app.
     `nome_arquivo` habilita o botão de download (só administradores recebem esse parâmetro).
     """
     t = theme.tokens()
-    b64 = base64.b64encode(gz).decode("ascii")
+    b64 = base64.b64encode(gz).decode("ascii") if gz is not None else ""
     alt_barra = 48 if barra else 0
     download = "<button id='dl' type='button' disabled>Baixar HTML</button>" if nome_arquivo else ""
     barra_html = (f"<div class='bar'><span id='info'>Abrindo o relatório</span><div class='acoes'>{download}"
@@ -248,13 +250,43 @@ iframe{{display:block;width:100%;height:100%;border:0}}
 <iframe id="f" title="Relatório" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-downloads allow-modals allow-forms"></iframe></div>
 <script>
 const B64 = "{b64}";
+const LINKS = {json.dumps(links or [])};
+async function obterBytes(msg) {{
+  if (!LINKS.length) {{
+    const bin = atob(B64), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return [bytes];
+  }}
+  const partes = [];
+  for (let i = 0; i < LINKS.length; i++) {{
+    const r = await fetch(LINKS[i]);
+    if (!r.ok) throw new Error('falha ao baixar a parte ' + (i + 1) + ' (HTTP ' + r.status + ')');
+    const total = +r.headers.get('content-length') || 0, leitor = r.body.getReader(), pedacos = [];
+    let lido = 0;
+    for (;;) {{
+      const {{done, value}} = await leitor.read();
+      if (done) break;
+      pedacos.push(value); lido += value.length;
+      const pct = total ? Math.round(100 * lido / total) + '%' : (lido / 1048576).toFixed(0) + ' MB';
+      msg.textContent = 'Baixando o relatório' + (LINKS.length > 1 ? ' (parte ' + (i + 1) + ' de ' + LINKS.length + ')' : '') + ': ' + pct;
+    }}
+    partes.push(...pedacos);
+  }}
+  return partes;
+}}
 (async () => {{
   const msg = document.getElementById('msg'), info = document.getElementById('info');
   try {{
-    const bin = atob(B64), bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-    const blob = new Blob([await new Response(stream).arrayBuffer()], {{type: 'text/html;charset=utf-8'}});
+    const bruto = new Blob(await obterBytes(msg));
+    const inicio = new Uint8Array(await bruto.slice(0, 2).arrayBuffer());
+    let blob;
+    if (inicio[0] === 0x1f && inicio[1] === 0x8b) {{
+      msg.textContent = 'Descompactando';
+      const stream = bruto.stream().pipeThrough(new DecompressionStream('gzip'));
+      blob = new Blob([await new Response(stream).arrayBuffer()], {{type: 'text/html;charset=utf-8'}});
+    }} else {{
+      blob = new Blob([bruto], {{type: 'text/html;charset=utf-8'}});
+    }}
     document.getElementById('f').srcdoc = await blob.text();
     msg.remove();
     const tam = blob.size >= 1048576 ? (blob.size / 1048576).toFixed(1).replace('.', ',') + ' MB'
