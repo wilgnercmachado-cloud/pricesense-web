@@ -1,0 +1,18 @@
+[client]
+toolbarMode = "minimal"
+showErrorDetails = "none"
+
+[server]
+maxUploadSize = 300
+
+[theme]
+base = "light"
+primaryColor = "#2424ED"
+backgroundColor = "#ECEEF1"
+secondaryBackgroundColor = "#F5F6F8"
+textColor = "#161A22"
+borderColor = "#D6DAE1"
+baseRadius = "0.5rem"
+buttonRadius = "0.5rem"
+font = "Archivo:https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&display=swap, sans-serif"
+headingFont = "Archivo:https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&display=swap, sans-serif"
