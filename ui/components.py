@@ -13,7 +13,11 @@ import streamlit.components.v1 as components
 from core.market_engine import formatar_brl
 from ui import theme
 
-esc = html.escape
+def esc(valor) -> str:
+    """Escapa qualquer valor para HTML (números e vazios inclusive; o banco pode devolver int ou None)."""
+    return "" if valor is None else html.escape(str(valor))
+
+
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
 MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto",
          "setembro", "outubro", "novembro", "dezembro"]
