@@ -12,9 +12,17 @@ from ui import theme
 _VENDOR = Path(__file__).resolve().parent.parent / "assets" / "vendor" / "lightweight-charts.standalone.production.js"
 
 
+_CDN = "https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js"
+
+
 @lru_cache(maxsize=1)
 def _biblioteca() -> str:
-    return _VENDOR.read_text(encoding="utf-8").replace("</script", "<\\/script")
+    """Biblioteca embutida a partir de assets/vendor; sem o arquivo, o navegador busca no CDN."""
+    try:
+        return "<script>" + _VENDOR.read_text(encoding="utf-8").replace("</script", "<\\/script") + "</script>"
+    except OSError:
+        return f'<script src="{_CDN}"></script>'
+
 
 
 def grafico(dados: dict, moda: float | None = None, altura: int = 430) -> None:
@@ -52,7 +60,7 @@ def grafico(dados: dict, moda: float | None = None, altura: int = 430) -> None:
 <div class="rng" id="rng"><button data-d="7">7D</button><button data-d="15">15D</button><button data-d="30">30D</button><button data-d="0" class="on">Tudo</button></div></div>
 <div class="body"><div id="chart"></div><div class="side"><h4>Concorrentes no dia</h4><small id="dia"></small><div id="lista"></div></div></div>
 </div>
-<script>{_biblioteca()}</script>
+{_biblioteca()}
 <script>
 const P = {payload}, C = P.cores, D = P.dados, LC = LightweightCharts;
 const brl = v => v == null ? '-' : 'R$ ' + v.toLocaleString('pt-BR', {{minimumFractionDigits: 2, maximumFractionDigits: 2}});

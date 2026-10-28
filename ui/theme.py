@@ -94,26 +94,55 @@ html, body, .stApp, button, input, textarea, select, [data-testid="stMarkdownCon
 [data-testid="stIconMaterial"], .ms {{ font-family: 'Material Symbols Rounded' !important; font-weight: 400; }}
 .stApp {{
   color: var(--ps-ink);
-  background:
+  background-color: var(--ps-canvas);
+  background-image:
     radial-gradient(1100px 620px at 88% -12%, var(--ps-glow1), transparent 62%),
     radial-gradient(900px 560px at -12% 18%, var(--ps-glow2), transparent 60%),
-    linear-gradient(180deg, var(--ps-canvas2), var(--ps-canvas) 55%) fixed;
-}}
-.stApp::before {{
-  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-  background-image: linear-gradient(var(--ps-grid) 1px, transparent 1px), linear-gradient(90deg, var(--ps-grid) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 35%, transparent 80%);
-  -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 35%, transparent 80%);
+    linear-gradient(180deg, transparent 0, transparent 140px, var(--ps-canvas) 720px),
+    linear-gradient(var(--ps-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--ps-grid) 1px, transparent 1px),
+    linear-gradient(180deg, var(--ps-canvas2), var(--ps-canvas) 720px);
+  background-size: auto, auto, auto, 56px 56px, 56px 56px, auto;
+  background-attachment: fixed;
 }}
 [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-testid="stBottomBlockContainer"] {{ background: transparent !important; }}
 [data-testid="stAppDeployButton"], [data-testid="stMainMenu"], [data-testid="stDecoration"],
 [data-testid="stToolbarActions"], [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] {{ display: none !important; }}
-[data-testid="stMainBlockContainer"] {{ max-width: 1440px; padding: 5.2rem 2.5rem 5rem; position: relative; z-index: 1; }}
+[data-testid="stMainBlockContainer"] {{ max-width: 1440px; padding: 5.2rem 2.5rem 5rem; }}
 @media (max-width: 760px) {{ [data-testid="stMainBlockContainer"] {{ padding: 4.6rem 1rem 4rem; }} }}
-@keyframes ps-in {{ from {{ opacity: 0; transform: translateY(6px); }} to {{ opacity: 1; transform: none; }} }}
-[data-testid="stMainBlockContainer"] > div > [data-testid="stVerticalBlock"] > div {{ animation: ps-in .45s cubic-bezier(.2,.7,.2,1) both; }}
+/* troca de tema suave, só em propriedades baratas de animar */
+.stApp, header[data-testid="stHeader"], [class*="st-key-psc_"], .ps-q, .ps-split, .ps-ticker, [data-testid="stExpander"] details,
+[data-baseweb="select"] > div, [data-baseweb="input"], [data-testid="stBaseButton-secondary"] {{
+  transition: background-color .35s ease, border-color .35s ease, color .35s ease, box-shadow .35s ease;
+}}
 @media (prefers-reduced-motion: reduce) {{ [data-testid="stMainBlockContainer"] * {{ animation: none !important; transition: none !important; }} }}
+
+/* botão de tema fixo no topo */
+.st-key-ps_tema {{ position: fixed !important; top: 11px; right: 20px; z-index: 1000002; width: auto !important; gap: 0; }}
+.st-key-ps_tema [data-testid="stElementContainer"]:has(iframe) {{ display: none; }}
+.st-key-ps_tema button {{
+  width: 38px; height: 38px; min-height: 38px; padding: 0; border-radius: 50%;
+  background: var(--ps-surface) !important; border: 1px solid var(--ps-line) !important;
+  backdrop-filter: var(--ps-glass); -webkit-backdrop-filter: var(--ps-glass);
+  transition: transform .25s cubic-bezier(.2,.7,.2,1), border-color .2s ease, box-shadow .2s ease !important;
+}}
+.st-key-ps_tema button:hover {{ transform: rotate(-18deg) scale(1.06); border-color: var(--ps-primary) !important;
+  box-shadow: 0 0 0 4px var(--ps-primary-soft); }}
+.st-key-ps_tema button [data-testid="stIconMaterial"] {{ color: var(--ps-ink); font-size: 20px; }}
+@media (max-width: 760px) {{ .st-key-ps_tema {{ top: 9px; right: 12px; }} }}
+
+/* menus do topo: vidro e abertura suave */
+[data-testid="stTopNavPopover"] {{ animation: ps-drop .22s cubic-bezier(.2,.8,.2,1) both; transform-origin: top left; }}
+[data-testid="stTopNavPopoverBody"] {{
+  background: color-mix(in srgb, var(--ps-surface-solid) 82%, transparent) !important;
+  backdrop-filter: var(--ps-glass); -webkit-backdrop-filter: var(--ps-glass);
+  border: 1px solid var(--ps-line) !important; border-radius: 14px !important; box-shadow: 0 24px 48px -20px rgba(0,0,0,.5) !important;
+}}
+[data-testid="stTopNavDropdownLink"] {{ border-radius: 9px; transition: background-color .15s ease, color .15s ease; }}
+[data-testid="stTopNavDropdownLink"]:hover {{ background: var(--ps-primary-soft) !important; color: var(--ps-primary) !important; }}
+[data-testid="stTopNavSection"], [data-testid="stTopNavLink"] {{ transition: background-color .2s ease, color .2s ease; border-radius: 9px; }}
+[data-testid="stTopNavSection"]:hover, [data-testid="stTopNavLink"]:hover {{ background: var(--ps-raised) !important; }}
+@keyframes ps-drop {{ from {{ opacity: 0; transform: translateY(-6px) scale(.98); }} to {{ opacity: 1; transform: none; }} }}
 
 header[data-testid="stHeader"] {{
   background: color-mix(in srgb, var(--ps-canvas) 62%, transparent);

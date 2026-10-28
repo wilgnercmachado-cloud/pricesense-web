@@ -191,7 +191,7 @@ def botao_copiar(texto: str | None = None, rotulo: str = "Copiar", feito: str = 
     components.html(f"""
 <style>
 body{{margin:0;background:transparent;font-family:'Archivo','Helvetica Neue',Arial,sans-serif}}
-button{{width:100%;height:{altura}px;border-radius:8px;border:1px solid {t['line']};background:{t['raised']};
+button{{width:100%;height:{altura}px;border-radius:8px;border:1px solid {t['line']};background:{t['surface_solid']};
 color:{t['ink']};font:500 14px 'Archivo','Helvetica Neue',Arial,sans-serif;cursor:pointer;transition:background .15s,border-color .15s}}
 button:hover{{border-color:{t['primary']};color:{t['primary']}}}
 button.ok{{background:{t['ok']};border-color:{t['ok']};color:#fff}}
@@ -253,7 +253,7 @@ html,body{{margin:0;height:100%;background:transparent;font:14px 'Archivo','Helv
 .bar{{height:{alt_barra}px;display:flex;align-items:center;justify-content:space-between;gap:12px}}
 .bar span{{color:{t['muted']};font-size:13px}}
 .acoes{{display:flex;gap:8px}}
-button{{height:38px;padding:0 16px;border-radius:8px;border:1px solid {t['line']};background:{t['raised']};color:{t['ink']};
+button{{height:38px;padding:0 16px;border-radius:8px;border:1px solid {t['line']};background:{t['surface_solid']};color:{t['ink']};
 font:500 14px 'Archivo','Helvetica Neue',Arial,sans-serif;cursor:pointer}}
 button:hover:not(:disabled){{border-color:{t['primary']};color:{t['primary']}}}
 button:disabled{{opacity:.5;cursor:default}}
@@ -331,3 +331,35 @@ async function obterBytes(msg) {{
   }}
 }})();
 </script></body></html>""", height=altura + alt_barra, scrolling=False)
+
+
+def menu_ao_passar_mouse() -> None:
+    """Abre os menus do topo ao passar o mouse (só em dispositivos com mouse) e fecha ao sair."""
+    components.html("""<script>
+const d = window.parent.document, w = window.parent;
+if (!d.__psHover && w.matchMedia('(hover: hover)').matches) {
+  d.__psHover = true;
+  let aberto = null, timer = null, abertoEm = 0;
+  const estaAberto = b => b && b.getAttribute('aria-expanded') === 'true';
+  const fechar = () => { if (estaAberto(aberto)) aberto.click(); aberto = null; };
+  d.addEventListener('mouseover', e => {
+    const alvo = e.target.closest ? e.target : e.target.parentElement;
+    if (!alvo || !alvo.closest) return;
+    const secao = alvo.closest('[data-testid="stTopNavSection"]');
+    const painel = alvo.closest('[data-testid="stTopNavPopover"], [data-testid="stTopNavPopoverBody"]');
+    if (secao) {
+      clearTimeout(timer);
+      if (aberto && aberto !== secao) fechar();
+      if (!estaAberto(secao)) { secao.click(); abertoEm = Date.now(); }
+      aberto = secao; return;
+    }
+    if (painel) { clearTimeout(timer); return; }
+    if (aberto) { clearTimeout(timer); timer = setTimeout(fechar, 240); }
+  });
+  // Um clique logo depois de abrir pelo mouse não deve fechar o menu.
+  d.addEventListener('click', e => {
+    const secao = e.isTrusted && e.target.closest && e.target.closest('[data-testid="stTopNavSection"]');
+    if (secao && secao === aberto && Date.now() - abertoEm < 700) { e.stopPropagation(); e.preventDefault(); }
+  }, true);
+}
+</script>""", height=0, width=0)
