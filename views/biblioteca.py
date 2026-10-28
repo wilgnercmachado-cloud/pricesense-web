@@ -49,16 +49,14 @@ def _visualizador(rel: dict) -> None:
 </div>""")
 
     try:
-        conteudo = reports.baixar_html(rel["arquivo_path"], str(rel.get("atualizado_em") or rel.get("versao")))
+        with st.spinner("Baixando o relatório"):
+            gz = reports.baixar_compactado(rel["arquivo_path"], str(rel.get("atualizado_em") or rel.get("versao")))
     except Exception as exc:
         st.error(f"Não foi possível baixar o arquivo do relatório: {exc}", icon=":material/error:")
         return
 
-    c1, c2, c3, c4 = st.columns([1.3, 1, 1, 1], vertical_alignment="bottom")
+    c1, _, c3, c4 = st.columns([1.3, 1, 1, 1], vertical_alignment="bottom")
     altura = c1.segmented_control("Altura", list(ALTURAS), default="Padrão", required=True, key="rel_altura")
-    with c2:
-        st.download_button("Baixar HTML", data=conteudo.encode("utf-8"), mime="text/html", width="stretch",
-                           file_name=f"{(rel.get('titulo') or 'relatorio')[:60]}.html", icon=":material/download:")
     with c3:
         ui.botao_copiar(rotulo="Copiar link", feito="Link copiado", link_param=("r", rel["id"]))
     with c4:
@@ -67,7 +65,8 @@ def _visualizador(rel: dict) -> None:
                 st.switch_page(state.paginas()["publicar"], query_params={"editar": rel["id"]})
 
     st.html("<div style='height:6px'></div>")
-    ui.relatorio_html(conteudo, ALTURAS[altura])
+    nome = "".join(c for c in (rel.get("titulo") or "relatorio") if c.isalnum() or c in " -_").strip()[:60] or "relatorio"
+    ui.relatorio_html(gz, ALTURAS[altura], nome_arquivo=f"{nome}.html")
 
 
 def render() -> None:

@@ -68,8 +68,11 @@ def _formulario(rel: dict | None) -> None:
                     conteudo = codigo.encode("utf-8")
 
     if conteudo:
-        with st.expander("Pré-visualizar", expanded=False, icon=":material/visibility:"):
-            ui.relatorio_html(conteudo.decode("utf-8", errors="replace"), 560)
+        mb = len(conteudo) / 1024 / 1024
+        if st.toggle(f"Pré-visualizar ({f'{mb:.1f}'.replace('.', ',')} MB)", key=f"pub_prev_{sufixo}"):
+            with st.spinner("Compactando para a pré-visualização"):
+                gz = reports.compactar(conteudo)
+            ui.relatorio_html(gz, 560)
 
     erros = []
     if not titulo.strip():
@@ -97,7 +100,7 @@ def _formulario(rel: dict | None) -> None:
             "destaque": destaque if admin else bool(rel.get("destaque")) if editando else False,
         }
         try:
-            with st.spinner("Salvando"):
+            with st.spinner("Compactando e enviando o arquivo. Relatórios grandes levam alguns segundos."):
                 if editando:
                     reports.atualizar(rel, meta, conteudo)
                     rid = rel["id"]
