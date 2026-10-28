@@ -8,15 +8,37 @@ from ui import components as ui
 from ui import theme
 
 FERRAMENTAS = [
-    ("preco_bot", "Preço Bot", "Arredonda preços pelas regras de gôndola e monta o arquivo de importação do ERP.", ":material/sell:"),
-    ("promo", "Pricing Promo", "Valida encartes, abre clusters em filiais e aponta conflitos de preço e de data.", ":material/campaign:"),
-    ("pesquisa", "Pesquisa de Mercado", "Lê a extração da rotina 1067 e calcula moda, menor preço e visão de mercado.", ":material/query_stats:"),
-    ("regular", "Pricing Regular", "Análises competitivas de preço regular. Em migração para a nova plataforma.", ":material/price_change:"),
+    ("pesquisa", "Pesquisa de Mercado", "Moda, menor preço e histórico da concorrência a partir da rotina 1067.", "query_stats"),
+    ("promo", "Pricing Promo", "Valida encartes, abre clusters em filiais e aponta conflitos de preço e de data.", "campaign"),
+    ("preco_bot", "Preço Bot", "Arredonda preços pelas regras de gôndola e monta o arquivo de importação do ERP.", "sell"),
+    ("regular", "Pricing Regular", "Análises competitivas de preço regular. Em migração para a nova plataforma.", "price_change"),
 ]
 
 
+def _resumo_pesquisa() -> None:
+    """Se uma pesquisa foi carregada nesta sessão, mostra o retrato do mercado logo no início."""
+    df = st.session_state.get("df_pesq_master")
+    if df is None or df.empty:
+        return
+    from core import market_engine as me
+    base = me.filtro_qualidade(df)
+    if base.empty:
+        return
+    k = me.indicadores(base)
+    serie = base.groupby("PESQUISADATA_DT")[me.VAR].min().sort_index().tolist()
+    ui.secao("Mercado na última pesquisa", st.session_state.get("arquivo_pesquisa_nome", ""))
+    ui.etiquetas([
+        ui.etiqueta("Moda varejo", k["moda_var"], tom="primary", serie=serie),
+        ui.etiqueta("Moda atacado", k["moda_atac"], tom="alert"),
+        ui.etiqueta("Menor varejo", k["min"], tom="ok"),
+        ui.etiqueta("Coletas", len(base), tipo="numero"),
+    ])
+
+
 def render() -> None:
-    ui.cabecalho(f"Olá, {state.primeiro_nome()}", ui.data_extenso())
+    ui.cabecalho(f"Olá, {state.primeiro_nome()}",
+                 extra_html=f"<p class='ps-clock'><i class='ps-live'></i>{ui.data_extenso()}</p>")
+    _resumo_pesquisa()
     paginas = state.paginas()
 
     disponiveis = [f for f in FERRAMENTAS if f[0] in paginas]
@@ -27,8 +49,9 @@ def render() -> None:
         colunas = st.columns(min(len(disponiveis), 4))
         for col, (chave, nome, desc, icone) in zip(colunas, disponiveis):
             with col, st.container(border=True, key=f"psc_tool_{chave}"):
-                st.html(f"<div class='ps-tool'><h3>{ui.esc(nome)}</h3><p>{ui.esc(desc)}</p></div>")
-                st.page_link(paginas[chave], label=f"Abrir {nome}", icon=icone)
+                st.html(f"<div class='ps-tool'><div class='ic'><span class='ms'>{icone}</span></div>"
+                        f"<h3>{ui.esc(nome)}</h3><p>{ui.esc(desc)}</p></div>")
+                st.page_link(paginas[chave], label="Abrir", icon=":material/arrow_outward:")
 
     esq, dir_ = st.columns([1.6, 1], gap="large")
     with esq:

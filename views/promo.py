@@ -90,11 +90,38 @@ def _clusters_fora() -> None:
                         st.warning("A tabela solicitacoes_cluster ainda não existe no Supabase. Rode supabase/migrations.sql.")
 
 
+def _linha_do_tempo(df: pd.DataFrame) -> None:
+    d = df.assign(_ini=pd.to_datetime(df['INICIO'], format='%d/%m/%Y', errors='coerce'),
+                  _fim=pd.to_datetime(df['FIM'], format='%d/%m/%Y', errors='coerce')).dropna(subset=['_ini', '_fim'])
+    if d.empty:
+        return
+    camp = d.groupby('ARQUIVO ORIGEM').agg(ini=('_ini', 'min'), fim=('_fim', 'max'), itens=('SEQPRODUTO', 'size'),
+                                           crit=('Status Sistema', lambda s: int(s.str.contains('CRÍTICO').sum()))).sort_values('ini')
+    t0, t1 = camp['ini'].min(), camp['fim'].max() + pd.Timedelta(days=1)
+    total = max((t1 - t0).days, 1)
+    pos = lambda x: 100 * (x - t0).days / total
+    hoje = pd.Timestamp.today().normalize()
+    marca_hoje = f"<div class='ps-gantt-hoje' style='left:{pos(hoje):.2f}%' title='Hoje'></div>" if t0 <= hoje <= t1 else ""
+    linhas = ""
+    for nome, r in camp.iterrows():
+        esq, larg = pos(r['ini']), max(pos(r['fim'] + pd.Timedelta(days=1)) - pos(r['ini']), 1.2)
+        classe = "alert" if r['crit'] else "ok"
+        rotulo = f"{r['ini']:%d/%m} a {r['fim']:%d/%m}, {r['itens']} itens" + (f", {r['crit']} críticos" if r['crit'] else "")
+        linhas += (f"<div class='ps-gantt-row'><span title='{ui.esc(nome)}'>{ui.esc(nome)}</span><div class='ps-gantt-lane'>{marca_hoje}"
+                   f"<div class='ps-gantt-bar {classe}' style='left:{esq:.2f}%;width:{larg:.2f}%' title='{ui.esc(rotulo)}'>{ui.esc(rotulo)}</div></div></div>")
+    meio = t0 + (t1 - t0) / 2
+    st.html(f"<div class='ps-gantt'><div class='ps-gantt-axis'><span>{t0:%d/%m}</span><span>{meio:%d/%m}</span>"
+            f"<span>{(t1 - pd.Timedelta(days=1)):%d/%m}</span></div>{linhas}</div>")
+
+
 def render() -> None:
     ui.cabecalho("Pricing Promo", "Valide encartes antes de subir: abre clusters em filiais, encontra preço divergente e período sobreposto.")
 
-    arquivos = st.file_uploader("Planilhas de encarte (XLSX, XLS ou CSV com ponto e vírgula)", accept_multiple_files=True,
-                                type=['xlsx', 'xls', 'csv'], key="promo_upload")
+    carregados = st.session_state.get("promo_arquivos")
+    with st.expander(f"{len(carregados)} planilha(s) carregada(s)" if carregados else "Enviar as planilhas da campanha",
+                     expanded=not carregados, icon=":material/upload_file:"):
+        arquivos = st.file_uploader("Planilhas de encarte (XLSX, XLS ou CSV com ponto e vírgula)", accept_multiple_files=True,
+                                    type=['xlsx', 'xls', 'csv'], key="promo_upload")
     if arquivos:
         _carregar(arquivos)
 
@@ -147,6 +174,10 @@ def render() -> None:
     ])
     st.html("<div style='height:10px'></div>")
     ui.barra_validacao(total - criticos, criticos)
+
+    ui.secao("Linha do tempo das campanhas", "Períodos que se cruzam ficam lado a lado. Campanhas com itens críticos aparecem em vermelho.")
+    with st.container(border=True, key="psc_promo_gantt"):
+        _linha_do_tempo(df_f)
 
     # ---------------------------------------------------------------- grade
     ui.secao("Itens", "Edite preço e datas direto na grade. Mudar a data pergunta se vale para a campanha inteira.")

@@ -9,7 +9,7 @@ import streamlit as st
 
 from core import db
 from core import market_engine as me
-from ui import charts
+from ui import terminal
 from ui import components as ui
 from ui import theme
 
@@ -64,8 +64,11 @@ def _filtros(df: pd.DataFrame) -> dict:
 def render() -> None:
     ui.cabecalho("Pesquisa de Mercado", "Moda, menor preço e histórico da concorrência a partir da rotina 1067.")
 
-    arquivo = st.file_uploader("Extração da rotina 1067, aba pesquisa extração (ZIP, CSV com | ou Excel)",
-                               type=['zip', 'csv', 'xlsx', 'xls'], key="pesq_upload")
+    carregado = st.session_state.get("arquivo_pesquisa_nome")
+    with st.expander(f"Arquivo: {carregado}" if carregado else "Enviar a extração da rotina 1067",
+                     expanded=not carregado, icon=":material/upload_file:"):
+        arquivo = st.file_uploader("Extração da rotina 1067, aba pesquisa extração (ZIP, CSV com | ou Excel)",
+                                   type=['zip', 'csv', 'xlsx', 'xls'], key="pesq_upload")
     if arquivo:
         _processar(arquivo)
 
@@ -90,43 +93,48 @@ def render() -> None:
         ui.vazio("Nenhuma coleta no filtro", "Amplie o período ou remova algum filtro. Preços zerados e fora da curva já são descartados automaticamente.")
         return
 
-    st.html("<div style='height:6px'></div>")
-    ui.letreiro(me.itens_letreiro(df_f))
-
     k = me.indicadores(df_f)
+    dados = me.serie_terminal(df_f)
+    modas = me.modas_por_produto(df_f)
+    um_produto = df_f['PRODUTO'].nunique() == 1
+    ui.letreiro(me.itens_letreiro(df_f), referencias=modas)
 
     def _origem(o):
-        return f"<b>{ui.esc(o[0][:34])}</b><br>{ui.esc(o[1])}" if o else ""
+        return f"<b>{ui.esc(o[0][:30])}</b> em {ui.esc(o[1])}" if o else ""
 
-    ui.secao("Mercado no filtro", f"{ui.numero(len(df_f))} coletas válidas.")
-    ui.etiquetas([
-        ui.etiqueta("Moda varejo", k["moda_var"], tom="primary"),
-        ui.etiqueta("Moda atacado", k["moda_atac"], tom="alert"),
-        ui.etiqueta("Coletas no preço moda", k["qtd_moda"], tipo="numero"),
-        ui.etiqueta("Menor varejo", k["min"], tom="promo", nota=_origem(k["min_origem"])),
+    indice = me.indice_pdv(df_f, modas)
+    menor_vs_moda = 100 * (k["min"] - k["moda_var"]) / k["moda_var"] if k["moda_var"] and um_produto else None
+    serie_var = [v for v in dados["series"].get("var_conc", []) if v is not None]
+    serie_atac = [v for v in dados["series"].get("atac_conc", []) if v is not None]
+
+    ui.secao("Mercado no filtro", f"{ui.numero(len(df_f))} coletas válidas")
+    cards = [
+        ui.etiqueta("Moda varejo", k["moda_var"], tom="primary", nota=f"{ui.numero(k['qtd_moda'])} coletas nesse preço", serie=serie_var),
+        ui.etiqueta("Moda atacado", k["moda_atac"], tom="alert", serie=serie_atac),
+        ui.etiqueta("Menor varejo", k["min"], tom="ok", nota=_origem(k["min_origem"]), variacao=menor_vs_moda, inverter=True),
         ui.etiqueta("Maior varejo", k["max"], nota=_origem(k["max_origem"])),
-    ])
+    ]
+    if indice is not None:
+        cards.append(ui.etiqueta("Índice de preço do PDV", indice, tipo="indice", tom="ok" if indice <= 100 else "alert",
+                                 nota="Nosso varejo sobre a moda de cada produto. Abaixo de 100, estamos mais baratos.",
+                                 variacao=indice - 100, inverter=True))
+    ui.etiquetas(cards)
 
-    t = theme.tokens()
-    esq, dir_ = st.columns([2, 1], gap="medium")
-    with esq, st.container(border=True, key="psc_pq_graf"):
-        serie = me.serie_menor_preco(df_f)
-        aba_conc, aba_pdv = st.tabs(["Concorrência", "Nosso PDV"])
-        with aba_conc:
-            st.plotly_chart(charts.menor_preco(serie, [(me.VAR, "Varejo concorrente", t["varejo"], -34, True),
-                                                       (me.ATAC, "Atacado concorrente", t["atacado"], 34, False)]),
-                            width="stretch", config={"displayModeBar": False}, key="pq_chart_conc")
-        with aba_pdv:
-            st.plotly_chart(charts.menor_preco(serie, [("Vlr. Varejo PDV", "Varejo PDV", t["varejo"], -34, False),
-                                                       ("Vlr. Atacado PDV", "Atacado PDV", t["atacado"], 34, False)]),
-                            width="stretch", config={"displayModeBar": False}, key="pq_chart_pdv")
-        st.caption("Menor preço registrado em cada dia do período.")
-    with dir_, st.container(border=True, key="psc_pq_media"):
-        st.html("<div class='ps-sec' style='margin-top:.2rem'><h2>Preço médio por concorrente</h2></div>")
-        medias = me.media_por_empresa(df_f)
-        st.dataframe(medias, hide_index=True, width="stretch", height=min(380, 38 + 35 * len(medias)),
-                     column_config={"Varejo": st.column_config.NumberColumn(format="R$ %.2f"),
-                                    "Atacado": st.column_config.NumberColumn(format="R$ %.2f")})
+    ui.secao("Evolução do menor preço", "Passe o mouse no gráfico para ver o ranking de concorrentes de cada dia.")
+    with st.container(border=True, key="psc_pq_terminal"):
+        terminal.grafico(dados, moda=(k["moda_var"] or None) if um_produto else None)
+
+    ui.secao("Posição de cada concorrente", "Quanto cada um fica, em média, acima ou abaixo da moda de cada produto.")
+    with st.container(border=True, key="psc_pq_media"):
+        linhas = []
+        for _, r in me.indice_por_concorrente(df_f, modas).iterrows():
+            dif = float(r["Dif"])
+            cor = "var(--ps-down)" if dif > 0 else "var(--ps-up)"
+            texto_dif = f"{'+' if dif > 0 else ''}{dif:.1f}".replace(".", ",")
+            extra = (f"<em style='color:{cor}'>{texto_dif}%</em>"
+                     f"<em style='color:var(--ps-faint)'>{int(r['Produtos'])} prod.</em>")
+            linhas.append((str(r["Concorrente"]), float(r["Varejo"]), extra))
+        ui.ranking(linhas)
 
     # ---------------------------------------------------------------- extrações
     ui.secao("Extrações", "Gere a planilha de inteligência competitiva sobre as coletas do filtro.")

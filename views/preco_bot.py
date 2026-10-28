@@ -28,6 +28,33 @@ def _lojas() -> list[str]:
     return opcoes if todas else filiais
 
 
+def _previa(texto: str, limite: int = 8) -> None:
+    """Mostra, antes de gerar, como os preços colados ficam depois das regras de arredondamento."""
+    linhas = []
+    for linha in texto.strip().split("\n"):
+        partes = pb._partes(linha)
+        if len(partes) < 2:
+            continue
+        try:
+            v = float(partes[1].replace(",", "."))
+            a = float(partes[2].replace(",", ".")) if len(partes) >= 3 and partes[2] else v
+        except ValueError:
+            continue
+        nv = pb.arredondar_varejo(v) if v > 0 else 0.0
+        na = pb.arredondar_atacado(a, nv) if a > 0 else 0.0
+        linhas.append((partes[0], v, nv, a, na))
+    if not linhas:
+        return
+    f = lambda x: f"{x:.2f}".replace(".", ",")
+    corpo = "".join(
+        f"<tr><td>{ui.esc(c)}</td><td class='de'>{f(v)}</td><td>{f(nv)}</td><td class='de'>{f(a)}</td><td>{f(na)}</td></tr>"
+        for c, v, nv, a, na in linhas[:limite])
+    resto = f"<p class='ps-q-n' style='margin:.5rem 0 0'>Mais {len(linhas) - limite} linha(s) no arquivo final.</p>" if len(linhas) > limite else ""
+    st.html("<div class='ps-sec' style='margin:.4rem 0 .4rem'><h2 style='font-size:.95rem'>Prévia do arredondamento</h2></div>"
+            "<table class='ps-mini'><thead><tr><th>Produto</th><th>Varejo colado</th><th>Varejo final</th><th>Atacado colado</th>"
+            f"<th>Atacado final</th></tr></thead><tbody>{corpo}</tbody></table>{resto}")
+
+
 def render() -> None:
     ui.cabecalho("Preço Bot", "Cole os preços, aplique as regras de arredondamento e gere o arquivo de importação do ERP.")
 
@@ -73,6 +100,8 @@ def render() -> None:
         texto = st.text_area("Preços colados", height=190, label_visibility="collapsed", key="pb_texto",
                              placeholder="12345\t9,93\t9,49\n67890\t24,10\t22,90")
 
+        if texto.strip() and not cancelamento:
+            _previa(texto)
         checagem = pb.validar_colagem(texto) if texto.strip() and not cancelamento else \
             {"erro_atacado": False, "alerta_margem": False, "itens_erro": [], "linhas": 0}
         if checagem["erro_atacado"]:
