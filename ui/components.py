@@ -10,7 +10,6 @@ from pathlib import Path
 import streamlit as st
 import streamlit.components.v1 as components
 
-from core import state
 from core.market_engine import formatar_brl
 from ui import theme
 
@@ -53,13 +52,9 @@ def marca_html() -> str:
 
 
 # ---------------------------------------------------------------- estrutura de página
-def cabecalho(titulo: str, descricao: str | None = None) -> None:
-    esq, dir_ = st.columns([1, 0.36], vertical_alignment="bottom")
-    with esq:
-        desc = f"<p>{esc(descricao)}</p>" if descricao else ""
-        st.html(f"<div class='ps-head'><h1>{esc(titulo)}</h1>{desc}</div>")
-    with dir_:
-        _area_usuario()
+def cabecalho(titulo: str, descricao: str | None = None, extra_html: str = "") -> None:
+    desc = f"<p>{esc(descricao)}</p>" if descricao else ""
+    st.html(f"<div class='ps-head'><h1>{esc(titulo)}</h1>{desc}{extra_html}</div>")
 
 
 def secao(titulo: str, descricao: str | None = None) -> None:
@@ -67,7 +62,7 @@ def secao(titulo: str, descricao: str | None = None) -> None:
     st.html(f"<div class='ps-sec'><h2>{esc(titulo)}</h2>{desc}</div>")
 
 
-def avatar_html(tamanho: int = 44) -> str:
+def avatar_html(tamanho: int = 52) -> str:
     foto = st.session_state.get("foto_perfil")
     estilo = f"width:{tamanho}px;height:{tamanho}px"
     if foto:
@@ -76,50 +71,57 @@ def avatar_html(tamanho: int = 44) -> str:
     return f"<div class='ps-avatar' style='{estilo}'>{inicial}</div>"
 
 
-def _area_usuario() -> None:
-    with st.container(horizontal=True, horizontal_alignment="right", vertical_alignment="center", gap="small"):
-        escuro = theme.modo() == "Dark"
-        if st.button("Claro" if escuro else "Escuro", icon=":material/light_mode:" if escuro else ":material/dark_mode:",
-                     type="tertiary", key="tema_toggle", help="Alternar tema"):
-            st.session_state.tema = "Light" if escuro else "Dark"
-            st.rerun()
-        with st.popover(state.primeiro_nome(), icon=":material/account_circle:"):
-            cargo = st.session_state.get("usuario_cargo") or st.session_state.get("usuario_login")
-            st.html(f"<div class='ps-user'>{avatar_html()}<div><b>{esc(st.session_state.get('usuario_logado', ''))}</b>"
-                    f"<span>{esc(cargo or '')}</span></div></div>")
-            paginas = state.paginas()
-            if "perfil" in paginas:
-                st.page_link(paginas["perfil"], label="Meu perfil", icon=":material/person:")
-            if "sair" in paginas:
-                st.page_link(paginas["sair"], label="Sair", icon=":material/logout:")
-
-
 def vazio(titulo: str, texto: str) -> None:
     st.html(f"<div class='ps-empty'><h3>{esc(titulo)}</h3><p>{esc(texto)}</p></div>")
 
 
 # ---------------------------------------------------------------- etiquetas
-def _preco_html(valor: float, sufixo: str = "") -> str:
-    texto = formatar_brl(valor, prefixo=False)
-    inteiro, dec = texto.rsplit(",", 1)
-    suf = f"<span class='suf'>{esc(sufixo)}</span>" if sufixo else ""
-    return (f"<div class='ps-price' aria-label='R$ {esc(texto)}'><span class='cur'>R$</span>"
-            f"<span>{esc(inteiro)}</span><span class='dec'>,{esc(dec)}</span>{suf}</div>")
+def sparkline(valores: list[float], cor: str, altura: int = 34) -> str:
+    vals = [float(v) for v in valores if v is not None]
+    if len(vals) < 2:
+        return ""
+    lo, hi = min(vals), max(vals)
+    faixa = (hi - lo) or 1.0
+    n = len(vals) - 1
+    pts = [(round(100 * i / n, 2), round(2 + (altura - 4) * (1 - (v - lo) / faixa), 2)) for i, v in enumerate(vals)]
+    linha = " ".join(f"{x},{y}" for x, y in pts)
+    gid = f"sg{abs(hash((tuple(vals), cor))) % 10**8}"
+    svg = (f"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 {altura}' preserveAspectRatio='none'>"
+            f"<defs><linearGradient id='{gid}' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='{cor}' stop-opacity='.35'/>"
+            f"<stop offset='1' stop-color='{cor}' stop-opacity='0'/></linearGradient></defs>"
+            f"<polygon points='0,{altura} {linha} 100,{altura}' fill='url(#{gid})'/>"
+            f"<polyline points='{linha}' fill='none' stroke='{cor}' stroke-width='1.6' vector-effect='non-scaling-stroke' stroke-linejoin='round'/>"
+            f"</svg>")
+    # st.html remove <svg> embutido; como imagem, o SVG é preservado.
+    return f"<img class='ps-spark' alt='' src='data:image/svg+xml;base64,{base64.b64encode(svg.encode()).decode()}'>"
 
 
-def etiqueta(rotulo: str, valor, tipo: str = "preco", tom: str = "neutro", nota: str = "") -> str:
-    """Etiqueta de gôndola. tipo: preco | numero | pct. tom: neutro | primary | promo | alert | ok."""
+def variacao_html(pct: float | None, inverter: bool = False) -> str:
+    if pct is None:
+        return ""
+    if abs(pct) < 0.05:
+        return "<span class='ps-d flat'>0,0%</span>"
+    subiu = pct > 0
+    bom = subiu != inverter
+    seta = "▲" if subiu else "▼"
+    return f"<span class='ps-d {'up' if bom else 'down'}'>{seta} {f'{abs(pct):.1f}'.replace('.', ',')}%</span>"
+
+
+def etiqueta(rotulo: str, valor, tipo: str = "preco", tom: str = "neutro", nota: str = "",
+             serie: list[float] | None = None, variacao: float | None = None, inverter: bool = False) -> str:
+    """Card de cotação. tipo: preco | numero | pct | indice. tom: neutro | primary | promo | alert | ok."""
     if tipo == "preco":
-        corpo = _preco_html(float(valor or 0))
-    elif tipo == "pct":
-        corpo = f"<div class='ps-price'><span>{esc(f'{float(valor):.1f}'.replace('.', ','))}</span><span class='suf'>%</span></div>"
+        corpo = f"<small>R$</small>{esc(formatar_brl(float(valor or 0), prefixo=False))}"
+    elif tipo in ("pct", "indice"):
+        corpo = esc(f"{float(valor or 0):.1f}".replace(".", ",")) + ("<small>%</small>" if tipo == "pct" else "")
     else:
-        num = numero(valor)
-        corpo = f"<div class='ps-price'><span>{esc(num)}</span></div>"
-    classe = "" if tom == "neutro" else f" t-{tom}"
-    nota_html = f"<div class='ps-tag-note'>{nota}</div>" if nota else ""
-    return (f"<div class='ps-tag{classe}'><div class='ps-tag-label'>{esc(rotulo)}</div>"
-            f"<div>{corpo}{nota_html}</div></div>")
+        corpo = esc(numero(valor))
+    t = theme.tokens()
+    cor = {"primary": t["primary"], "promo": t["amber"], "alert": t["down"], "ok": t["up"]}.get(tom, t["muted"])
+    spark = sparkline(serie, cor) if serie else ""
+    nota_html = f"<div class='ps-q-n'>{nota}</div>" if nota else ""
+    return (f"<div class='ps-q t-{tom}'><div class='ps-q-top'><div class='ps-q-l'>{esc(rotulo)}</div>{variacao_html(variacao, inverter)}</div>"
+            f"<div class='ps-q-v'>{corpo}</div>{nota_html}{spark}</div>")
 
 
 def etiquetas(itens: list[str]) -> None:
@@ -143,18 +145,34 @@ def barra_validacao(validos: int, criticos: int) -> None:
     )
 
 
-def letreiro(itens: list[dict]) -> None:
+def letreiro(itens: list[dict], referencias: dict | None = None) -> None:
+    """referencias: moda de cada produto; cada cotação é comparada à moda do próprio produto."""
     if not itens:
         return
-    blocos = "".join(
-        f"<span class='ps-ticker-item'><b>{esc(i['empresa'])}</b>"
-        f"<small>varejo</small><span class='v'>{esc(formatar_brl(i['varejo']))}</span>"
-        f"<small>atacado</small><span class='a'>{esc(formatar_brl(i['atacado'])) if i['atacado'] and i['atacado'] > 0 else '-'}</span></span>"
-        for i in itens
-    )
+    blocos = ""
+    for i in itens:
+        var = ""
+        referencia = (referencias or {}).get(i.get("produto"))
+        if referencia:
+            pct = 100 * (float(i["varejo"]) - referencia) / referencia
+            var = (f"<span class='{'down' if pct > 0 else 'up'}'>{'▲' if pct > 0 else '▼'} {f'{abs(pct):.1f}'.replace('.', ',')}%</span>"
+                   if abs(pct) >= 0.05 else "<span class='a'>=</span>")
+        atac = esc(formatar_brl(i['atacado'])) if i['atacado'] and i['atacado'] > 0 else '-'
+        blocos += (f"<span class='ps-ticker-item'><b>{esc(i['empresa'])}</b><span class='v'>{esc(formatar_brl(i['varejo']))}</span>"
+                   f"{var}<small>atacado</small><span class='a'>{atac}</span></span>")
     duracao = max(30, len(itens) * 7)
-    st.html(f"<div class='ps-ticker' aria-label='Menor preço recente por concorrente'>"
+    st.html(f"<div class='ps-ticker' aria-label='Menor preço recente por concorrente, comparado à moda de mercado'>"
             f"<div class='ps-ticker-track' style='--dur:{duracao}s'>{blocos}{blocos}</div></div>")
+
+
+def ranking(linhas: list[tuple[str, float, str]]) -> None:
+    """linhas: (rótulo, valor, html extra à direita)."""
+    if not linhas:
+        return
+    maximo = max(v for _, v, _ in linhas) or 1
+    html_ = "".join(f"<div class='ps-rank-row'><span title='{esc(r)}'>{esc(r)}</span><div class='bar'><i style='width:{100 * v / maximo:.1f}%'></i></div>"
+                    f"<div><b>{esc(formatar_brl(v))}</b>{extra}</div></div>" for r, v, extra in linhas)
+    st.html(f"<div class='ps-rank'>{html_}</div>")
 
 
 # ---------------------------------------------------------------- ações com JavaScript

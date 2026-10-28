@@ -1,60 +1,50 @@
-"""Sistema visual "Etiqueta de gôndola": tokens, tema nativo do Streamlit e CSS."""
+"""Sistema visual "Pregão": terminal de mercado com vidro translúcido."""
 from __future__ import annotations
 
 import streamlit as st
 from streamlit import config as st_config
 
-FONTE = "Archivo"
-FONTE_URL = "https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&display=swap"
+FONTE = "Geist"
+FONTE_MONO = "Geist Mono"
+FONTE_URL = "https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap"
+_URL_GEIST = "https://fonts.googleapis.com/css2?family=Geist:wght@300..700&display=swap"
+_URL_MONO = "https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400..600&display=swap"
 
 TOKENS = {
-    "Light": {
-        "canvas": "#ECEEF1",      # piso de loja
-        "surface": "#FFFFFF",
-        "raised": "#F5F6F8",
-        "ink": "#161A22",
-        "muted": "#5A6372",
-        "line": "#D6DAE1",
-        "primary": "#2424ED",     # azul PriceSense
-        "primary_hover": "#1515B8",
-        "primary_soft": "rgba(36,36,237,.09)",
-        "tag": "#FFD000",         # amarelo encarte
-        "tag_ink": "#161A22",
-        "alert": "#D7192D",       # vermelho oferta
-        "alert_soft": "rgba(215,25,45,.10)",
-        "ok": "#0C8A57",
-        "ok_soft": "rgba(12,138,87,.11)",
-        "warn_soft": "rgba(255,208,0,.30)",
-        "varejo": "#2424ED",
-        "atacado": "#D7192D",
-        "shadow": "0 1px 0 rgba(22,26,34,.04), 0 10px 28px -16px rgba(22,26,34,.22)",
-    },
     "Dark": {
-        "canvas": "#0E1424",      # loja à noite
-        "surface": "#151D31",
-        "raised": "#1B2540",
-        "ink": "#EEF1F8",
-        "muted": "#9AA5BD",
-        "line": "#2A3550",
-        "primary": "#7B83FF",
-        "primary_hover": "#9AA0FF",
-        "primary_soft": "rgba(123,131,255,.14)",
-        "tag": "#FFD000",
-        "tag_ink": "#161A22",
-        "alert": "#FF5468",
-        "alert_soft": "rgba(255,84,104,.14)",
-        "ok": "#3DD598",
-        "ok_soft": "rgba(61,213,152,.13)",
-        "warn_soft": "rgba(255,208,0,.16)",
-        "varejo": "#8C93FF",
-        "atacado": "#FF6B7C",
-        "shadow": "0 1px 0 rgba(0,0,0,.25), 0 14px 32px -18px rgba(0,0,0,.6)",
+        "canvas": "#060A13", "canvas2": "#0A1122", "field": "#0E1628",
+        "surface": "rgba(20,29,52,.52)", "surface_solid": "#0F1729", "raised": "rgba(255,255,255,.05)",
+        "ink": "#E9EEF7", "muted": "#8D97AD", "faint": "#5B6680",
+        "line": "rgba(255,255,255,.09)", "line_strong": "rgba(255,255,255,.18)", "line_hex": "#1F2A42",
+        "primary": "#5B8CFF", "primary_hover": "#7FA6FF", "primary_soft": "rgba(91,140,255,.15)",
+        "up": "#2BD99F", "up_soft": "rgba(43,217,159,.13)", "down": "#FF5C7A", "down_soft": "rgba(255,92,122,.13)",
+        "amber": "#F5B547", "amber_soft": "rgba(245,181,71,.15)",
+        "glow1": "rgba(91,140,255,.20)", "glow2": "rgba(43,217,159,.09)", "grid": "rgba(255,255,255,.035)",
+        "highlight": "rgba(255,255,255,.07)",
+        "shadow": "0 1px 0 rgba(255,255,255,.04) inset, 0 20px 40px -24px rgba(0,0,0,.8)",
+    },
+    "Light": {
+        "canvas": "#EDF1F7", "canvas2": "#F8FAFD", "field": "#FFFFFF",
+        "surface": "rgba(255,255,255,.62)", "surface_solid": "#FFFFFF", "raised": "rgba(15,23,42,.04)",
+        "ink": "#0B1220", "muted": "#566176", "faint": "#8A94A8",
+        "line": "rgba(15,23,42,.09)", "line_strong": "rgba(15,23,42,.18)", "line_hex": "#DCE2EC",
+        "primary": "#2D4BFF", "primary_hover": "#1F38D6", "primary_soft": "rgba(45,75,255,.10)",
+        "up": "#0E9F6E", "up_soft": "rgba(14,159,110,.11)", "down": "#E11D48", "down_soft": "rgba(225,29,72,.10)",
+        "amber": "#C47A0A", "amber_soft": "rgba(245,181,71,.20)",
+        "glow1": "rgba(45,75,255,.13)", "glow2": "rgba(14,159,110,.08)", "grid": "rgba(15,23,42,.04)",
+        "highlight": "rgba(255,255,255,.7)",
+        "shadow": "0 1px 0 rgba(255,255,255,.8) inset, 0 18px 40px -26px rgba(15,23,42,.35)",
     },
 }
+# apelidos usados pelas telas
+for _t in TOKENS.values():
+    _t.update(alert=_t["down"], alert_soft=_t["down_soft"], ok=_t["up"], ok_soft=_t["up_soft"],
+              tag=_t["amber"], tag_ink="#0B1220", warn_soft=_t["amber_soft"],
+              varejo=_t["primary"], atacado=_t["down"], pdv=_t["amber"])
 
 
 def modo() -> str:
-    return "Dark" if st.session_state.get("tema") == "Dark" else "Light"
+    return "Light" if st.session_state.get("tema") == "Light" else "Dark"
 
 
 def tokens() -> dict:
@@ -64,23 +54,15 @@ def tokens() -> dict:
 def _tema_nativo(t: dict) -> None:
     opcoes = {
         "theme.base": "dark" if modo() == "Dark" else "light",
-        "theme.primaryColor": t["primary"],
-        "theme.backgroundColor": t["canvas"],
-        "theme.secondaryBackgroundColor": t["raised"],
-        "theme.textColor": t["ink"],
-        "theme.borderColor": t["line"],
-        "theme.dataframeBorderColor": t["line"],
-        "theme.dataframeHeaderBackgroundColor": t["raised"],
-        "theme.linkColor": t["primary"],
-        "theme.redColor": t["alert"],
-        "theme.greenColor": t["ok"],
-        "theme.blueColor": t["primary"],
-        "theme.yellowColor": t["tag"],
-        "theme.font": f"{FONTE}:{FONTE_URL}, sans-serif",
-        "theme.headingFont": f"{FONTE}:{FONTE_URL}, sans-serif",
-        "theme.baseRadius": "0.5rem",
-        "theme.buttonRadius": "0.5rem",
-        "theme.showWidgetBorder": True,
+        "theme.primaryColor": t["primary"], "theme.backgroundColor": t["canvas"],
+        "theme.secondaryBackgroundColor": t["field"], "theme.textColor": t["ink"],
+        "theme.borderColor": t["line_hex"], "theme.dataframeBorderColor": t["line_hex"],
+        "theme.dataframeHeaderBackgroundColor": t["field"], "theme.linkColor": t["primary"],
+        "theme.redColor": t["down"], "theme.greenColor": t["up"], "theme.blueColor": t["primary"],
+        "theme.yellowColor": t["amber"],
+        "theme.font": f"{FONTE}:{_URL_GEIST}, sans-serif", "theme.headingFont": f"{FONTE}:{_URL_GEIST}, sans-serif",
+        "theme.codeFont": f"{FONTE_MONO}:{_URL_MONO}, monospace",
+        "theme.baseRadius": "0.65rem", "theme.buttonRadius": "0.65rem", "theme.showWidgetBorder": True,
     }
     for chave, valor in opcoes.items():
         try:
@@ -102,264 +84,261 @@ def _css(t: dict) -> str:
 :root {{
 {v}
   --ps-shadow: {t['shadow']};
-  --ps-font: '{FONTE}', 'Helvetica Neue', Arial, sans-serif;
+  --ps-font: '{FONTE}', -apple-system, 'Segoe UI', sans-serif;
+  --ps-mono: '{FONTE_MONO}', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --ps-glass: blur(22px) saturate(160%);
 }}
 
-/* ---------- base ---------- */
-html, body, .stApp, button, input, textarea, select, [data-testid="stMarkdownContainer"] {{
-  font-family: var(--ps-font);
+/* ---------- base e fundo ---------- */
+html, body, .stApp, button, input, textarea, select, [data-testid="stMarkdownContainer"] {{ font-family: var(--ps-font); }}
+[data-testid="stIconMaterial"], .ms {{ font-family: 'Material Symbols Rounded' !important; font-weight: 400; }}
+.stApp {{
+  color: var(--ps-ink);
+  background:
+    radial-gradient(1100px 620px at 88% -12%, var(--ps-glow1), transparent 62%),
+    radial-gradient(900px 560px at -12% 18%, var(--ps-glow2), transparent 60%),
+    linear-gradient(180deg, var(--ps-canvas2), var(--ps-canvas) 55%) fixed;
 }}
-[data-testid="stIconMaterial"] {{ font-family: 'Material Symbols Rounded' !important; }}
-.stApp {{ background: var(--ps-canvas); color: var(--ps-ink); }}
-[data-testid="stAppDeployButton"], [data-testid="stMainMenu"], [data-testid="stDecoration"] {{ display: none !important; }}
-[data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] {{ display: none !important; }}
-
-[data-testid="stMainBlockContainer"] {{
-  max-width: 1440px;
-  padding: 5.4rem 2.5rem 5rem;
+.stApp::before {{
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: linear-gradient(var(--ps-grid) 1px, transparent 1px), linear-gradient(90deg, var(--ps-grid) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 35%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 35%, transparent 80%);
 }}
-@media (max-width: 760px) {{
-  [data-testid="stMainBlockContainer"] {{ padding: 4.6rem 1rem 4rem; }}
-}}
+[data-testid="stAppViewContainer"], [data-testid="stMain"], [data-testid="stBottomBlockContainer"] {{ background: transparent !important; }}
+[data-testid="stAppDeployButton"], [data-testid="stMainMenu"], [data-testid="stDecoration"],
+[data-testid="stToolbarActions"], [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] {{ display: none !important; }}
+[data-testid="stMainBlockContainer"] {{ max-width: 1440px; padding: 5.2rem 2.5rem 5rem; position: relative; z-index: 1; }}
+@media (max-width: 760px) {{ [data-testid="stMainBlockContainer"] {{ padding: 4.6rem 1rem 4rem; }} }}
+@keyframes ps-in {{ from {{ opacity: 0; transform: translateY(6px); }} to {{ opacity: 1; transform: none; }} }}
+[data-testid="stMainBlockContainer"] > div > [data-testid="stVerticalBlock"] > div {{ animation: ps-in .45s cubic-bezier(.2,.7,.2,1) both; }}
+@media (prefers-reduced-motion: reduce) {{ [data-testid="stMainBlockContainer"] * {{ animation: none !important; transition: none !important; }} }}
 
 header[data-testid="stHeader"] {{
-  background: var(--ps-surface);
+  background: color-mix(in srgb, var(--ps-canvas) 62%, transparent);
+  backdrop-filter: var(--ps-glass); -webkit-backdrop-filter: var(--ps-glass);
   border-bottom: 1px solid var(--ps-line);
 }}
 
-/* superfícies (containers com key que começa em psc_) */
-[class*="st-key-psc_"] {{
-  background: var(--ps-surface);
+/* ---------- vidro: containers com key psc_*, expanders, popovers ---------- */
+[class*="st-key-psc_"], [data-testid="stExpander"] details, [data-testid="stPopoverBody"] {{
+  background: var(--ps-surface) !important;
+  backdrop-filter: var(--ps-glass); -webkit-backdrop-filter: var(--ps-glass);
+  border: 1px solid var(--ps-line) !important; border-radius: 16px !important;
   box-shadow: var(--ps-shadow);
+  transition: border-color .2s ease, box-shadow .2s ease;
 }}
+[class*="st-key-psc_"]:hover {{ border-color: var(--ps-line-strong) !important; }}
+[data-testid="stExpander"] summary:hover {{ color: var(--ps-primary); }}
 
-button[kind="primary"], button[kind="secondary"], button[kind="tertiary"],
-[data-testid="stBaseButton-primary"], [data-testid="stBaseButton-secondary"] {{ font-weight: 600; }}
+/* campos */
+[data-baseweb="select"] > div, [data-baseweb="input"], [data-baseweb="textarea"], [data-baseweb="base-input"] {{
+  background-color: color-mix(in srgb, var(--ps-field) 72%, transparent) !important;
+  border-color: var(--ps-line) !important;
+}}
+[data-baseweb="select"] > div:focus-within, [data-baseweb="input"]:focus-within, [data-baseweb="textarea"]:focus-within {{
+  border-color: var(--ps-primary) !important; box-shadow: 0 0 0 3px var(--ps-primary-soft) !important;
+}}
+[data-baseweb="tag"] {{ background: var(--ps-primary-soft) !important; color: var(--ps-ink) !important; border: 1px solid color-mix(in srgb, var(--ps-primary) 40%, transparent) !important; }}
+[data-baseweb="tag"] span {{ color: var(--ps-ink) !important; }}
 
+/* botões */
+[data-testid="stBaseButton-primary"], [data-testid="stBaseButton-primaryFormSubmit"] {{
+  background: linear-gradient(180deg, var(--ps-primary-hover), var(--ps-primary)) !important;
+  border: 1px solid color-mix(in srgb, var(--ps-primary) 70%, #fff) !important; color: #fff !important; font-weight: 550 !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,.25) inset, 0 10px 24px -12px var(--ps-primary);
+  transition: transform .15s ease, box-shadow .2s ease !important;
+}}
+[data-testid="stBaseButton-primary"]:hover, [data-testid="stBaseButton-primaryFormSubmit"]:hover {{
+  transform: translateY(-1px); box-shadow: 0 1px 0 rgba(255,255,255,.25) inset, 0 14px 30px -12px var(--ps-primary);
+}}
+[data-testid="stBaseButton-secondary"], [data-testid="stBaseButton-secondaryFormSubmit"] {{
+  background: color-mix(in srgb, var(--ps-field) 60%, transparent) !important; border: 1px solid var(--ps-line) !important;
+  backdrop-filter: blur(10px); font-weight: 500 !important;
+}}
+[data-testid="stBaseButton-secondary"]:hover {{ border-color: var(--ps-primary) !important; color: var(--ps-primary) !important; }}
+[data-testid="stBaseButton-primary"]:disabled {{ opacity: .4; box-shadow: none; transform: none; filter: saturate(.6); }}
 :focus-visible {{ outline: 2px solid var(--ps-primary) !important; outline-offset: 2px; }}
+[data-testid="stTabs"] [data-baseweb="tab-list"] {{ gap: 4px; }}
+[data-testid="stDataFrame"] {{ border-radius: 12px; overflow: hidden; }}
 
-/* área de colagem do Preço Bot: colunas alinhadas por TAB */
-.st-key-pb_texto textarea {{
-  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
-  font-size: .9rem; tab-size: 8; -moz-tab-size: 8; line-height: 1.55;
-}}
+.st-key-pb_texto textarea {{ font-family: var(--ps-mono); font-size: .9rem; tab-size: 8; -moz-tab-size: 8; line-height: 1.6; }}
 
-/* ---------- cabeçalho de página ---------- */
+/* ---------- títulos ---------- */
 .ps-head h1 {{
-  font-family: var(--ps-font); font-stretch: 116%; font-weight: 800;
-  font-size: clamp(1.85rem, 1.1rem + 2.1vw, 2.75rem);
-  letter-spacing: -.028em; line-height: 1.02; margin: 0; padding: 0; color: var(--ps-ink);
+  font-family: var(--ps-font); font-weight: 600; font-size: clamp(2rem, 1.3rem + 2vw, 2.9rem);
+  letter-spacing: -.04em; line-height: 1.04; margin: 0; padding: 0; color: var(--ps-ink);
 }}
-.ps-head p {{ color: var(--ps-muted); margin: .45rem 0 0; font-size: 1.02rem; max-width: 68ch; line-height: 1.45; }}
-
-.ps-sec {{ margin: 1.6rem 0 .55rem; }}
-.ps-sec h2 {{
-  font-family: var(--ps-font); font-stretch: 108%; font-weight: 750; font-size: 1.22rem;
-  letter-spacing: -.012em; margin: 0; padding: 0; color: var(--ps-ink);
-}}
+.ps-head p {{ color: var(--ps-muted); margin: .5rem 0 0; font-size: 1rem; max-width: 72ch; line-height: 1.5; }}
+.ps-sec {{ margin: 1.9rem 0 .7rem; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }}
 [class*="st-key-psc_"] .ps-sec {{ margin-top: .1rem; }}
-.ps-sec p {{ color: var(--ps-muted); margin: .2rem 0 0; font-size: .93rem; max-width: 72ch; }}
+.ps-sec h2 {{ font-family: var(--ps-font); font-weight: 600; font-size: 1.12rem; letter-spacing: -.02em; margin: 0; padding: 0; color: var(--ps-ink); }}
+.ps-sec p {{ color: var(--ps-muted); margin: 0; font-size: .9rem; }}
 
-/* ---------- etiqueta de gôndola (elemento assinatura) ---------- */
-.ps-tags {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 12px; }}
-.ps-tag {{
-  --band: var(--ps-ink);
-  position: relative; overflow: hidden;
-  background: var(--ps-surface); border: 1px solid var(--ps-line); border-radius: 10px;
-  padding: 14px 16px 13px 24px; min-height: 124px;
-  display: flex; flex-direction: column; justify-content: space-between; gap: 10px;
-  box-shadow: var(--ps-shadow);
+/* ---------- cotação (indicador com sparkline) ---------- */
+.ps-tags {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }}
+.ps-q {{
+  --tone: var(--ps-ink);
+  position: relative; overflow: hidden; border-radius: 16px; padding: 16px 18px 14px;
+  background: var(--ps-surface); border: 1px solid var(--ps-line); box-shadow: var(--ps-shadow);
+  backdrop-filter: var(--ps-glass); -webkit-backdrop-filter: var(--ps-glass);
+  display: flex; flex-direction: column; gap: 6px; min-height: 120px; transition: border-color .2s, transform .2s;
 }}
-.ps-tag::before {{ content: ""; position: absolute; inset: 0 auto 0 0; width: 8px; background: var(--band); }}
-.ps-tag::after {{
-  content: ""; position: absolute; top: 12px; right: 12px; width: 9px; height: 9px; border-radius: 50%;
-  background: var(--ps-canvas); box-shadow: inset 0 0 0 1px var(--ps-line);
-}}
-.ps-tag.t-primary {{ --band: var(--ps-primary); }}
-.ps-tag.t-promo {{ --band: var(--ps-tag); }}
-.ps-tag.t-alert {{ --band: var(--ps-alert); }}
-.ps-tag.t-ok {{ --band: var(--ps-ok); }}
-.ps-tag-label {{ font-size: .88rem; font-weight: 600; color: var(--ps-ink); padding-right: 18px; line-height: 1.25; }}
-.ps-price {{
-  display: flex; align-items: flex-start; color: var(--ps-ink);
-  font-family: var(--ps-font); font-stretch: 62%; font-weight: 800; font-size: 3.1rem;
-  line-height: .86; letter-spacing: -.01em; font-variant-numeric: tabular-nums lining-nums;
-}}
-.ps-price .cur {{ font-stretch: 100%; font-size: .3em; font-weight: 700; margin: .28em .3em 0 0; letter-spacing: 0; }}
-.ps-price .dec {{
-  font-size: .5em; margin-top: .06em; text-decoration: underline;
-  text-decoration-thickness: .07em; text-underline-offset: .13em;
-}}
-.ps-price .suf {{ font-stretch: 100%; font-size: .3em; font-weight: 700; margin: .28em 0 0 .3em; }}
-.ps-tag-note {{ font-size: .8rem; color: var(--ps-muted); line-height: 1.3; }}
-.ps-tag-note b {{ color: var(--ps-ink); font-weight: 600; }}
+.ps-q:hover {{ border-color: var(--ps-line-strong); transform: translateY(-1px); }}
+.ps-q::before {{ content: ""; position: absolute; inset: 0 0 auto 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--tone), transparent); opacity: .7; }}
+.ps-q.t-primary {{ --tone: var(--ps-primary); }} .ps-q.t-promo {{ --tone: var(--ps-amber); }}
+.ps-q.t-alert {{ --tone: var(--ps-down); }} .ps-q.t-ok {{ --tone: var(--ps-up); }} .ps-q.t-neutro {{ --tone: var(--ps-faint); }}
+.ps-q-top {{ display: flex; justify-content: space-between; align-items: center; gap: 8px; }}
+.ps-q-l {{ font-size: .82rem; font-weight: 500; color: var(--ps-muted); line-height: 1.25; }}
+.ps-q-v {{ font-family: var(--ps-mono); font-weight: 500; font-size: 1.85rem; letter-spacing: -.03em; color: var(--ps-ink);
+  font-variant-numeric: tabular-nums; line-height: 1.1; white-space: nowrap; }}
+.ps-q-v small {{ font-size: .5em; color: var(--ps-muted); margin-right: .25em; font-weight: 400; letter-spacing: 0; }}
+.ps-q-n {{ font-size: .78rem; color: var(--ps-faint); line-height: 1.35; }}
+.ps-q-n b {{ color: var(--ps-muted); font-weight: 500; }}
+.ps-q .ps-spark {{ display: block; width: 100%; height: 34px; margin-top: auto; }}
+.ps-d {{ font-family: var(--ps-mono); font-size: .74rem; font-weight: 500; padding: 2px 7px; border-radius: 999px; white-space: nowrap; }}
+.ps-d.up {{ color: var(--ps-up); background: var(--ps-up-soft); }} .ps-d.down {{ color: var(--ps-down); background: var(--ps-down-soft); }}
+.ps-d.flat {{ color: var(--ps-muted); background: var(--ps-raised); }}
 
 /* ---------- barra de validação ---------- */
-.ps-split {{ background: var(--ps-surface); border: 1px solid var(--ps-line); border-radius: 10px; padding: 14px 16px; box-shadow: var(--ps-shadow); }}
-.ps-split-bar {{ display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--ps-raised); gap: 2px; }}
-.ps-split-bar span {{ display: block; }}
-.ps-split-bar .ok {{ background: var(--ps-ok); }}
-.ps-split-bar .alert {{ background: var(--ps-alert); }}
-.ps-split-legend {{ display: flex; gap: 18px; margin-top: 10px; font-size: .86rem; color: var(--ps-muted); flex-wrap: wrap; }}
-.ps-split-legend i {{ display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }}
-.ps-split-legend b {{ color: var(--ps-ink); font-variant-numeric: tabular-nums; }}
+.ps-split {{ background: var(--ps-surface); border: 1px solid var(--ps-line); border-radius: 16px; padding: 14px 18px;
+  box-shadow: var(--ps-shadow); backdrop-filter: var(--ps-glass); -webkit-backdrop-filter: var(--ps-glass); }}
+.ps-split-bar {{ display: flex; height: 6px; border-radius: 6px; overflow: hidden; background: var(--ps-raised); gap: 3px; }}
+.ps-split-bar span {{ display: block; border-radius: 6px; }}
+.ps-split-bar .ok {{ background: var(--ps-up); box-shadow: 0 0 12px var(--ps-up); }}
+.ps-split-bar .alert {{ background: var(--ps-down); box-shadow: 0 0 12px var(--ps-down); }}
+.ps-split-legend {{ display: flex; gap: 20px; margin-top: 10px; font-size: .84rem; color: var(--ps-muted); flex-wrap: wrap; }}
+.ps-split-legend i {{ display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; }}
+.ps-split-legend b {{ color: var(--ps-ink); font-family: var(--ps-mono); font-weight: 500; }}
 
-/* ---------- régua de concorrentes (letreiro) ---------- */
-.ps-ticker {{
-  position: relative; overflow: hidden; background: var(--ps-surface);
-  border: 1px solid var(--ps-line); border-radius: 10px; box-shadow: var(--ps-shadow);
-}}
+/* ---------- fita de cotações ---------- */
+.ps-ticker {{ position: relative; overflow: hidden; border-radius: 14px; border: 1px solid var(--ps-line);
+  background: var(--ps-surface); backdrop-filter: var(--ps-glass); -webkit-backdrop-filter: var(--ps-glass);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }}
 .ps-ticker-track {{ display: inline-flex; white-space: nowrap; padding: 11px 0; animation: ps-ticker var(--dur) linear infinite; }}
 .ps-ticker:hover .ps-ticker-track {{ animation-play-state: paused; }}
-.ps-ticker-item {{ display: inline-flex; align-items: baseline; gap: 10px; padding: 0 26px; border-right: 1px dashed var(--ps-line); font-size: .9rem; }}
-.ps-ticker-item b {{ font-weight: 700; letter-spacing: .01em; }}
-.ps-ticker-item .v {{ color: var(--ps-varejo); font-weight: 800; font-stretch: 75%; font-size: 1.05rem; font-variant-numeric: tabular-nums; }}
-.ps-ticker-item .a {{ color: var(--ps-atacado); font-weight: 800; font-stretch: 75%; font-size: 1.05rem; font-variant-numeric: tabular-nums; }}
-.ps-ticker-item small {{ color: var(--ps-muted); font-size: .76rem; }}
+.ps-ticker-item {{ display: inline-flex; align-items: baseline; gap: 9px; padding: 0 24px; border-right: 1px solid var(--ps-line); font-size: .86rem; }}
+.ps-ticker-item b {{ font-weight: 600; letter-spacing: .01em; color: var(--ps-ink); }}
+.ps-ticker-item .v {{ font-family: var(--ps-mono); color: var(--ps-ink); }}
+.ps-ticker-item .a {{ font-family: var(--ps-mono); color: var(--ps-muted); }}
+.ps-ticker-item small {{ color: var(--ps-faint); font-size: .74rem; }}
+.ps-ticker-item .up {{ color: var(--ps-up); font-family: var(--ps-mono); font-size: .78rem; }}
+.ps-ticker-item .down {{ color: var(--ps-down); font-family: var(--ps-mono); font-size: .78rem; }}
 @keyframes ps-ticker {{ from {{ transform: translateX(0); }} to {{ transform: translateX(-50%); }} }}
-@media (prefers-reduced-motion: reduce) {{
-  .ps-ticker {{ overflow-x: auto; }}
-  .ps-ticker-track {{ animation: none; }}
-}}
+@media (prefers-reduced-motion: reduce) {{ .ps-ticker {{ overflow-x: auto; }} .ps-ticker-track {{ animation: none; }} }}
 
-/* ---------- avisos e estados vazios ---------- */
-.ps-empty {{
-  border: 1.5px dashed var(--ps-line); border-radius: 12px; padding: 34px 28px;
-  background: color-mix(in srgb, var(--ps-surface) 55%, transparent);
-}}
-.ps-empty h3 {{ font-family: var(--ps-font); font-stretch: 108%; font-size: 1.1rem; font-weight: 750; margin: 0 0 .35rem; padding: 0; color: var(--ps-ink); }}
-.ps-empty p {{ margin: 0; color: var(--ps-muted); max-width: 62ch; line-height: 1.5; }}
+/* ---------- barras horizontais (ranking) ---------- */
+.ps-rank {{ display: flex; flex-direction: column; gap: 10px; }}
+.ps-rank-row {{ display: grid; grid-template-columns: minmax(90px, 1fr) 2fr auto; gap: 10px; align-items: center; font-size: .85rem; }}
+.ps-rank-row span {{ color: var(--ps-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
+.ps-rank-row .bar {{ height: 6px; border-radius: 6px; background: var(--ps-raised); overflow: hidden; }}
+.ps-rank-row .bar i {{ display: block; height: 100%; border-radius: 6px; background: linear-gradient(90deg, color-mix(in srgb, var(--ps-primary) 50%, transparent), var(--ps-primary)); }}
+.ps-rank-row b {{ font-family: var(--ps-mono); font-weight: 500; color: var(--ps-ink); }}
+.ps-rank-row em {{ font-style: normal; font-family: var(--ps-mono); font-size: .74rem; margin-left: 8px; }}
 
-.ps-chip {{
-  display: inline-flex; align-items: center; gap: 6px; font-size: .78rem; font-weight: 600;
-  padding: 3px 9px; border-radius: 999px; background: var(--ps-raised); color: var(--ps-ink);
-  border: 1px solid var(--ps-line); white-space: nowrap;
-}}
-.ps-chip i {{ width: 8px; height: 8px; border-radius: 50%; display: inline-block; }}
-.ps-chip.promo {{ background: var(--ps-tag); color: var(--ps-tag-ink); border-color: transparent; }}
+/* ---------- linha do tempo de campanhas ---------- */
+.ps-gantt {{ position: relative; }}
+.ps-gantt-axis {{ display: flex; justify-content: space-between; font-family: var(--ps-mono); font-size: .72rem; color: var(--ps-faint); margin: 0 0 8px 180px; }}
+.ps-gantt-row {{ display: grid; grid-template-columns: 170px 1fr; gap: 10px; align-items: center; min-height: 34px; }}
+.ps-gantt-row > span {{ font-size: .84rem; color: var(--ps-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
+.ps-gantt-lane {{ position: relative; height: 26px; border-radius: 8px; background: repeating-linear-gradient(90deg, var(--ps-grid) 0 1px, transparent 1px 40px); }}
+.ps-gantt-bar {{ position: absolute; top: 3px; bottom: 3px; border-radius: 6px; display: flex; align-items: center; padding: 0 8px;
+  font-family: var(--ps-mono); font-size: .72rem; color: #fff; overflow: hidden; white-space: nowrap; min-width: 6px; }}
+.ps-gantt-bar.ok {{ background: linear-gradient(90deg, color-mix(in srgb, var(--ps-up) 65%, transparent), var(--ps-up)); }}
+.ps-gantt-bar.alert {{ background: linear-gradient(90deg, color-mix(in srgb, var(--ps-down) 65%, transparent), var(--ps-down)); box-shadow: 0 0 14px -2px var(--ps-down); }}
+.ps-gantt-hoje {{ position: absolute; top: -4px; bottom: -4px; width: 1px; background: var(--ps-amber); }}
+@media (max-width: 760px) {{ .ps-gantt-row {{ grid-template-columns: 100px 1fr; }} .ps-gantt-axis {{ margin-left: 110px; }} }}
 
-/* ---------- ferramentas na página inicial ---------- */
-.ps-tool h3 {{
-  font-family: var(--ps-font); font-stretch: 108%; font-weight: 750; font-size: 1.12rem;
-  margin: 0 0 .3rem; padding: 0; color: var(--ps-ink); letter-spacing: -.01em;
-}}
-.ps-tool p {{ color: var(--ps-muted); font-size: .92rem; line-height: 1.45; margin: 0; min-height: 4.1em; }}
-.ps-tool .ps-chip {{ margin-bottom: .7rem; }}
+/* ---------- tabela compacta (prévia do arredondamento) ---------- */
+.ps-mini {{ width: 100%; border-collapse: collapse; font-size: .86rem; }}
+.ps-mini th {{ text-align: left; font-weight: 500; color: var(--ps-faint); padding: 6px 10px; border-bottom: 1px solid var(--ps-line); }}
+.ps-mini td {{ padding: 7px 10px; border-bottom: 1px solid var(--ps-line); font-family: var(--ps-mono); color: var(--ps-ink); }}
+.ps-mini td.de {{ color: var(--ps-faint); text-decoration: line-through; }}
+.ps-mini tr:last-child td {{ border-bottom: none; }}
+
+/* ---------- estados vazios e chips ---------- */
+.ps-empty {{ border: 1px dashed var(--ps-line-strong); border-radius: 16px; padding: 30px 28px;
+  background: color-mix(in srgb, var(--ps-surface) 70%, transparent); backdrop-filter: var(--ps-glass); }}
+.ps-empty h3 {{ font-family: var(--ps-font); font-size: 1.05rem; font-weight: 600; margin: 0 0 .35rem; padding: 0; color: var(--ps-ink); letter-spacing: -.01em; }}
+.ps-empty p {{ margin: 0; color: var(--ps-muted); max-width: 64ch; line-height: 1.5; }}
+.ps-chip {{ display: inline-flex; align-items: center; gap: 6px; font-size: .76rem; font-weight: 500; padding: 3px 10px; border-radius: 999px;
+  background: var(--ps-raised); color: var(--ps-ink); border: 1px solid var(--ps-line); white-space: nowrap; }}
+.ps-chip i {{ width: 6px; height: 6px; border-radius: 50%; display: inline-block; }}
+.ps-chip.promo {{ background: var(--ps-amber-soft); color: var(--ps-amber); border-color: transparent; }}
+
+/* ---------- início ---------- */
+.ps-tool {{ display: flex; flex-direction: column; gap: 10px; }}
+.ps-tool .ic {{ width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; color: #fff;
+  background: linear-gradient(135deg, var(--ps-primary), color-mix(in srgb, var(--ps-primary) 40%, var(--ps-up)));
+  box-shadow: 0 8px 22px -10px var(--ps-primary); }}
+.ps-tool h3 {{ font-family: var(--ps-font); font-weight: 600; font-size: 1.05rem; margin: 0; padding: 0; color: var(--ps-ink); letter-spacing: -.02em; }}
+.ps-tool p {{ color: var(--ps-muted); font-size: .9rem; line-height: 1.45; margin: 0; min-height: 4em; }}
+.ps-head .ps-clock {{ font-family: var(--ps-mono); color: var(--ps-muted); font-size: .86rem; display: flex; align-items: center; gap: 9px; }}
+.ps-tool .ms {{ font-family: 'Material Symbols Rounded'; font-size: 22px; line-height: 1; font-weight: 300; }}
+.ps-live {{ width: 7px; height: 7px; border-radius: 50%; background: var(--ps-up); box-shadow: 0 0 0 0 var(--ps-up); animation: ps-pulse 2s infinite; }}
+@keyframes ps-pulse {{ 0% {{ box-shadow: 0 0 0 0 color-mix(in srgb, var(--ps-up) 60%, transparent); }} 100% {{ box-shadow: 0 0 0 10px transparent; }} }}
 
 /* ---------- relatórios ---------- */
-.ps-rep-cat {{ display: flex; align-items: center; gap: 8px; font-size: .82rem; font-weight: 600; color: var(--ps-muted); margin-bottom: .55rem; }}
-.ps-rep-cat i {{ width: 10px; height: 10px; border-radius: 3px; display: inline-block; }}
-.ps-rep-title {{
-  font-family: var(--ps-font); font-stretch: 104%; font-weight: 750; font-size: 1.12rem;
-  line-height: 1.22; color: var(--ps-ink); margin-bottom: .4rem; letter-spacing: -.01em;
-}}
-.ps-rep-desc {{
-  color: var(--ps-muted); font-size: .9rem; line-height: 1.45; min-height: 3.9em;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-}}
-.ps-rep-meta {{ display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: .8rem; font-size: .8rem; color: var(--ps-muted); }}
+.ps-rep-cat {{ display: flex; align-items: center; gap: 8px; font-size: .8rem; font-weight: 500; color: var(--ps-muted); margin-bottom: .5rem; }}
+.ps-rep-cat i {{ width: 8px; height: 8px; border-radius: 50%; display: inline-block; }}
+.ps-rep-meta {{ display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: .6rem; font-size: .78rem; color: var(--ps-faint); }}
 .ps-rep-meta span {{ display: inline-flex; align-items: center; gap: 4px; }}
-.ps-rep-tags {{ display: flex; flex-wrap: wrap; gap: 6px; margin-top: .7rem; }}
-
-.ps-viewer-head h2 {{
-  font-family: var(--ps-font); font-stretch: 112%; font-weight: 800; letter-spacing: -.02em;
-  font-size: clamp(1.5rem, 1rem + 1.4vw, 2.1rem); line-height: 1.08; margin: 0; padding: 0; color: var(--ps-ink);
-}}
+.ps-rep-tags {{ display: flex; flex-wrap: wrap; gap: 6px; margin-top: .6rem; }}
+.ps-viewer-head h2 {{ font-family: var(--ps-font); font-weight: 600; letter-spacing: -.035em; font-size: clamp(1.5rem, 1rem + 1.4vw, 2.2rem);
+  line-height: 1.1; margin: 0; padding: 0; color: var(--ps-ink); }}
 .ps-viewer-head p {{ color: var(--ps-muted); margin: .45rem 0 0; max-width: 80ch; }}
-
-.ps-list-row {{ display: grid; grid-template-columns: 12px 1fr auto; gap: 12px; align-items: center; padding: 11px 2px; border-bottom: 1px solid var(--ps-line); }}
-.ps-list-row:last-child {{ border-bottom: none; }}
-.ps-list-row i {{ width: 10px; height: 10px; border-radius: 3px; }}
-.ps-list-row b {{ font-weight: 650; color: var(--ps-ink); }}
-.ps-list-row span {{ color: var(--ps-muted); font-size: .84rem; }}
-
-/* ---------- biblioteca segmentada ---------- */
-.ps-rel-linha {{ display: grid; grid-template-columns: 10px 1fr; gap: 12px; align-items: start; }}
-.ps-rel-linha > i {{ width: 10px; height: 10px; border-radius: 3px; margin-top: .42rem; }}
-.ps-rel-linha b {{ font-weight: 680; color: var(--ps-ink); font-size: .98rem; }}
-.ps-rel-linha span {{ display: block; color: var(--ps-muted); font-size: .82rem; }}
+.ps-list-row {{ display: grid; grid-template-columns: 10px 1fr; gap: 12px; align-items: center; padding: 6px 2px; }}
+.ps-list-row i {{ width: 8px; height: 8px; border-radius: 50%; }}
+.ps-list-row b {{ font-weight: 550; color: var(--ps-ink); }}
+.ps-list-row span {{ color: var(--ps-faint); font-size: .82rem; }}
+.ps-rel-linha {{ display: grid; grid-template-columns: 8px 1fr; gap: 12px; align-items: start; }}
+.ps-rel-linha > i {{ width: 8px; height: 8px; border-radius: 50%; margin-top: .48rem; }}
+.ps-rel-linha b {{ font-weight: 550; color: var(--ps-ink); font-size: .96rem; }}
+.ps-rel-linha span {{ display: block; color: var(--ps-faint); font-size: .8rem; }}
 .ps-rel-linha .ps-chip {{ display: inline-flex; margin-left: 6px; vertical-align: 1px; }}
-.ps-rel-linha p {{ color: var(--ps-muted); font-size: .88rem; margin: .15rem 0 0; max-width: 90ch;
+.ps-rel-linha p {{ color: var(--ps-muted); font-size: .87rem; margin: .15rem 0 0; max-width: 90ch;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }}
 .ps-rel-linha .ps-rep-meta {{ margin-top: .35rem; }}
 .ps-rel-linha .ps-rep-meta span {{ display: inline-flex; }}
 .ps-rel-linha .ps-rep-tags {{ margin-top: .45rem; }}
-[class*="st-key-fav1_"] button, [class*="st-key-fav1_"] button * {{ color: var(--ps-primary) !important; }}
-[class*="st-key-fav1_"] [data-testid="stIconMaterial"] {{ font-variation-settings: 'FILL' 1; }}
 .ps-rel-sep {{ border-top: 1px solid var(--ps-line); margin: .1rem 0; }}
-[data-testid="stExpander"] details {{ background: var(--ps-surface); box-shadow: var(--ps-shadow); }}
-[data-testid="stExpander"] summary p {{ font-size: 1.05rem; }}
-.ps-foco-titulo {{ font-family: var(--ps-font); font-stretch: 108%; font-weight: 750; font-size: 1.05rem; color: var(--ps-ink); }}
-
-/* ---------- avatar ---------- */
-.ps-avatar {{
-  width: 44px; height: 44px; border-radius: 50%; object-fit: cover; display: grid; place-items: center;
-  background: var(--ps-primary); color: #fff; font-weight: 800; font-size: 1.05rem;
-}}
-.ps-user {{ display: flex; gap: 12px; align-items: center; margin-bottom: .5rem; }}
-.ps-user b {{ display: block; color: var(--ps-ink); }}
-.ps-user span {{ color: var(--ps-muted); font-size: .85rem; }}
+[class*="st-key-fav1_"] button, [class*="st-key-fav1_"] button * {{ color: var(--ps-amber) !important; }}
+[class*="st-key-fav1_"] [data-testid="stIconMaterial"] {{ font-variation-settings: 'FILL' 1; }}
+.ps-foco-titulo {{ font-weight: 600; font-size: 1rem; color: var(--ps-ink); letter-spacing: -.01em; }}
+.ps-user {{ display: flex; gap: 14px; align-items: center; }}
+.ps-user b {{ display: block; color: var(--ps-ink); font-size: 1.05rem; }}
+.ps-user span {{ color: var(--ps-muted); font-size: .86rem; }}
+.ps-avatar {{ width: 52px; height: 52px; border-radius: 50%; object-fit: cover; display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--ps-primary), var(--ps-up)); color: #fff; font-weight: 600; font-size: 1.2rem; }}
 
 /* ---------- login ---------- */
-.ps-hero {{ padding: 2vh 0; }}
-.ps-hero-brand {{ display: flex; align-items: center; gap: 10px; margin-bottom: 2.4rem; }}
-.ps-hero-brand img {{ width: 40px; height: 40px; display: block; }}
-.ps-hero-brand span {{ font-stretch: 112%; font-weight: 800; font-size: 1.7rem; letter-spacing: -.03em; color: var(--ps-ink); }}
-.ps-hero-tag {{
-  position: relative; background: var(--ps-tag); color: var(--ps-tag-ink); border-radius: 18px;
-  padding: 26px 30px 24px 44px; max-width: 560px; box-shadow: 0 30px 60px -32px rgba(22,26,34,.55);
-  transform: rotate(-1.6deg);
-}}
-.ps-hero-tag::before {{ content: ""; position: absolute; inset: 0 auto 0 0; width: 16px; background: var(--ps-tag-ink); border-radius: 18px 0 0 18px; }}
-.ps-hero-tag::after {{
-  content: ""; position: absolute; top: 22px; right: 24px; width: 16px; height: 16px; border-radius: 50%;
-  background: var(--ps-canvas); box-shadow: inset 0 0 0 2px rgba(22,26,34,.25);
-}}
-.ps-hero-desc {{ font-weight: 700; font-size: 1.05rem; line-height: 1.3; max-width: 30ch; margin-bottom: 18px; }}
-.ps-hero-price {{
-  display: flex; align-items: flex-start; font-stretch: 62%; font-weight: 850;
-  font-size: clamp(6rem, 4rem + 7vw, 10.5rem); line-height: .82; letter-spacing: -.02em;
-  font-variant-numeric: tabular-nums lining-nums;
-}}
-.ps-hero-price .cur {{ font-stretch: 100%; font-size: .22em; font-weight: 800; margin: .3em .22em 0 0; }}
-.ps-hero-price .dec {{ display: inline-flex; font-size: .5em; margin-top: .05em; border-bottom: .07em solid currentColor; }}
-.ps-roll {{ display: inline-block; height: 1em; overflow: hidden; line-height: 1; vertical-align: top; }}
-.ps-reel {{
-  display: flex; flex-direction: column; transform: translateY(calc(var(--to) * -1em));
-  animation: ps-roll 1.6s cubic-bezier(.16,.84,.24,1) both; animation-delay: var(--d);
-}}
-.ps-reel span {{ display: block; height: 1em; line-height: 1; }}
-@keyframes ps-roll {{ from {{ transform: translateY(0); }} to {{ transform: translateY(calc(var(--to) * -1em)); }} }}
-@media (prefers-reduced-motion: reduce) {{ .ps-reel {{ animation: none; }} }}
-.ps-hero-foot {{ display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-top: 18px; border-top: 2px dashed rgba(22,26,34,.35); padding-top: 14px; }}
-.ps-hero-foot .atac {{ font-weight: 700; font-size: .95rem; }}
-.ps-hero-foot .atac strong {{ font-stretch: 70%; font-weight: 850; font-size: 1.9rem; letter-spacing: -.01em; margin-left: 6px; }}
-.ps-hero-foot .bars {{ display: flex; gap: 2px; align-items: flex-end; height: 34px; }}
-.ps-hero-foot .bars i {{ display: block; width: 2px; background: var(--ps-tag-ink); }}
-.ps-hero-copy {{ margin-top: 2.4rem; color: var(--ps-muted); max-width: 46ch; line-height: 1.5; font-size: 1.02rem; }}
-.st-key-psc_login h2 {{ font-family: var(--ps-font); font-stretch: 110%; font-weight: 800; font-size: 1.6rem; margin: 0 0 .2rem; padding: 0; letter-spacing: -.02em; }}
+.ps-login-brand {{ display: flex; align-items: center; gap: 10px; margin-bottom: 2.2rem; }}
+.ps-login-brand img {{ width: 34px; height: 34px; }}
+.ps-login-brand span {{ font-weight: 600; font-size: 1.35rem; letter-spacing: -.03em; color: var(--ps-ink); }}
+.ps-login-h1 {{ font-family: var(--ps-font); font-weight: 600; font-size: clamp(2.2rem, 1.4rem + 2.6vw, 3.6rem); letter-spacing: -.045em;
+  line-height: 1.02; margin: 0 0 1rem; padding: 0; color: var(--ps-ink); max-width: 15ch; }}
+.ps-login-h1 em {{ font-style: normal; background: linear-gradient(90deg, var(--ps-primary), var(--ps-up)); -webkit-background-clip: text; background-clip: text; color: transparent; }}
+.ps-login-p {{ color: var(--ps-muted); font-size: 1.05rem; line-height: 1.55; max-width: 48ch; margin: 0; }}
+.ps-login-pills {{ display: flex; flex-wrap: wrap; gap: 8px; margin-top: 1.2rem; }}
+.ps-login-pills span {{ display: inline-flex; align-items: center; gap: 8px; font-size: .8rem; color: var(--ps-muted); padding: 6px 12px;
+  border-radius: 999px; border: 1px solid var(--ps-line); background: var(--ps-surface); backdrop-filter: var(--ps-glass); }}
+.ps-login-pills i {{ width: 6px; height: 6px; border-radius: 50%; }}
+.st-key-psc_login {{ padding: 26px 24px !important; }}
+.st-key-psc_login [data-baseweb="input"] {{ border-color: var(--ps-line-strong) !important; }}
+.st-key-psc_login h2 {{ font-family: var(--ps-font); font-weight: 600; font-size: 1.5rem; margin: 0 0 .25rem; padding: 0; letter-spacing: -.03em; color: var(--ps-ink); }}
 .st-key-psc_login p.sub {{ color: var(--ps-muted); margin: 0 0 1rem; }}
-@media (max-width: 760px) {{ .ps-hero-tag {{ transform: none; padding-left: 34px; }} }}
 """
 
 
 def cor_categoria(nome: str) -> str:
-    paleta = (["#8C93FF", "#FF6B7C", "#3DD598", "#FFB648", "#B58CFF", "#4CC9F0", "#FF7EB6", "#9AA5BD"] if modo() == "Dark"
-              else ["#2424ED", "#D7192D", "#0C8A57", "#E08A00", "#7A3FD1", "#0B8DB0", "#C2367A", "#5A6372"])
+    paleta = (["#7FA6FF", "#FF7A93", "#2BD99F", "#F5B547", "#B794FF", "#4CC9F0", "#FF8FC7", "#9AA5BD"] if modo() == "Dark"
+              else ["#2D4BFF", "#E11D48", "#0E9F6E", "#C47A0A", "#7A3FD1", "#0B8DB0", "#C2367A", "#566176"])
     return paleta[sum(ord(c) for c in (nome or "")) % len(paleta)]
 
 
 def plotly_layout(altura: int = 320) -> dict:
     t = tokens()
-    return dict(
-        height=altura,
-        margin=dict(l=8, r=8, t=16, b=8),
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family=f"{FONTE}, sans-serif", color=t["muted"], size=12),
-        hovermode="x unified",
-        hoverlabel=dict(bgcolor=t["surface"], bordercolor=t["line"], font=dict(family=f"{FONTE}, sans-serif", color=t["ink"], size=13)),
-        xaxis=dict(showgrid=False, zeroline=False, tickfont=dict(color=t["muted"], size=11), linecolor=t["line"]),
-        yaxis=dict(showgrid=True, gridcolor=t["line"], zeroline=False, tickprefix="R$ ", tickfont=dict(color=t["muted"], size=11)),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color=t["ink"])),
-        separators=",.",
-    )
+    return dict(height=altura, margin=dict(l=8, r=8, t=16, b=8), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(family=f"{FONTE}, sans-serif", color=t["muted"], size=12), separators=",.")
