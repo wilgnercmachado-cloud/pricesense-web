@@ -14,7 +14,7 @@ _AUTH_DEFAULTS = {
 }
 
 _DEFAULTS = {
-    "tema": "Light",
+    "tema": "Dark",
     "modo_login": "login",
     "reset_key": 0,
     **_AUTH_DEFAULTS,

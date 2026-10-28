@@ -199,7 +199,8 @@ def itens_letreiro(df_filt: pd.DataFrame) -> list[dict]:
     if df_tk.empty:
         return []
     df_tk = df_tk.sort_values(by=['PESQUISADATA_DT', VAR], ascending=[False, True]).drop_duplicates(subset=['EMPRESA_CONC'], keep='first')
-    return [{"empresa": str(r['EMPRESA_CONC']).upper(), "varejo": r[VAR], "atacado": r[ATAC]} for _, r in df_tk.iterrows()]
+    return [{"empresa": str(r['EMPRESA_CONC']).upper(), "varejo": r[VAR], "atacado": r[ATAC], "produto": r['PRODUTO']}
+            for _, r in df_tk.iterrows()]
 
 
 def media_por_empresa(df_filt: pd.DataFrame) -> pd.DataFrame:
@@ -316,3 +317,42 @@ def extrair(modelo: str, df_filt: pd.DataFrame) -> tuple[pd.DataFrame | None, st
         return out.sort_values(by=['Filial', 'Produto']), ""
 
     return None, "Modelo desconhecido."
+
+
+def serie_terminal(df_filt: pd.DataFrame, top: int = 10) -> dict:
+    """Dados do gráfico de mercado: menor preço diário por série e o ranking de concorrentes de cada dia."""
+    cols = {"var_conc": VAR, "atac_conc": ATAC, "var_pdv": 'Vlr. Varejo PDV', "atac_pdv": 'Vlr. Atacado PDV'}
+    base = df_filt.dropna(subset=['PESQUISADATA_DT'])
+    diario = base.groupby('PESQUISADATA_DT')[[c for c in cols.values() if c in base.columns]].agg(
+        lambda s: s[s > 0.09].min() if (s > 0.09).any() else None).sort_index()
+    datas = [d.strftime('%Y-%m-%d') for d in diario.index]
+    series = {}
+    for chave, col in cols.items():
+        if col in diario.columns:
+            series[chave] = [None if pd.isna(v) else round(float(v), 2) for v in diario[col]]
+    dia = base[base[VAR] > 0.09].groupby(['PESQUISADATA_DT', 'FILIALCONCORRENTE'])[VAR].min().reset_index()
+    ranking = {}
+    for d, g in dia.groupby('PESQUISADATA_DT'):
+        g = g.sort_values(VAR).head(top)
+        ranking[d.strftime('%Y-%m-%d')] = [[str(c)[:34], round(float(v), 2)] for c, v in zip(g['FILIALCONCORRENTE'], g[VAR])]
+    return {"datas": datas, "series": series, "ranking": ranking}
+
+
+def modas_por_produto(df_filt: pd.DataFrame) -> dict:
+    """Preço mais frequente de varejo de cada produto (referência para comparações justas)."""
+    return {p: float(g.value_counts().index[0]) for p, g in df_filt.groupby('PRODUTO')[VAR] if not g.empty}
+
+
+def indice_pdv(df_filt: pd.DataFrame, modas: dict) -> float | None:
+    """Média, por produto, de (varejo médio do nosso PDV / moda do produto) x 100."""
+    pdv = df_filt[df_filt['Vlr. Varejo PDV'] > 0.09].groupby('PRODUTO')['Vlr. Varejo PDV'].mean()
+    razoes = [v / modas[p] for p, v in pdv.items() if modas.get(p)]
+    return 100 * sum(razoes) / len(razoes) if razoes else None
+
+
+def indice_por_concorrente(df_filt: pd.DataFrame, modas: dict) -> pd.DataFrame:
+    """Para cada concorrente: preço médio e quanto ele fica, em média, acima ou abaixo da moda de cada produto."""
+    d = df_filt.assign(_moda=df_filt['PRODUTO'].map(modas)).dropna(subset=['_moda'])
+    d = d.assign(_dif=100 * (d[VAR] / d['_moda'] - 1))
+    out = d.groupby('EMPRESA_CONC').agg(Varejo=(VAR, 'mean'), Dif=('_dif', 'mean'), Produtos=('PRODUTO', 'nunique')).reset_index()
+    return out.rename(columns={'EMPRESA_CONC': 'Concorrente'}).sort_values('Dif')
