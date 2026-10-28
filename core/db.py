@@ -12,7 +12,11 @@ class ConfigError(RuntimeError):
 @st.cache_resource(show_spinner=False)
 def _criar_cliente(url: str, key: str):
     from supabase import create_client
-    return create_client(url, key)
+    try:
+        from supabase import ClientOptions
+        return create_client(url, key, options=ClientOptions(storage_client_timeout=300, postgrest_client_timeout=60))
+    except Exception:
+        return create_client(url, key)
 
 
 def get_client():

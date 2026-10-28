@@ -1,6 +1,9 @@
 """Biblioteca de relatórios HTML (tabela `relatorios` + bucket `relatorios` no Supabase Storage)."""
 from __future__ import annotations
 
+import codecs
+import gzip
+import posixpath
 import uuid
 from datetime import datetime, timezone
 
@@ -9,7 +12,9 @@ import streamlit as st
 from core import db
 
 BUCKET = "relatorios"
-TAMANHO_MAXIMO_MB = 25
+TAMANHO_MAXIMO_MB = 300        # HTML original (limite do upload no Streamlit)
+LIMITE_STORAGE_MB = 50         # arquivo compactado (limite por arquivo do plano gratuito do Supabase)
+GZIP = b"\x1f\x8b"
 VISIBILIDADES = ["Todos", "Selecionados", "Admins"]
 ROTULO_VISIBILIDADE = {
     "Todos": "Toda a equipe",
@@ -42,16 +47,44 @@ def buscar(rid: str) -> dict | None:
     return next((r for r in listar() if str(r.get("id")) == str(rid)), None)
 
 
-@st.cache_data(ttl=900, show_spinner=False, max_entries=24)
-def baixar_html(caminho: str, versao: str) -> str:
-    """`versao` entra só na chave do cache, para invalidar quando o arquivo muda."""
+def _eh_utf8(conteudo: bytes) -> bool:
+    decodificador = codecs.getincrementaldecoder("utf-8")()
+    passo = 1 << 20
+    try:
+        for i in range(0, len(conteudo), passo):
+            decodificador.decode(conteudo[i:i + passo])
+        decodificador.decode(b"", final=True)
+        return True
+    except UnicodeDecodeError:
+        return False
+
+
+@st.cache_data(show_spinner=False, max_entries=2)
+def compactar(conteudo: bytes) -> bytes:
+    """Normaliza para UTF-8 e compacta com gzip (HTML costuma encolher de 5 a 15 vezes)."""
+    if conteudo[:2] == GZIP:
+        return conteudo
+    if not _eh_utf8(conteudo):
+        conteudo = conteudo.decode("cp1252", errors="replace").encode("utf-8")
+    return gzip.compress(conteudo, compresslevel=6)
+
+
+@st.cache_data(ttl=900, show_spinner=False, max_entries=6)
+def baixar_compactado(caminho: str, versao: str) -> bytes:
+    """Arquivo do relatório já compactado. `versao` entra só na chave do cache."""
     conteudo = db.sb().storage.from_(BUCKET).download(caminho)
-    for codificacao in ("utf-8", "cp1252", "latin-1"):
-        try:
-            return conteudo.decode(codificacao)
-        except UnicodeDecodeError:
-            continue
-    return conteudo.decode("utf-8", errors="replace")
+    return compactar(conteudo)
+
+
+def _validar_tamanho(conteudo: bytes) -> bytes:
+    if len(conteudo) > TAMANHO_MAXIMO_MB * 1024 * 1024:
+        raise ErroRelatorio(f"O arquivo passa de {TAMANHO_MAXIMO_MB} MB.")
+    gz = compactar(conteudo)
+    if len(gz) > LIMITE_STORAGE_MB * 1024 * 1024:
+        raise ErroRelatorio(
+            f"Mesmo compactado, o arquivo ficou com {len(gz) / 1024 / 1024:.0f} MB, acima do limite de "
+            f"{LIMITE_STORAGE_MB} MB por arquivo do Supabase. Reduza os dados embutidos no HTML.")
+    return gz
 
 
 # ---------------------------------------------------------------- permissões
@@ -75,20 +108,18 @@ def visiveis(login: str, admin: bool) -> list[dict]:
 
 
 # ---------------------------------------------------------------- escrita
-def _enviar(caminho: str, conteudo: bytes) -> None:
+def _enviar(caminho: str, gz: bytes) -> None:
     db.sb().storage.from_(BUCKET).upload(
-        caminho, conteudo,
-        {"content-type": "text/html; charset=utf-8", "upsert": "true", "cache-control": "60"},
+        caminho, gz, {"content-type": "application/gzip", "upsert": "true", "cache-control": "60"},
     )
 
 
 def publicar(meta: dict, conteudo: bytes, autor_login: str, autor_nome: str) -> str:
-    if len(conteudo) > TAMANHO_MAXIMO_MB * 1024 * 1024:
-        raise ErroRelatorio(f"O arquivo passa de {TAMANHO_MAXIMO_MB} MB.")
+    gz = _validar_tamanho(conteudo)
     rid = str(uuid.uuid4())
-    caminho = f"{datetime.now():%Y/%m}/{rid}.html"
+    caminho = f"{datetime.now():%Y/%m}/{rid}.html.gz"
     try:
-        _enviar(caminho, conteudo)
+        _enviar(caminho, gz)
     except Exception as exc:
         raise ErroRelatorio(f"Não foi possível enviar o arquivo para o Storage: {exc}") from exc
     registro = {
@@ -110,19 +141,29 @@ def publicar(meta: dict, conteudo: bytes, autor_login: str, autor_nome: str) -> 
 
 def atualizar(rel: dict, meta: dict, conteudo: bytes | None = None) -> None:
     campos = {**meta, "atualizado_em": _agora()}
+    caminho_antigo = None
     if conteudo is not None:
-        if len(conteudo) > TAMANHO_MAXIMO_MB * 1024 * 1024:
-            raise ErroRelatorio(f"O arquivo passa de {TAMANHO_MAXIMO_MB} MB.")
+        gz = _validar_tamanho(conteudo)
+        caminho = rel["arquivo_path"]
+        if not caminho.endswith(".gz"):
+            caminho_antigo = caminho
+            caminho = posixpath.join(posixpath.dirname(caminho), f"{rel['id']}.html.gz")
         try:
-            _enviar(rel["arquivo_path"], conteudo)
+            _enviar(caminho, gz)
         except Exception as exc:
             raise ErroRelatorio(f"Não foi possível enviar o novo arquivo: {exc}") from exc
+        campos["arquivo_path"] = caminho
         campos["tamanho_bytes"] = len(conteudo)
         campos["versao"] = int(rel.get("versao") or 1) + 1
     try:
         db.sb().table("relatorios").update(campos).eq("id", rel["id"]).execute()
     except Exception as exc:
         raise ErroRelatorio(f"Não foi possível salvar as alterações: {exc}") from exc
+    if caminho_antigo:
+        try:
+            db.sb().storage.from_(BUCKET).remove([caminho_antigo])
+        except Exception:
+            pass
     limpar_cache()
 
 

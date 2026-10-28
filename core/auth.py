@@ -82,7 +82,8 @@ def entrar(usuario: str, senha: str) -> tuple[bool, str]:
         return False, "Informe usuário e senha."
     try:
         registro = db.buscar_usuario(usuario)
-    except Exception:
+    except Exception as exc:
+        print(f"[PriceSense] Falha ao consultar a tabela usuarios: {exc!r}", flush=True)
         return False, "Não foi possível conectar ao banco de dados. Tente novamente em instantes."
 
     if not registro or not conferir_senha(senha, registro.get("senha")):
