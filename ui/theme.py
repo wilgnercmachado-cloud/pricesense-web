@@ -273,6 +273,24 @@ button[kind="primary"], button[kind="secondary"], button[kind="tertiary"],
 .ps-list-row b {{ font-weight: 650; color: var(--ps-ink); }}
 .ps-list-row span {{ color: var(--ps-muted); font-size: .84rem; }}
 
+/* ---------- biblioteca segmentada ---------- */
+.ps-rel-linha {{ display: grid; grid-template-columns: 10px 1fr; gap: 12px; align-items: start; }}
+.ps-rel-linha > i {{ width: 10px; height: 10px; border-radius: 3px; margin-top: .42rem; }}
+.ps-rel-linha b {{ font-weight: 680; color: var(--ps-ink); font-size: .98rem; }}
+.ps-rel-linha span {{ display: block; color: var(--ps-muted); font-size: .82rem; }}
+.ps-rel-linha .ps-chip {{ display: inline-flex; margin-left: 6px; vertical-align: 1px; }}
+.ps-rel-linha p {{ color: var(--ps-muted); font-size: .88rem; margin: .15rem 0 0; max-width: 90ch;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }}
+.ps-rel-linha .ps-rep-meta {{ margin-top: .35rem; }}
+.ps-rel-linha .ps-rep-meta span {{ display: inline-flex; }}
+.ps-rel-linha .ps-rep-tags {{ margin-top: .45rem; }}
+[class*="st-key-fav1_"] button, [class*="st-key-fav1_"] button * {{ color: var(--ps-primary) !important; }}
+[class*="st-key-fav1_"] [data-testid="stIconMaterial"] {{ font-variation-settings: 'FILL' 1; }}
+.ps-rel-sep {{ border-top: 1px solid var(--ps-line); margin: .1rem 0; }}
+[data-testid="stExpander"] details {{ background: var(--ps-surface); box-shadow: var(--ps-shadow); }}
+[data-testid="stExpander"] summary p {{ font-size: 1.05rem; }}
+.ps-foco-titulo {{ font-family: var(--ps-font); font-stretch: 108%; font-weight: 750; font-size: 1.05rem; color: var(--ps-ink); }}
+
 /* ---------- avatar ---------- */
 .ps-avatar {{
   width: 44px; height: 44px; border-radius: 50%; object-fit: cover; display: grid; place-items: center;
