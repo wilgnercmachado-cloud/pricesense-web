@@ -69,7 +69,9 @@ def _formulario(rel: dict | None) -> None:
 
     if conteudo:
         mb = len(conteudo) / 1024 / 1024
-        if st.toggle(f"Pré-visualizar ({f'{mb:.1f}'.replace('.', ',')} MB)", key=f"pub_prev_{sufixo}"):
+        if mb > 40:
+            st.caption(f"Arquivo de {f'{mb:.0f}'} MB: a pré-visualização fica disponível depois de publicar.")
+        elif st.toggle(f"Pré-visualizar ({f'{mb:.1f}'.replace('.', ',')} MB)", key=f"pub_prev_{sufixo}"):
             with st.spinner("Compactando para a pré-visualização"):
                 gz = reports.compactar(conteudo)
             ui.relatorio_html(gz, 560, barra=False)
@@ -100,12 +102,17 @@ def _formulario(rel: dict | None) -> None:
             "destaque": destaque if admin else bool(rel.get("destaque")) if editando else False,
         }
         try:
-            with st.spinner("Compactando e enviando o arquivo. Relatórios grandes levam alguns segundos."):
-                if editando:
-                    reports.atualizar(rel, meta, conteudo)
-                    rid = rel["id"]
-                else:
-                    rid = reports.publicar(meta, conteudo, login, st.session_state.usuario_logado)
+            barra = st.progress(0, text="Compactando o arquivo")
+
+            def _progresso(i: int, total: int) -> None:
+                barra.progress(int(100 * i / total), text=f"Enviando parte {i + 1} de {total}" if total > 1 else "Enviando o arquivo")
+
+            if editando:
+                reports.atualizar(rel, meta, conteudo, progresso=_progresso)
+                rid = rel["id"]
+            else:
+                rid = reports.publicar(meta, conteudo, login, st.session_state.usuario_logado, progresso=_progresso)
+            barra.progress(100, text="Pronto")
         except reports.ErroRelatorio as exc:
             st.error(str(exc), icon=":material/error:")
             return

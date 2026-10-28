@@ -135,10 +135,10 @@ def _visualizador(rel: dict, prefs: dict) -> None:
     foco = st.session_state.get("rel_foco") == rel["id"]
 
     try:
-        with st.spinner("Baixando o relatório"):
-            gz = reports.baixar_compactado(rel["arquivo_path"], str(rel.get("atualizado_em") or rel.get("versao")))
+        links = reports.links_assinados(rel["arquivo_path"], int(rel.get("partes") or 1),
+                                        str(rel.get("atualizado_em") or rel.get("versao")))
     except Exception as exc:
-        st.error(f"Não foi possível baixar o arquivo do relatório: {exc}", icon=":material/error:")
+        st.error(f"Não foi possível localizar o arquivo do relatório: {exc}", icon=":material/error:")
         return
     arquivo = _nome_arquivo(rel) if admin else None
 
@@ -153,7 +153,7 @@ def _visualizador(rel: dict, prefs: dict) -> None:
                 st.rerun()
             st.html(f"<div class='ps-foco-titulo'>{ui.esc(rel.get('titulo', ''))}</div>")
         with st.container(key="rel_quadro"):
-            ui.relatorio_html(gz, 860, nome_arquivo=arquivo)
+            ui.relatorio_html(links=links, altura=860, nome_arquivo=arquivo)
         return
 
     ui.cabecalho("Relatórios")
@@ -185,7 +185,7 @@ def _visualizador(rel: dict, prefs: dict) -> None:
             if st.button("Editar", icon=":material/edit:", key="rel_editar"):
                 st.switch_page(state.paginas()["publicar"], query_params={"editar": rel["id"]})
 
-    ui.relatorio_html(gz, ALTURAS[altura], nome_arquivo=arquivo)
+    ui.relatorio_html(links=links, altura=ALTURAS[altura], nome_arquivo=arquivo)
 
 
 def render() -> None:
