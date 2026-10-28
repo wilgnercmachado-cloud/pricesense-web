@@ -189,3 +189,36 @@ def registrar_visualizacao(rel: dict) -> None:
 
 def categorias() -> list[str]:
     return sorted({(r.get("categoria") or "Geral") for r in listar()})
+
+
+# ---------------------------------------------------------------- favoritos e recentes (por usuário)
+def preferencias(login: str) -> dict[str, dict]:
+    """{id do relatório: {"favorito": bool, "ultimo_acesso": iso}} do usuário. Vazio se a tabela não existir."""
+    try:
+        dados = db.sb().table("relatorios_usuario").select("*").eq("usuario", login).execute().data or []
+    except Exception:
+        return {}
+    return {str(r["relatorio_id"]): r for r in dados}
+
+
+def _gravar_preferencia(login: str, rid: str, campos: dict) -> None:
+    db.sb().table("relatorios_usuario").upsert(
+        {"usuario": login, "relatorio_id": rid, **campos}, on_conflict="usuario,relatorio_id").execute()
+
+
+def marcar_acesso(login: str, rid: str) -> None:
+    if st.session_state.get("_ultimo_relatorio_aberto") == rid:
+        return
+    st.session_state._ultimo_relatorio_aberto = rid
+    try:
+        _gravar_preferencia(login, rid, {"ultimo_acesso": _agora()})
+    except Exception:
+        pass
+
+
+def definir_favorito(login: str, rid: str, favorito: bool) -> None:
+    try:
+        _gravar_preferencia(login, rid, {"favorito": favorito})
+    except Exception as exc:
+        raise ErroRelatorio("Não foi possível salvar o favorito. Confira se a tabela relatorios_usuario "
+                            "existe no Supabase (supabase/migrations.sql).") from exc
