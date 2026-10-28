@@ -132,7 +132,6 @@ def _visualizador(rel: dict, prefs: dict) -> None:
     reports.registrar_visualizacao(rel)
     reports.marcar_acesso(login, rel["id"])
     favorito = bool(prefs.get(str(rel["id"]), {}).get("favorito"))
-    foco = st.session_state.get("rel_foco") == rel["id"]
 
     try:
         links = reports.links_assinados(rel["arquivo_path"], int(rel.get("partes") or 1),
@@ -140,21 +139,7 @@ def _visualizador(rel: dict, prefs: dict) -> None:
     except Exception as exc:
         st.error(f"Não foi possível localizar o arquivo do relatório: {exc}", icon=":material/error:")
         return
-    arquivo = _nome_arquivo(rel) if admin else None
-
-    if foco:
-        # Modo foco: some a navegação do app e o relatório ocupa a janela inteira.
-        st.html("<style>header[data-testid='stHeader']{display:none}"
-                "[data-testid='stMainBlockContainer']{padding:.6rem 1rem 0 !important;max-width:none !important}"
-                ".st-key-rel_quadro [data-testid='stIFrame']{height:calc(100vh - 74px) !important}</style>")
-        with st.container(horizontal=True, vertical_alignment="center", gap="small"):
-            if st.button("Sair do modo foco", icon=":material/close_fullscreen:", key="rel_foco_sair"):
-                st.session_state.pop("rel_foco", None)
-                st.rerun()
-            st.html(f"<div class='ps-foco-titulo'>{ui.esc(rel.get('titulo', ''))}</div>")
-        with st.container(key="rel_quadro"):
-            ui.relatorio_html(links=links, altura=860, nome_arquivo=arquivo)
-        return
+    arquivo = _nome_arquivo(rel) if auth.pode_publicar() else None
 
     ui.cabecalho("Relatórios")
     if st.button("Voltar para a biblioteca", type="tertiary", icon=":material/arrow_back:", key="rel_voltar"):
@@ -173,9 +158,6 @@ def _visualizador(rel: dict, prefs: dict) -> None:
 
     with st.container(horizontal=True, vertical_alignment="bottom", gap="small", key="rel_acoes"):
         altura = st.segmented_control("Altura", list(ALTURAS), default="Padrão", required=True, key="rel_altura")
-        if st.button("Expandir tela", icon=":material/open_in_full:", type="primary", key="rel_foco_entrar"):
-            st.session_state.rel_foco = rel["id"]
-            st.rerun()
         st.button("Remover dos favoritos" if favorito else "Favoritar", key="rel_fav",
                   icon=":material/bookmark_added:" if favorito else ":material/bookmark_add:",
                   on_click=_alternar_favorito, args=(rel["id"], not favorito))
@@ -199,7 +181,6 @@ def render() -> None:
             return
         st.query_params.clear()
         st.toast("Relatório não encontrado ou sem permissão de acesso.", icon=":material/lock:")
-    st.session_state.pop("rel_foco", None)
 
     ui.cabecalho("Relatórios", "Análises publicadas pela equipe de pricing.")
     todos = reports.visiveis(login, admin)
