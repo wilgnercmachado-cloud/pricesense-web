@@ -9,11 +9,13 @@ from ui import components as ui
 NOVA = "Nova categoria"
 
 
-def _usuarios_aprovados() -> list[str]:
+def _usuarios_aprovados() -> dict[str, str]:
+    """{login: nome}, em ordem alfabética de nome."""
     try:
-        return sorted(u["usuario"] for u in db.listar_usuarios() if u.get("status") == "Aprovado")
+        aprovados = [u for u in db.listar_usuarios() if u.get("status") == "Aprovado"]
     except Exception:
-        return []
+        return {}
+    return {u["usuario"]: (u.get("nome") or u["usuario"]) for u in sorted(aprovados, key=lambda u: (u.get("nome") or u["usuario"]).lower())}
 
 
 def _formulario(rel: dict | None) -> None:
@@ -45,9 +47,10 @@ def _formulario(rel: dict | None) -> None:
                                     format_func=reports.ROTULO_VISIBILIDADE.get, label_visibility="collapsed", key=f"pub_vis_{sufixo}")
             permitidos: list[str] = []
             if visibilidade == "Selecionados":
-                permitidos = st.multiselect("Pessoas com acesso", _usuarios_aprovados(),
-                                            default=[u for u in (rel.get("usuarios_permitidos") or []) if u in _usuarios_aprovados()] if editando else [],
-                                            key=f"pub_users_{sufixo}")
+                pessoas = _usuarios_aprovados()
+                permitidos = st.multiselect("Pessoas com acesso", list(pessoas), format_func=lambda u: pessoas.get(u, u),
+                                            default=[u for u in (rel.get("usuarios_permitidos") or []) if u in pessoas] if editando else [],
+                                            placeholder="Busque pelo nome", key=f"pub_users_{sufixo}")
             destaque = False
             if admin:
                 destaque = st.toggle("Destacar no topo da biblioteca", value=bool(rel.get("destaque")) if editando else False,

@@ -7,7 +7,7 @@ from core import auth, reports, state
 from ui import components as ui
 from ui import theme
 
-ALTURAS = {"Compacta": 640, "Padrão": 860, "Alta": 1200}
+ALTURA = 880
 
 
 # ---------------------------------------------------------------- ações
@@ -156,18 +156,18 @@ def _visualizador(rel: dict, prefs: dict) -> None:
   <span>Versão {rel.get('versao') or 1}</span></div>
 </div>""")
 
-    with st.container(horizontal=True, vertical_alignment="bottom", gap="small", key="rel_acoes"):
-        altura = st.segmented_control("Altura", list(ALTURAS), default="Padrão", required=True, key="rel_altura")
-        st.button("Remover dos favoritos" if favorito else "Favoritar", key="rel_fav",
+    with st.container(horizontal=True, vertical_alignment="center", gap="small", key="rel_acoes"):
+        st.button("Favorito" if favorito else "Favoritar", key="rel_fav",
                   icon=":material/bookmark_added:" if favorito else ":material/bookmark_add:",
                   on_click=_alternar_favorito, args=(rel["id"], not favorito))
-        with st.container(width=150):
-            ui.botao_copiar(rotulo="Copiar link", feito="Link copiado", link_param=("r", rel["id"]))
         if reports.pode_editar(rel, login, admin) and auth.pode_publicar():
             if st.button("Editar", icon=":material/edit:", key="rel_editar"):
                 st.switch_page(state.paginas()["publicar"], query_params={"editar": rel["id"]})
+        ui.acoes_relatorio(rel["id"], links, arquivo)
 
-    ui.relatorio_html(links=links, altura=ALTURAS[altura], nome_arquivo=arquivo)
+    st.html("<div style='height:8px'></div>")
+    with st.container(key="rel_quadro"):
+        ui.relatorio_html(links=links, altura=ALTURA, barra=False)
 
 
 def render() -> None:

@@ -129,11 +129,11 @@ def _form_entrar() -> None:
 def _form_cadastro() -> None:
     st.html("<h2>Solicitar acesso</h2><p class='sub'>Um administrador aprova o cadastro e libera as ferramentas.</p>")
     with st.form("form_cadastro", border=False):
-        nome = st.text_input("Nome completo")
+        nome = st.text_input("Nome completo", placeholder="Ex.: João Silva")
         c1, c2 = st.columns(2)
-        usuario = c1.text_input("Usuário")
-        matricula = c2.text_input("Matrícula")
-        cargo = st.text_input("Cargo")
+        usuario = c1.text_input("Usuário", placeholder="Ex.: joao.silva", help="Use nome.sobrenome, sem espaços nem acentos.")
+        matricula = c2.text_input("Matrícula", placeholder="Ex.: 123456")
+        cargo = st.text_input("Cargo", placeholder="Ex.: Comprador")
         c3, c4 = st.columns(2)
         senha = c3.text_input("Senha", type="password", help="Mínimo de 6 caracteres.")
         senha2 = c4.text_input("Confirmar senha", type="password")
