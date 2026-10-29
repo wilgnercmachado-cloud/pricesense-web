@@ -6,12 +6,12 @@ showErrorDetails = "none"
 maxUploadSize = 300
 
 [theme]
-base = "dark"
-primaryColor = "#5B8CFF"
-backgroundColor = "#060A13"
-secondaryBackgroundColor = "#0E1628"
-textColor = "#E9EEF7"
-borderColor = "#1F2A42"
+base = "light"
+primaryColor = "#2D4BFF"
+backgroundColor = "#EDF1F7"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#0B1220"
+borderColor = "#DCE2EC"
 baseRadius = "0.65rem"
 buttonRadius = "0.65rem"
 font = "Geist:https://fonts.googleapis.com/css2?family=Geist:wght@300..700&display=swap, sans-serif"
