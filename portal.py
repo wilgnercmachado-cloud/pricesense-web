@@ -10,7 +10,7 @@ import streamlit as st
 
 st.set_page_config(page_title="PriceSense", page_icon=":material/sell:", layout="wide", initial_sidebar_state="collapsed")
 
-from core import auth, db, state  # noqa: E402
+from core import auth, db, presenca, state  # noqa: E402
 from ui import components as ui  # noqa: E402
 from ui import theme  # noqa: E402
 from views import admin, biblioteca, home, login, perfil, pesquisa, preco_bot, promo, publicar, regular  # noqa: E402
@@ -34,6 +34,7 @@ except db.ConfigError:
 
 
 def _sair() -> None:
+    presenca.registrar_saida(st.session_state.get("usuario_login", ""))
     state.encerrar_sessao()
     st.query_params.clear()
     st.rerun()
@@ -98,5 +99,30 @@ with st.container(key="ps_tema"):
         theme.aplicar()  # grava as cores antes do rerun, para a troca ser imediata
         st.rerun()
     ui.menu_ao_passar_mouse()
+
+presenca.pulso()
+
+if admin_on and pagina.url_path != "admin":
+    @st.fragment(run_every="30s")
+    def _aviso_solicitacoes() -> None:
+        """Pop-up para administradores quando chegam pedidos de acesso (verifica a cada 30 s)."""
+        try:
+            fila = db.pendentes()
+        except Exception:
+            return
+        if not fila or st.session_state.get("_aviso_dispensado") == len(fila):
+            return
+        with st.container(key="ps_aviso"):
+            nomes = ", ".join(ui.esc(u.get("nome") or u["usuario"]) for u in fila[:2]) + (f" e mais {len(fila) - 2}" if len(fila) > 2 else "")
+            titulo = "Nova solicitação de acesso" if len(fila) == 1 else f"{len(fila)} solicitações de acesso"
+            st.html(f"<div class='ps-aviso'><i class='ps-live'></i><div><b>{titulo}</b><span>{nomes}</span></div></div>")
+            c1, c2 = st.columns(2)
+            if c1.button("Revisar", type="primary", width="stretch", key="aviso_ir"):
+                st.switch_page(p["admin"])
+            if c2.button("Depois", width="stretch", key="aviso_depois"):
+                st.session_state._aviso_dispensado = len(fila)
+                st.rerun(scope="fragment")
+
+    _aviso_solicitacoes()
 
 pagina.run()
