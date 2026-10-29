@@ -101,6 +101,8 @@ def entrar(usuario: str, senha: str) -> tuple[bool, str]:
         except Exception:
             pass  # o login segue; a migração tenta de novo na próxima vez
 
+    from core import presenca
+    presenca.registrar_login(registro)
     st.session_state.logado = True
     st.session_state.usuario_logado = registro.get("nome") or usuario
     st.session_state.usuario_login = registro["usuario"]

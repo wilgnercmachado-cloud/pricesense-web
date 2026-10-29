@@ -139,6 +139,10 @@ def buscar_usuario(login: str) -> dict | None:
     return dados[0] if dados else None
 
 
+def pendentes() -> list[dict]:
+    return sb().table("usuarios").select("usuario, nome").eq("status", "Pendente").execute().data or []
+
+
 def listar_usuarios() -> list[dict]:
     return sb().table("usuarios").select("*").execute().data or []
 
