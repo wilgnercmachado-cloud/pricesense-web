@@ -44,7 +44,7 @@ for _t in TOKENS.values():
 
 
 def modo() -> str:
-    return "Light" if st.session_state.get("tema") == "Light" else "Dark"
+    return "Dark" if st.session_state.get("tema") == "Dark" else "Light"
 
 
 def tokens() -> dict:
@@ -131,6 +131,26 @@ html, body, .stApp, button, input, textarea, select, [data-testid="stMarkdownCon
 .st-key-ps_tema button [data-testid="stIconMaterial"] {{ color: var(--ps-ink); font-size: 20px; }}
 @media (max-width: 760px) {{ .st-key-ps_tema {{ top: 9px; right: 12px; }} }}
 
+/* presença */
+.ps-user-meta {{ display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: .45rem; font-size: .78rem; color: var(--ps-muted); }}
+.ps-status {{ display: inline-flex; align-items: center; gap: 6px; color: var(--ps-faint); font-weight: 500; }}
+.ps-status i {{ width: 7px; height: 7px; border-radius: 50%; background: var(--ps-faint); }}
+.ps-status.on {{ color: var(--ps-up); }}
+.ps-status.on i {{ background: var(--ps-up); animation: ps-pulse 2s infinite; }}
+
+/* aviso de novas solicitações (administradores) */
+.st-key-ps_aviso {{
+  position: fixed !important; right: 22px; bottom: 22px; z-index: 1000001; width: 340px !important; padding: 16px;
+  background: color-mix(in srgb, var(--ps-surface-solid) 78%, transparent); border: 1px solid var(--ps-line);
+  border-radius: 16px; backdrop-filter: var(--ps-glass); -webkit-backdrop-filter: var(--ps-glass);
+  box-shadow: 0 30px 60px -24px rgba(0,0,0,.45); animation: ps-aviso .45s cubic-bezier(.2,.8,.2,1) both;
+}}
+@keyframes ps-aviso {{ from {{ opacity: 0; transform: translateY(16px) scale(.98); }} to {{ opacity: 1; transform: none; }} }}
+.ps-aviso {{ display: flex; gap: 12px; align-items: flex-start; }}
+.ps-aviso .ps-live {{ margin-top: 6px; flex: none; background: var(--ps-amber); }}
+.ps-aviso b {{ display: block; font-weight: 600; color: var(--ps-ink); }}
+.ps-aviso span {{ color: var(--ps-muted); font-size: .86rem; }}
+
 /* menus do topo: vidro e abertura suave */
 [data-testid="stTopNavPopover"] {{ animation: ps-drop .22s cubic-bezier(.2,.8,.2,1) both; transform-origin: top left; }}
 [data-testid="stTopNavPopoverBody"] {{
@@ -172,21 +192,42 @@ header[data-testid="stHeader"] {{
 [data-baseweb="tag"] {{ background: var(--ps-primary-soft) !important; color: var(--ps-ink) !important; border: 1px solid color-mix(in srgb, var(--ps-primary) 40%, transparent) !important; }}
 [data-baseweb="tag"] span {{ color: var(--ps-ink) !important; }}
 
-/* botões */
+/* botões: vidro translúcido, brilho que atravessa no hover */
+[data-testid="stBaseButton-primary"], [data-testid="stBaseButton-primaryFormSubmit"],
+[data-testid="stBaseButton-secondary"], [data-testid="stBaseButton-secondaryFormSubmit"] {{
+  position: relative; overflow: hidden; isolation: isolate; min-height: 40px; font-weight: 550 !important;
+  transition: transform .18s cubic-bezier(.2,.7,.2,1), box-shadow .22s ease, border-color .2s ease, color .2s ease !important;
+}}
+[data-testid="stBaseButton-primary"]::after, [data-testid="stBaseButton-primaryFormSubmit"]::after,
+[data-testid="stBaseButton-secondary"]::after, [data-testid="stBaseButton-secondaryFormSubmit"]::after {{
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.38) 50%, transparent 65%);
+  transform: translateX(-130%); transition: transform .7s cubic-bezier(.2,.7,.2,1);
+}}
+[data-testid^="stBaseButton-"]:hover::after {{ transform: translateX(130%); }}
+[data-testid^="stBaseButton-"]:active {{ transform: translateY(0) scale(.98) !important; }}
 [data-testid="stBaseButton-primary"], [data-testid="stBaseButton-primaryFormSubmit"] {{
-  background: linear-gradient(180deg, var(--ps-primary-hover), var(--ps-primary)) !important;
-  border: 1px solid color-mix(in srgb, var(--ps-primary) 70%, #fff) !important; color: #fff !important; font-weight: 550 !important;
-  box-shadow: 0 1px 0 rgba(255,255,255,.25) inset, 0 10px 24px -12px var(--ps-primary);
-  transition: transform .15s ease, box-shadow .2s ease !important;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ps-primary-hover) 92%, transparent), color-mix(in srgb, var(--ps-primary) 92%, transparent)) !important;
+  border: 1px solid color-mix(in srgb, var(--ps-primary) 70%, #fff) !important; color: #fff !important;
+  backdrop-filter: blur(10px) saturate(160%); -webkit-backdrop-filter: blur(10px) saturate(160%);
+  box-shadow: 0 1px 0 rgba(255,255,255,.3) inset, 0 10px 24px -12px var(--ps-primary);
 }}
 [data-testid="stBaseButton-primary"]:hover, [data-testid="stBaseButton-primaryFormSubmit"]:hover {{
-  transform: translateY(-1px); box-shadow: 0 1px 0 rgba(255,255,255,.25) inset, 0 14px 30px -12px var(--ps-primary);
+  transform: translateY(-1px); box-shadow: 0 1px 0 rgba(255,255,255,.3) inset, 0 16px 32px -12px var(--ps-primary);
 }}
 [data-testid="stBaseButton-secondary"], [data-testid="stBaseButton-secondaryFormSubmit"] {{
-  background: color-mix(in srgb, var(--ps-field) 60%, transparent) !important; border: 1px solid var(--ps-line) !important;
-  backdrop-filter: blur(10px); font-weight: 500 !important;
+  background: color-mix(in srgb, var(--ps-surface-solid) 58%, transparent) !important; border: 1px solid var(--ps-line) !important;
+  backdrop-filter: blur(10px) saturate(160%); -webkit-backdrop-filter: blur(10px) saturate(160%);
+  box-shadow: 0 1px 0 var(--ps-highlight) inset, 0 6px 16px -12px rgba(15,23,42,.35);
 }}
-[data-testid="stBaseButton-secondary"]:hover {{ border-color: var(--ps-primary) !important; color: var(--ps-primary) !important; }}
+[data-testid="stBaseButton-secondary"]:hover, [data-testid="stBaseButton-secondaryFormSubmit"]:hover {{
+  transform: translateY(-1px); border-color: color-mix(in srgb, var(--ps-primary) 55%, transparent) !important; color: var(--ps-primary) !important;
+  box-shadow: 0 1px 0 var(--ps-highlight) inset, 0 12px 26px -14px var(--ps-primary);
+}}
+[data-testid="stPageLink-NavLink"] {{ border-radius: 10px; transition: background-color .2s ease, transform .18s ease; }}
+[data-testid="stPageLink-NavLink"]:hover {{ background: var(--ps-primary-soft); transform: translateX(2px); }}
+.st-key-rel_acoes [data-testid^="stBaseButton-"] {{ height: 40px; min-width: 136px; }}
+.st-key-rel_acoes [data-testid^="stBaseButton-"] p {{ font-weight: 550; font-size: 14px; }}
 [data-testid="stBaseButton-primary"]:disabled {{ opacity: .4; box-shadow: none; transform: none; filter: saturate(.6); }}
 :focus-visible {{ outline: 2px solid var(--ps-primary) !important; outline-offset: 2px; }}
 [data-testid="stTabs"] [data-baseweb="tab-list"] {{ gap: 4px; }}

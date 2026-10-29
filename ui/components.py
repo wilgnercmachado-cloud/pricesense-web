@@ -367,3 +367,74 @@ if (!d.__psHover && w.matchMedia('(hover: hover)').matches) {
   }, true);
 }
 </script>""", height=0, width=0)
+
+
+_ICONES = {
+    "link": "<path d='M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5'/><path d='M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5'/>",
+    "baixar": "<path d='M12 3v12'/><path d='m7 10 5 5 5-5'/><path d='M5 21h14'/>",
+    "tela": "<path d='M8 3H5a2 2 0 0 0-2 2v3'/><path d='M16 3h3a2 2 0 0 1 2 2v3'/><path d='M8 21H5a2 2 0 0 1-2-2v-3'/><path d='M16 21h3a2 2 0 0 0 2-2v-3'/>",
+    "ok": "<path d='m5 12 5 5 9-10'/>",
+}
+
+
+def _icone(nome: str) -> str:
+    return (f"<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' "
+            f"stroke-linejoin='round' aria-hidden='true'>{_ICONES[nome]}</svg>")
+
+
+def acoes_relatorio(rid: str, links: list[str], nome_arquivo: str | None) -> None:
+    """Copiar link, Baixar HTML (só para quem publica) e Tela cheia, no mesmo padrão dos botões do app."""
+    t = theme.tokens()
+    botoes = [f"<button id='cp' type='button'>{_icone('link')}<span>Copiar link</span></button>"]
+    if nome_arquivo:
+        botoes.append(f"<button id='dl' type='button'>{_icone('baixar')}<span>Baixar HTML</span></button>")
+    botoes.append(f"<button id='fs' type='button' class='pri'>{_icone('tela')}<span>Tela cheia</span></button>")
+    largura = 150 * len(botoes) + 8 * (len(botoes) - 1) + 4
+    components.html(f"""<!doctype html><html><head><meta charset="utf-8"><style>
+@import url('{theme.FONTE_URL}');
+html,body{{margin:0;background:transparent;overflow:hidden}}
+.row{{display:flex;gap:8px;padding:2px}}
+button{{position:relative;overflow:hidden;isolation:isolate;flex:1;height:40px;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  border-radius:.65rem;border:1px solid {t['line']};background:color-mix(in srgb,{t['surface_solid']} 70%,transparent);color:{t['ink']};
+  font:550 14px 'Geist',-apple-system,sans-serif;cursor:pointer;box-shadow:0 1px 0 {t['highlight']} inset,0 6px 16px -12px rgba(15,23,42,.35);
+  transition:transform .18s cubic-bezier(.2,.7,.2,1),box-shadow .22s ease,border-color .2s ease,color .2s ease}}
+button svg{{width:16px;height:16px;flex:none}}
+button::after{{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.38) 50%,transparent 65%);transform:translateX(-130%);transition:transform .7s cubic-bezier(.2,.7,.2,1)}}
+button:hover::after{{transform:translateX(130%)}}
+button:hover{{transform:translateY(-1px);border-color:color-mix(in srgb,{t['primary']} 55%,transparent);color:{t['primary']};box-shadow:0 1px 0 {t['highlight']} inset,0 12px 26px -14px {t['primary']}}}
+button:active{{transform:scale(.98)}}
+button.pri{{background:linear-gradient(180deg,{t['primary_hover']},{t['primary']});color:#fff;border-color:color-mix(in srgb,{t['primary']} 70%,#fff);
+  box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 10px 24px -12px {t['primary']}}}
+button.pri:hover{{color:#fff;box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 16px 32px -12px {t['primary']}}}
+button.ok{{background:{t['up']};border-color:{t['up']};color:#fff}}
+button:focus-visible{{outline:2px solid {t['primary']};outline-offset:2px}}
+button:disabled{{opacity:.6;cursor:progress}}
+</style></head><body><div class="row">{''.join(botoes)}</div><script>
+const LINKS = {json.dumps(links)}, NOME = {json.dumps(nome_arquivo or "")}, RID = {json.dumps(str(rid))};
+const pai = window.parent.document;
+function aviso(b, texto, ms) {{ const s = b.querySelector('span'), o = s.textContent; s.textContent = texto; b.classList.add('ok');
+  setTimeout(() => {{ s.textContent = o; b.classList.remove('ok'); }}, ms || 2200); }}
+document.getElementById('cp').onclick = async e => {{
+  const b = e.currentTarget, u = new URL(window.parent.location.href); u.search = ''; u.searchParams.set('r', RID);
+  try {{ await navigator.clipboard.writeText(u.toString()); aviso(b, 'Link copiado'); }} catch (_) {{ b.querySelector('span').textContent = 'Não foi possível copiar'; }}
+}};
+document.getElementById('fs').onclick = () => {{
+  const alvo = pai.querySelector('.st-key-rel_quadro iframe');
+  if (alvo && alvo.requestFullscreen) alvo.requestFullscreen().catch(() => {{}});
+}};
+const dl = document.getElementById('dl');
+if (dl) dl.onclick = async () => {{
+  const s = dl.querySelector('span'), o = s.textContent; dl.disabled = true;
+  try {{
+    const partes = [];
+    for (let i = 0; i < LINKS.length; i++) {{ s.textContent = 'Baixando ' + Math.round(100 * i / LINKS.length) + '%';
+      const r = await fetch(LINKS[i]); if (!r.ok) throw new Error(r.status); partes.push(await r.arrayBuffer()); }}
+    let blob = new Blob(partes); const ini = new Uint8Array(await blob.slice(0, 2).arrayBuffer());
+    if (ini[0] === 0x1f && ini[1] === 0x8b) blob = await new Response(blob.stream().pipeThrough(new DecompressionStream('gzip'))).blob();
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([blob], {{type: 'text/html'}})); a.download = NOME;
+    document.body.appendChild(a); a.click(); setTimeout(() => {{ URL.revokeObjectURL(a.href); a.remove(); }}, 3000);
+    dl.disabled = false; s.textContent = o; aviso(dl, 'Download iniciado');
+  }} catch (err) {{ dl.disabled = false; s.textContent = 'Falha no download'; setTimeout(() => s.textContent = o, 2500); }}
+}};
+</script></body></html>""", height=46, width=largura)
