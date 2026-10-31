@@ -1,155 +1,220 @@
-"""Pricing Regular: motor de precificação sobre a pesquisa de mercado."""
+"""Pricing Regular: precificação sobre a base completa do relatório Pricing GMAT3."""
 from __future__ import annotations
 
 import io
 from datetime import datetime
 
+import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
 import streamlit as st
 
-from core import market_engine as me
-from core import pricing_engine as pe
+from core import gmat_pricing as gp
+from core import gmat_reader as gr
+from core import reports
 from ui import components as ui
-from ui import theme
 
-COR_ACAO = {"Subir": "up", "Baixar": "down", "Manter": "faint"}
-
-
-def _fonte() -> pd.DataFrame | None:
-    df = st.session_state.get("df_pesq_master")
-    if df is not None and not df.empty:
-        st.caption(f"Usando a pesquisa {st.session_state.get('arquivo_pesquisa_nome', '')} "
-                   f"({ui.numero(len(df))} coletas). Para trocar, envie outra extração na Pesquisa de Mercado.")
-        return df
-    from views.pesquisa import _processar
-    arquivo = st.file_uploader("Extração da rotina 1067 (ZIP, CSV com | ou Excel)", type=['zip', 'csv', 'xlsx', 'xls'], key="reg_upload")
-    if arquivo:
-        _processar(arquivo)
-        st.rerun()
-    ui.vazio("Envie a pesquisa de mercado",
-             "O motor usa a extração da rotina 1067: preço atual do PDV, custo, moda e menor preço da concorrência. "
-             "Se você já carregou a pesquisa na página Pesquisa de Mercado, ela é usada aqui automaticamente.")
-    return None
+FILTROS = [("Estado", "Estado"), ("Diretor regional", "Diretor regional"), ("Filial", "Filial"),
+           ("Departamento", "Departamento"), ("Comprador", "Comprador"), ("Categoria", "Categoria"), ("Cesta", "Cesta")]
+VISOES = ["Estado", "Diretor regional", "Filial", "Departamento", "Comprador", "Categoria"]
+MAX_GRADE = 2000
 
 
-def _matriz(res: pd.DataFrame, margem_min: float) -> go.Figure:
-    t = theme.tokens()
-    fig = go.Figure()
-    for acao, chave in COR_ACAO.items():
-        d = res[res['Ação'] == acao]
-        if d.empty:
-            continue
-        fig.add_trace(go.Scatter(
-            x=d['Índice atual'], y=d['Margem atual %'], mode='markers', name=acao,
-            marker=dict(size=11, color=t[chave], opacity=.85, line=dict(width=1, color=t['surface_solid'])),
-            customdata=d[['Produto', 'Filial', 'Varejo atual', 'Varejo sugerido']].values,
-            hovertemplate="<b>%{customdata[0]}</b><br>%{customdata[1]}<br>Índice %{x:.1f} | Margem %{y:.1f}%<br>"
-                          "R$ %{customdata[2]:,.2f} para R$ %{customdata[3]:,.2f}<extra></extra>"))
-    fig.add_vline(x=100, line=dict(color=t['faint'], dash='dot', width=1))
-    fig.add_hline(y=margem_min, line=dict(color=t['amber'], dash='dot', width=1))
-    for x, y, txt in [(.02, .98, "Barato e margem alta: espaço para subir"), (.98, .98, "Caro e margem alta: baixar"),
-                      (.02, .04, "Barato e margem baixa: subir com cuidado"), (.98, .04, "Caro e margem baixa: rever custo")]:
-        fig.add_annotation(xref="paper", yref="paper", x=x, y=y, text=txt, showarrow=False,
-                           xanchor="left" if x < .5 else "right", font=dict(size=11, color=t['faint']))
-    layout = theme.plotly_layout(380)
-    layout.update(hovermode="closest", legend=dict(orientation="h", y=1.08, x=0, font=dict(color=t['ink'])),
-                  xaxis=dict(title="Índice de preço (100 = moda do mercado)", gridcolor=t['line_hex'], zeroline=False, color=t['muted']),
-                  yaxis=dict(title="Margem atual (%)", gridcolor=t['line_hex'], zeroline=False, color=t['muted']),
-                  hoverlabel=dict(bgcolor=t['surface_solid'], bordercolor=t['line_hex'], font=dict(color=t['ink'])))
-    fig.update_layout(**layout)
-    return fig
+@st.cache_resource(show_spinner=False, max_entries=2)
+def _base_publicada(caminho: str, partes: int, versao: str) -> tuple[pd.DataFrame, dict]:
+    rel = {"arquivo_path": caminho, "partes": partes}
+    return gr.ler_de_gzip_ou_html(reports.baixar_conteudo(rel))
+
+
+@st.cache_resource(show_spinner=False, max_entries=2)
+def _base_enviada(nome: str, tamanho: int, _conteudo: bytes) -> tuple[pd.DataFrame, dict]:
+    return gr.ler_de_gzip_ou_html(_conteudo)
+
+
+def _fonte() -> tuple[pd.DataFrame, dict] | None:
+    candidatos = [r for r in reports.listar() if str(r.get("arquivo_path", "")).endswith((".gz", ".html"))]
+    recentes = sorted(candidatos, key=lambda r: r.get("atualizado_em") or "", reverse=True)
+    preferidos = sorted(recentes, key=lambda r: "gmat" not in (r.get("titulo") or "").lower())  # GMAT primeiro, mais recente antes
+    with st.container(border=True, key="psc_reg_fonte"):
+        c1, c2 = st.columns([3, 1], vertical_alignment="bottom")
+        opcoes = {r["id"]: r for r in preferidos}
+        escolha = c1.selectbox("Base de preços (relatório publicado na biblioteca)", ["__upload__"] + list(opcoes),
+                               index=1 if opcoes else 0, key="reg_fonte",
+                               format_func=lambda k: "Enviar o HTML do relatório" if k == "__upload__" else
+                               f"{opcoes[k].get('titulo')}  ({ui.data_curta(opcoes[k].get('atualizado_em'))})")
+        if escolha == "__upload__":
+            arq = st.file_uploader("HTML do relatório Pricing GMAT3", type=["html", "htm"], key="reg_html")
+            if not arq:
+                return None
+            with st.spinner("Lendo a base do relatório"):
+                return _base_enviada(arq.name, arq.size, arq.getvalue())
+        rel = opcoes[escolha]
+        if not st.session_state.get("reg_carregado") == escolha:
+            if not c2.button("Carregar base", type="primary", width="stretch", icon=":material/database:", key="reg_carregar"):
+                st.caption("A base completa tem centenas de milhares de linhas. Carregue para começar.")
+                return None
+            st.session_state.reg_carregado = escolha
+        try:
+            with st.spinner("Baixando e lendo a base do relatório (leva alguns segundos na primeira vez)"):
+                return _base_publicada(rel["arquivo_path"], int(rel.get("partes") or 1), str(rel.get("atualizado_em")))
+        except gr.ErroLeitura as exc:
+            st.error(str(exc), icon=":material/error:")
+        except Exception as exc:
+            st.error(f"Não foi possível ler esse relatório: {exc}", icon=":material/error:")
+        return None
+
+
+def _filtrar(df: pd.DataFrame) -> pd.DataFrame:
+    with st.container(border=True, key="psc_reg_filtros"):
+        cols = st.columns(4)
+        mask = np.ones(len(df), dtype=bool)
+        for n, (rotulo, col) in enumerate(FILTROS):
+            opcoes = sorted(str(v) for v in pd.unique(df[col].to_numpy()[mask]) if pd.notna(v))
+            sel = cols[n % 4].multiselect(rotulo, opcoes, placeholder="Todos", key=f"reg_f_{col}")
+            if sel:
+                mask &= df[col].isin(sel).to_numpy()
+        busca = cols[3].text_input("Produto", placeholder="Código ou nome", key="reg_busca")
+        if busca.strip():
+            mask &= df["Produto"].astype(str).str.contains(busca.strip(), case=False, regex=False).to_numpy()
+    return df[mask]
+
+
+def _regras() -> dict:
+    with st.container(border=True, key="psc_reg_regras"):
+        c1, c2, c3, c4 = st.columns(4)
+        centavos = c1.number_input("Abaixo do mercado (R$)", 0.0, 1.0, 0.01, 0.01, format="%.2f", key="reg_cent")
+        margem_min = c2.number_input("Margem mínima (%)", -50.0, 30.0, -15.0, 1.0, format="%.0f", key="reg_mmin",
+                                     help="Regra do relatório: o mercado não é acompanhado na baixa quando deixaria a margem abaixo disso.")
+        zona = c3.slider("Zona neutra do IP (%)", 90, 110, (98, 101), key="reg_zona",
+                         help="Regra do relatório: só sobe com IP abaixo do início e só baixa com IP acima do fim.")
+        direcao = c4.segmented_control("Direção", ["Subir e baixar", "Só baixar", "Só subir"], default="Subir e baixar",
+                                       required=True, key="reg_dir")
+        c5, c6, c7, c8 = st.columns(4)
+        abaixo = c5.segmented_control("Mercado abaixo da mínima", ["Não acompanhar", "Baixar até o piso"],
+                                      default="Não acompanhar", required=True, key="reg_abx")
+        arred = c6.toggle("Arredondar pela regra da companhia", value=False, key="reg_arr",
+                          help="Desligado: preço exato (mercado − R$ 0,01). Ligado: aplica a régua de gôndola do Preço Bot.")
+        acoes = c7.toggle("Incluir itens em ação (encarte, mídia, vencimento)", value=False, key="reg_acoes")
+        cesta = c8.toggle("Não subir itens da cesta", value=False, key="reg_cesta",
+                          help="Itens da cesta costumam ficar abaixo do mercado de propósito, às vezes abaixo do custo.")
+    return dict(proteger_cesta=cesta, centavos=float(centavos), margem_min=margem_min / 100, piso_ip=zona[0] / 100, teto_ip=zona[1] / 100,
+                direcao=direcao, abaixo_minima=abaixo, arredondar=arred, incluir_acoes=acoes)
+
+
+def _status(resumo: dict) -> None:
+    cores = {"Mercado igual": "var(--ps-primary)", "Mercado maior": "var(--ps-up)", "Mercado menor": "var(--ps-down)",
+             "Mercado abaixo da mínima": "var(--ps-amber)", "Sem pesquisa": "var(--ps-faint)"}
+    tot = max(sum(resumo["status"].values()), 1)
+    barras = "".join(f"<span style='flex:{v};background:{cores[k]}'></span>" for k, v in resumo["status"].items() if v)
+    leg = "".join(f"<span><i style='background:{cores[k]}'></i>{k} <b>{ui.numero(v)}</b> ({f'{100 * v / tot:.0f}'}%)</span>"
+                  for k, v in resumo["status"].items())
+    st.html(f"<div class='ps-split'><div class='ps-split-bar'>{barras}</div><div class='ps-split-legend'>{leg}</div></div>")
+
+
+def _codigo(s: pd.Series) -> pd.Series:
+    return s.astype(str).str.split(" - ").str[0].str.strip()
 
 
 def render() -> None:
-    ui.cabecalho("Pricing Regular", "Motor de precificação: cruza preço atual, custo e mercado e sugere o novo preço já nas regras de gôndola.")
-    df = _fonte()
-    if df is None:
+    ui.cabecalho("Pricing Regular", "Precificação de cada filial contra o menor preço do mercado, com as regras do relatório Pricing GMAT3.")
+    fonte = _fonte()
+    if fonte is None:
+        ui.vazio("Escolha a base", "Selecione o relatório Pricing GMAT3 publicado na biblioteca e clique em Carregar base, "
+                                   "ou envie o HTML do relatório. Nada é alterado no ERP: o resultado é um arquivo de importação.")
         return
-    base_df = me.filtro_qualidade(df)
+    df_all, meta = fonte
+    st.caption(f"Base de {meta.get('atualizado')}, pesquisa de {' a '.join(meta.get('periodo') or [])}: "
+               f"{ui.numero(meta['linhas'])} linhas, {meta['filiais']} filiais, {ui.numero(meta['produtos'])} produtos.")
 
-    with st.container(border=True, key="psc_reg_filtros"):
-        c1, c2, c3, c4 = st.columns(4)
-        filial = c1.selectbox("Filial", ["Todas"] + sorted(base_df['FILIAL'].dropna().unique()), key="reg_filial")
-        cat = c2.selectbox("Categoria", ["Todas"] + sorted(base_df['CATEGORIA_COMERCIAL'].dropna().unique()), key="reg_cat")
-        grupo = c3.selectbox("Grupo empresarial", ["Todos"] + sorted(base_df['GRUPO_EMPRESARIAL'].dropna().unique()), key="reg_grupo")
-        busca = c4.text_input("Produto", placeholder="Código ou nome", key="reg_busca")
-    f = base_df
-    if filial != "Todas": f = f[f['FILIAL'] == filial]
-    if cat != "Todas": f = f[f['CATEGORIA_COMERCIAL'] == cat]
-    if grupo != "Todos": f = f[f['GRUPO_EMPRESARIAL'] == grupo]
-    if busca.strip(): f = f[f['PRODUTO'].astype(str).str.contains(busca.strip(), case=False, regex=False)]
-
-    base = pe.base_precificacao(f) if not f.empty else pd.DataFrame()
-    if base.empty:
-        ui.vazio("Nenhum produto com preço do PDV no filtro", "Amplie os filtros ou confira se a extração traz Vlr. Varejo PDV e CustoMedio.")
+    ui.secao("Recorte")
+    df = _filtrar(df_all)
+    if df.empty:
+        ui.vazio("Nada no recorte", "Remova algum filtro.")
         return
+    ui.secao("Regras de preço", "Padrão: varejo e atacado R$ 0,01 abaixo do menor preço do mercado, respeitando a margem mínima de −15%.")
+    regras = _regras()
+    res = gp.precificar(df, **regras)
+    k = gp.resumo(df, res)
 
-    ui.secao("Estratégia", "Defina a regra; o motor respeita a margem mínima e o limite de variação de cada rodada.")
-    with st.container(border=True, key="psc_reg_estrategia"):
-        estrategia = st.segmented_control("Estratégia", list(pe.ESTRATEGIAS), default="Seguir a moda", required=True, key="reg_estr")
-        st.caption(pe.ESTRATEGIAS[estrategia])
-        c1, c2, c3, c4 = st.columns(4)
-        padrao = 97 if estrategia == "Abaixo da moda" else 100
-        indice = c1.slider("Índice alvo", 85, 115, padrao, key=f"reg_ind_{estrategia}", help="100 = igual à referência; 97 = 3% abaixo.")
-        margem_min = c2.slider("Margem mínima (%)", 0, 50, 15, key="reg_mmin")
-        var_max = c3.slider("Variação máxima por rodada (%)", 1, 30, 10, key="reg_vmax")
-        gap = c4.slider("Atacado abaixo do varejo (%)", 0, 20, 5, key="reg_gap", help="Usado quando o mercado não informa a relação atacado/varejo.")
-
-    res = pe.precificar(base, estrategia, indice, margem_min, var_max, gap)
-    k = pe.impacto(res)
-    fmt = lambda v: f"{v:.1f}".replace(".", ",") if v is not None else "-"
-    ui.secao("Impacto da rodada", f"{ui.numero(k['itens'])} itens precificados")
+    fmt = lambda v, d=1: f"{v:.{d}f}".replace(".", ",") if v == v else "-"
+    ui.secao("Resultado da rodada", f"{ui.numero(k['linhas'])} linhas, {ui.numero(k['skus'])} produtos, {k['filiais']} filiais")
     ui.etiquetas([
-        ui.etiqueta("Sobem", k["sobem"], tipo="numero", tom="ok"),
-        ui.etiqueta("Baixam", k["descem"], tipo="numero", tom="alert"),
-        ui.etiqueta("Margem média", k["margem_nova"] or 0, tipo="pct", tom="primary",
-                    nota=f"Hoje {fmt(k['margem_atual'])}%",
-                    variacao=(k["margem_nova"] - k["margem_atual"]) if k["margem_nova"] is not None and k["margem_atual"] is not None else None),
-        ui.etiqueta("Índice de preço", k["indice_novo"] or 0, tipo="indice", tom="promo", nota=f"Hoje {fmt(k['indice_atual'])}",
-                    variacao=(k["indice_novo"] - k["indice_atual"]) if k["indice_novo"] and k["indice_atual"] else None, inverter=True),
-        ui.etiqueta("Travados pela regra", k["travados"], tipo="numero", nota="Margem mínima ou limite de variação"),
+        ui.etiqueta("Preços que sobem", k["sobem"], tipo="numero", tom="ok"),
+        ui.etiqueta("Preços que baixam", k["baixam"], tipo="numero", tom="alert"),
+        ui.etiqueta("IP (nosso ÷ menor do mercado)", 100 * k["ip_novo"], tipo="indice", tom="primary",
+                    nota=f"Hoje {fmt(100 * k['ip_atual'])}", variacao=100 * (k["ip_novo"] - k["ip_atual"]), inverter=True),
+        ui.etiqueta("Margem ponderada", 100 * k["margem_nova"], tipo="pct", tom="promo",
+                    nota=f"Hoje {fmt(100 * k['margem_atual'])}%", variacao=100 * (k["margem_nova"] - k["margem_atual"])),
+        ui.etiqueta("Lucro adicional por mês", k["ganho"], tom="ok", nota="Nas subidas, pelo volume atual"),
+        ui.etiqueta("Investimento por mês", k["investimento"], tom="alert", nota="Nas baixas, pelo volume atual"),
+        ui.etiqueta("Travados pela margem de −15%", k["bloqueados"], tipo="numero", nota="Mercado abaixo da mínima"),
     ])
+    st.html("<div style='height:10px'></div>")
+    _status(k)
 
-    ui.secao("Matriz de oportunidade", "Cada ponto é um produto: quanto ele está caro em relação ao mercado e quanto ele rende.")
-    with st.container(border=True, key="psc_reg_matriz"):
-        st.plotly_chart(_matriz(res, margem_min), width="stretch", config={"displayModeBar": False}, key="reg_matriz")
+    d = df.join(res)
+    ui.secao("Onde está o impacto")
+    with st.container(border=True, key="psc_reg_visao"):
+        visao = st.segmented_control("Ver por", VISOES, default="Estado", required=True, key="reg_visao")
+        d["_w"] = np.where(d["un_mes"] > 0, d["un_mes"], 1.0)
+        tem = (d["mk"] > 0) & (d["vm"] > 0)
+        g = d.assign(_vmw=np.where(tem, d["vm"] * d["_w"], 0), _nvw=np.where(tem, d["novo_varejo"] * d["_w"], 0),
+                     _mkw=np.where(tem, d["mk"] * d["_w"], 0), _sobe=d["acao"] == "Subir", _baixa=d["acao"] == "Baixar",
+                     _ganho=d["impacto_mes"].clip(lower=0), _inv=(-d["impacto_mes"]).clip(lower=0))
+        t = g.groupby(visao, observed=True).agg(Linhas=("Produto", "size"), Sobem=("_sobe", "sum"), Baixam=("_baixa", "sum"),
+                                                 vmw=("_vmw", "sum"), nvw=("_nvw", "sum"), mkw=("_mkw", "sum"),
+                                                 Ganho=("_ganho", "sum"), Investimento=("_inv", "sum")).reset_index()
+        t["IP atual"] = 100 * t["vmw"] / t["mkw"].replace(0, np.nan)
+        t["IP novo"] = 100 * t["nvw"] / t["mkw"].replace(0, np.nan)
+        t["Saldo/mês"] = t["Ganho"] - t["Investimento"]
+        t = t.drop(columns=["vmw", "nvw", "mkw"]).sort_values("Saldo/mês", ascending=False)
+        st.dataframe(t, hide_index=True, width="stretch", height=min(420, 40 + 35 * len(t)),
+                     column_config={"IP atual": st.column_config.NumberColumn(format="%.1f"), "IP novo": st.column_config.NumberColumn(format="%.1f"),
+                                    "Ganho": st.column_config.NumberColumn("Lucro adicional/mês", format="R$ %.0f"),
+                                    "Investimento": st.column_config.NumberColumn("Investimento/mês", format="R$ %.0f"),
+                                    "Saldo/mês": st.column_config.NumberColumn(format="R$ %.0f")})
 
-    ui.secao("Preços sugeridos", "Ajuste o varejo e o atacado final direto na grade antes de exportar.")
-    res["Varejo final"], res["Atacado final"] = res["Varejo sugerido"], res["Atacado sugerido"]
+    ui.secao("Preços da rodada", f"Os {MAX_GRADE} itens de maior impacto; ajuste o preço final se precisar. A exportação leva todos.")
+    mudam = d[d["acao"] != "Manter"].copy()
+    mudam["_abs"] = mudam["impacto_mes"].abs()
+    topo = mudam.nlargest(MAX_GRADE, "_abs")
+    cols = ["Estado", "Filial", "Produto", "Classificação", "cu", "vm", "am", "mk", "amk", "Concorrente menor", "ip_atual",
+            "acao", "motivo", "novo_varejo", "novo_atacado", "margem_atual", "margem_nova", "impacto_mes"]
+    nomes = {"cu": "Custo", "vm": "Varejo atual", "am": "Atacado atual", "mk": "Menor varejo mercado", "amk": "Menor atacado mercado",
+             "ip_atual": "IP atual", "acao": "Ação", "motivo": "Motivo", "novo_varejo": "Novo varejo", "novo_atacado": "Novo atacado",
+             "margem_atual": "Margem atual", "margem_nova": "Nova margem", "impacto_mes": "Impacto/mês"}
+    grade = topo[cols].rename(columns=nomes)
+    for c in ["Margem atual", "Nova margem"]:
+        grade[c] = grade[c] * 100
+    grade["IP atual"] = grade["IP atual"] * 100
     moeda = st.column_config.NumberColumn(format="R$ %.2f")
-    pct = st.column_config.NumberColumn(format="%.1f%%")
-    cols = ['Filial', 'Produto', 'Custo', 'Varejo atual', 'Margem atual %', 'Moda varejo', 'Menor varejo', 'Índice atual',
-            'Ação', 'Motivo', 'Varejo final', 'Atacado final', 'Margem nova %', 'Variação %']
     editado = st.data_editor(
-        res[cols], hide_index=True, width="stretch", height=min(520, 40 + 35 * len(res)), key="reg_grade",
-        disabled=[c for c in cols if c not in ("Varejo final", "Atacado final")],
-        column_config={"Custo": moeda, "Varejo atual": moeda, "Moda varejo": moeda, "Menor varejo": moeda,
-                       "Varejo final": st.column_config.NumberColumn("Varejo final", format="R$ %.2f", min_value=0.0, step=0.01),
-                       "Atacado final": st.column_config.NumberColumn("Atacado final", format="R$ %.2f", min_value=0.0, step=0.01),
-                       "Margem atual %": pct, "Margem nova %": pct, "Variação %": pct,
-                       "Índice atual": st.column_config.NumberColumn(format="%.1f")})
+        grade, hide_index=True, width="stretch", height=520, key="reg_grade",
+        disabled=[c for c in grade.columns if c not in ("Novo varejo", "Novo atacado")],
+        column_config={**{c: moeda for c in ["Custo", "Varejo atual", "Atacado atual", "Menor varejo mercado", "Menor atacado mercado",
+                                             "Novo varejo", "Novo atacado"]},
+                       "IP atual": st.column_config.NumberColumn(format="%.1f"), "Margem atual": st.column_config.NumberColumn(format="%.1f%%"),
+                       "Nova margem": st.column_config.NumberColumn(format="%.1f%%"), "Impacto/mês": st.column_config.NumberColumn(format="R$ %.0f")})
+    mudam.loc[editado.index, "novo_varejo"] = editado["Novo varejo"].to_numpy()
+    mudam.loc[editado.index, "novo_atacado"] = editado["Novo atacado"].to_numpy()
 
-    ui.secao("Exportar")
+    ui.secao("Exportar", f"{ui.numero(len(mudam))} preços mudam nesta rodada.")
     with st.container(border=True, key="psc_reg_export"):
-        mudar = editado[(editado["Varejo final"] - editado["Varejo atual"]).abs() >= 0.01]
-        c1, c2 = st.columns(2)
+        f2 = lambda s: s.map(lambda v: f"{v:.2f}".replace(".", ",") if pd.notna(v) and v > 0 else "")
+        erp = pd.DataFrame({"Código da Filial": _codigo(mudam["Filial"]), "Código do Produto": _codigo(mudam["Produto"]),
+                            "Preço Varejo": f2(mudam["novo_varejo"]), "Preço Atacado": f2(mudam["novo_atacado"])})
+        c1, c2, c3 = st.columns(3)
         with c1:
-            buf = io.BytesIO()
-            with pd.ExcelWriter(buf, engine="openpyxl") as w:
-                editado.to_excel(w, index=False, sheet_name="Precificacao")
-            st.download_button("Baixar análise completa (XLSX)", data=buf.getvalue(), width="stretch", icon=":material/download:",
-                               file_name=f"PriceSense_PricingRegular_{datetime.now():%d-%m-%Y}.xlsx",
-                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            st.download_button("Importação ERP (TXT)", data=erp.to_csv(sep="\t", index=False, header=False).encode("utf-8"),
+                               file_name=f"PriceSense_Regular_ERP_{datetime.now():%d-%m-%Y}.txt", mime="text/plain",
+                               type="primary", width="stretch", icon=":material/upload:",
+                               help="Layout de preço regular do Preço Bot: filial, produto, varejo e atacado.")
         with c2:
-            if editado['Filial'].nunique() > 1:
-                st.button("Copiar para o Preço Bot", disabled=True, width="stretch", key="reg_copy_off")
-                st.caption("Escolha uma filial no filtro para copiar: o Preço Bot aplica a mesma lista às filiais que você selecionar lá.")
-            elif mudar.empty:
-                st.button("Copiar para o Preço Bot", disabled=True, width="stretch", key="reg_copy_vazio")
-                st.caption("Nenhum preço muda com essa estratégia.")
+            analise = mudam.drop(columns=["_abs", "_w"], errors="ignore")
+            st.download_button("Análise completa (CSV)", data=analise.to_csv(sep=";", index=False, decimal=",").encode("utf-8-sig"),
+                               file_name=f"PriceSense_Regular_Analise_{datetime.now():%d-%m-%Y}.csv", mime="text/csv",
+                               width="stretch", icon=":material/table_view:")
+        with c3:
+            if len(erp) <= 20000:
+                ui.botao_copiar(erp.to_csv(sep="\t", index=False, header=False), "Copiar importação", "Importação copiada")
             else:
-                codigos = mudar['Produto'].astype(str).str.extract(r'(\d+)')[0]
-                f2 = lambda v: f"{v:.2f}".replace(".", ",")
-                texto = "\n".join(f"{c}\t{f2(v)}\t{f2(a)}" for c, v, a in zip(codigos, mudar['Varejo final'], mudar['Atacado final']))
-                ui.botao_copiar(texto, f"Copiar {len(mudar)} preços para o Preço Bot", "Copiado: cole no Preço Bot")
+                st.caption("Acima de 20 mil linhas, use o arquivo TXT: copiar tanto texto trava o navegador.")
