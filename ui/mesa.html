@@ -6,123 +6,147 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:transparent;color:var(--ink);font:13px 'Geist',-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
 body.fs{background:var(--canvas)}
-.num,.mono{font-family:'Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.num{font-family:'Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+svg.i{width:14px;height:14px;flex:none;vertical-align:-2px}
 #app{display:flex;flex-direction:column;gap:12px;height:100%;padding:2px}
+body.fs #app{padding:14px}
 .glass{background:var(--surface);border:1px solid var(--line);border-radius:16px;backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);box-shadow:var(--shadow)}
-/* topo */
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;flex-wrap:wrap}
-.top h1{margin:0;font-size:17px;font-weight:600;letter-spacing:-.02em}
+.top h1{margin:0;font-size:17px;font-weight:600;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
 .top small{color:var(--muted);font-size:12px;display:block;margin-top:2px}
-.acts{display:flex;gap:8px;flex-wrap:wrap}
-button{font:550 13px 'Geist',sans-serif;height:36px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer;
-  display:inline-flex;align-items:center;gap:7px;transition:transform .15s,border-color .2s,color .2s,box-shadow .2s;position:relative;overflow:hidden}
-button svg{width:15px;height:15px}
+.acts{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.acts .sep{width:1px;height:24px;background:var(--line);margin:0 3px}
+button{font:550 12.5px 'Geist',sans-serif;height:34px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer;
+  display:inline-flex;align-items:center;gap:7px;transition:transform .15s,border-color .2s,color .2s,box-shadow .2s,background .2s;position:relative;overflow:hidden;white-space:nowrap}
 button:hover{transform:translateY(-1px);border-color:var(--primary);color:var(--primary);box-shadow:0 8px 20px -12px var(--primary)}
 button.pri{background:linear-gradient(180deg,var(--primary-hover),var(--primary));color:#fff;border-color:transparent}
 button.pri:hover{color:#fff}
+button.gr{background:var(--up-soft);border-color:color-mix(in srgb,var(--up) 45%,transparent);color:var(--up)}
+button.on{background:var(--primary-soft);color:var(--primary);border-color:color-mix(in srgb,var(--primary) 50%,transparent)}
 button.ok{background:var(--up);border-color:var(--up);color:#fff}
-/* parâmetros */
-.params{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px 18px;padding:14px 16px}
-.prm label{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-bottom:6px;font-weight:500}
-.prm label b{color:var(--ink);font-family:'Geist Mono',monospace;font-weight:500}
+.params{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px 18px;padding:14px 16px}
+.params .nota{grid-column:1/-1;font-size:11.5px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.prm label{display:flex;justify-content:space-between;gap:6px;font-size:11.5px;color:var(--muted);margin-bottom:6px;font-weight:500}
+.prm label b{color:var(--ink);font-family:'Geist Mono',monospace;font-weight:500;white-space:nowrap}
 input[type=range]{width:100%;accent-color:var(--primary);height:18px;margin:0}
 .seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;height:30px}
 .seg button{flex:1;height:100%;border:0;border-radius:0;padding:0 8px;font-size:12px;background:transparent}
 .seg button.on{background:var(--primary-soft);color:var(--primary)}
 .seg button:hover{transform:none;box-shadow:none}
-/* kpis */
 .kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
-.k{padding:12px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--line);backdrop-filter:blur(16px);position:relative;overflow:hidden}
+.k{padding:11px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--line);backdrop-filter:blur(16px);position:relative;overflow:hidden}
 .k::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent,var(--t,var(--faint)),transparent)}
-.k span{display:block;font-size:11.5px;color:var(--muted);font-weight:500}
-.k b{display:block;font:500 21px 'Geist Mono',monospace;letter-spacing:-.03em;margin-top:4px;white-space:nowrap}
+.k span{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);font-weight:500}
+.k span svg{color:var(--t)}
+.k b{display:block;font:500 20px 'Geist Mono',monospace;letter-spacing:-.03em;margin-top:4px;white-space:nowrap}
 .k i{font-style:normal;font-size:11px;color:var(--faint);font-family:'Geist Mono',monospace}
-.d-up{color:var(--up)}.d-dn{color:var(--down)}
-/* visual */
-.viz{display:grid;grid-template-columns:1.3fr 1fr;gap:10px}
+.pos{color:var(--up)}.neg{color:var(--down)}
+.viz{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:10px}
 .viz .glass{padding:12px 14px}
-.viz h3,.side h3{margin:0 0 8px;font-size:12.5px;font-weight:600;color:var(--ink)}
-.hist{display:flex;align-items:flex-end;gap:3px;height:92px}
-.hist div{flex:1;border-radius:4px 4px 0 0;min-height:2px;position:relative;transition:height .3s cubic-bezier(.2,.7,.2,1);cursor:default}
-.hist div:hover{filter:brightness(1.15)}
+h3{margin:0 0 8px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:6px}
+h3 small{color:var(--faint);font-weight:400}
+.hist{display:flex;align-items:flex-end;gap:3px;height:86px}
+.hist div{flex:1;border-radius:4px 4px 0 0;min-height:2px;transition:height .3s cubic-bezier(.2,.7,.2,1)}
 .hax{display:flex;justify-content:space-between;font:10.5px 'Geist Mono',monospace;color:var(--faint);margin-top:5px}
-.regras{display:flex;flex-direction:column;gap:6px}
-.rg{display:grid;grid-template-columns:200px 1fr 70px;gap:8px;align-items:center;font-size:12px;cursor:pointer;padding:2px 4px;border-radius:7px}
+.lista{display:flex;flex-direction:column;gap:4px}
+.rg{display:grid;grid-template-columns:18px minmax(0,1fr) 90px 58px;gap:8px;align-items:center;font-size:12px;cursor:pointer;padding:3px 5px;border-radius:7px}
 .rg:hover,.rg.on{background:var(--primary-soft)}
-.rg .bar{height:7px;border-radius:5px;background:var(--raised);overflow:hidden}
+.rg span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rg .bar{height:6px;border-radius:5px;background:var(--raised);overflow:hidden}
 .rg .bar i{display:block;height:100%;border-radius:5px;transition:width .3s}
 .rg b{font-family:'Geist Mono',monospace;font-weight:500;text-align:right}
-/* área principal */
-.main{flex:1;min-height:0;display:grid;grid-template-columns:1fr 330px;gap:10px}
+.main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:10px}
 .gridbox{display:flex;flex-direction:column;min-height:0;overflow:hidden}
-.tools{display:flex;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-.tools input[type=search]{height:32px;border-radius:9px;border:1px solid var(--line);background:var(--field);color:var(--ink);padding:0 10px;font:13px 'Geist',sans-serif;width:240px}
+.tools{display:flex;gap:7px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tools input[type=search],.tools select{height:30px;border-radius:9px;border:1px solid var(--line);background:var(--field);color:var(--ink);padding:0 10px;font:12.5px 'Geist',sans-serif}
+.tools input[type=search]{width:230px}
 .chip{height:28px;padding:0 10px;border-radius:999px;font-size:12px}
-.chip.on{background:var(--primary-soft);color:var(--primary);border-color:color-mix(in srgb,var(--primary) 50%,transparent)}
 .tools .cnt{margin-left:auto;color:var(--muted);font-size:12px}
 #scroll{flex:1;overflow:auto;position:relative}
-.row,.hdr{display:grid;grid-template-columns:var(--cols);align-items:center;min-width:1580px}
-.hdr{position:sticky;top:0;z-index:2;background:var(--surface-solid);border-bottom:1px solid var(--line);height:34px}
-.hdr div{padding:0 8px;font-size:11.5px;color:var(--muted);font-weight:550;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:none}
-.hdr div.r,.row div.r{text-align:right}
-.hdr div:hover{color:var(--primary)}
+.row,.hdr{display:grid;grid-template-columns:var(--cols);width:max-content;min-width:100%}
+.hdr{position:sticky;top:0;z-index:3;background:var(--surface-solid);border-bottom:1px solid var(--line);min-height:46px}
+.hdr>div{position:relative;padding:6px 10px 6px 8px;font-size:11.5px;line-height:1.25;color:var(--muted);font-weight:600;cursor:pointer;user-select:none;
+  display:flex;align-items:center;gap:4px;white-space:normal;overflow:hidden}
+.hdr>div.r{justify-content:flex-end;text-align:right}
+.hdr>div:hover{color:var(--primary)}
+.hdr>div.edc{background:color-mix(in srgb,var(--primary) 9%,var(--surface-solid));color:var(--primary)}
+.hdr .rz{position:absolute;right:0;top:8px;bottom:8px;width:6px;cursor:col-resize;border-right:2px solid transparent}
+.hdr .rz:hover,.hdr .rz.on{border-right-color:var(--primary)}
+.hdr .ord{font-size:9px;color:var(--primary)}
 #body{position:relative}
-.row{position:absolute;left:0;right:0;height:34px;border-bottom:1px solid var(--line);font-size:12.5px;cursor:pointer}
+.row{position:absolute;left:0;height:34px;border-bottom:1px solid var(--line);font-size:12.5px;cursor:pointer;align-items:center}
 .row:hover{background:var(--raised)}
 .row.sel{background:var(--primary-soft)}
-.row div{padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.row .ed{padding:0 4px}
-.row input{width:100%;height:26px;border-radius:7px;border:1px solid var(--line);background:var(--field);color:var(--ink);text-align:right;padding:0 6px;font:500 12.5px 'Geist Mono',monospace}
-.row input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
-.row input.man{border-color:var(--amber);background:var(--amber-soft)}
+.row>div{padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:100%;display:flex;align-items:center}
+.row>div.r{justify-content:flex-end}
+.row>div.edc{background:color-mix(in srgb,var(--primary) 7%,transparent);padding:0 4px}
+.row>div.ed{padding:0 4px}
+.row input[type=text]{width:100%;height:26px;border-radius:7px;border:1px solid color-mix(in srgb,var(--primary) 30%,var(--line));background:var(--field);color:var(--ink);text-align:right;padding:0 6px;font:600 12.5px 'Geist Mono',monospace}
+.edc input[type=text]{color:var(--primary)!important}
+.row input[type=text]:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+.row input.man{border-color:var(--amber)!important;background:var(--amber-soft)!important}
+.row input.neg{color:var(--down)!important}
+.ok-box{width:18px;height:18px;border-radius:6px;border:1.5px solid var(--line-strong);display:grid;place-items:center;cursor:pointer;transition:all .15s;color:transparent}
+.ok-box.on{background:var(--up);border-color:var(--up);color:#fff}
+.ok-box.na{opacity:.25;cursor:default}
 .cv{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;font:600 11px 'Geist Mono',monospace;color:#fff}
 .cvA{background:var(--up)}.cvB{background:var(--primary)}.cvC{background:var(--faint)}
-.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;background:var(--raised);color:var(--muted);max-width:100%;overflow:hidden;text-overflow:ellipsis}
-/* painel lateral */
+.tag{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:11px;background:var(--raised);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .side{padding:14px;overflow:auto}
 .side .vazio{color:var(--muted);font-size:12.5px;line-height:1.5}
 .side h2{margin:0;font-size:14px;font-weight:600;line-height:1.3}
-.side .sub{color:var(--muted);font-size:12px;margin:4px 0 12px}
+.side .sub{color:var(--muted);font-size:12px;margin:4px 0 10px}
+.st{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .lad{width:100%;height:190px;display:block}
-.facts{display:grid;grid-template-columns:1fr auto;gap:6px 10px;font-size:12px;margin:10px 0}
-.facts span{color:var(--muted)} .facts b{font-family:'Geist Mono',monospace;font-weight:500;text-align:right}
-.why{font-size:12px;line-height:1.5;color:var(--muted);background:var(--raised);border-radius:10px;padding:10px;margin:8px 0 12px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}
+.mc{background:var(--raised);border-radius:10px;padding:8px 10px}
+.mc span{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.mc b{display:block;font:500 15px 'Geist Mono',monospace;margin-top:2px}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:5px 10px;font-size:12px;margin:8px 0}
+.facts span{color:var(--muted);display:flex;align-items:center;gap:5px} .facts b{font-family:'Geist Mono',monospace;font-weight:500;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.why{font-size:12px;line-height:1.5;color:var(--muted);background:var(--raised);border-radius:10px;padding:10px;margin:8px 0 10px}
 .alts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .alts button{height:32px;font-size:12px;justify-content:center;padding:0 8px}
-.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--surface-solid);border:1px solid var(--line);border-radius:10px;padding:9px 14px;font-size:12.5px;transition:all .25s;pointer-events:none;box-shadow:0 18px 40px -20px rgba(0,0,0,.5)}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--surface-solid);border:1px solid var(--line);border-radius:10px;padding:9px 14px;font-size:12.5px;transition:all .25s;pointer-events:none;box-shadow:0 18px 40px -20px rgba(0,0,0,.5);z-index:9}
 .toast.on{opacity:1;transform:translateX(-50%)}
-@media (max-width:1100px){.params{grid-template-columns:repeat(4,1fr)}.kpis{grid-template-columns:repeat(4,1fr)}.main{grid-template-columns:1fr}.side{display:none}.viz{grid-template-columns:1fr}}
+body.foco .params,body.foco .kpis,body.foco .viz{display:none}
+@media (max-width:1100px){.kpis{grid-template-columns:repeat(4,1fr)}.main{grid-template-columns:1fr}.side{display:none}.viz{grid-template-columns:1fr}}
 </style></head><body>
 <div id="app">
   <div class="top glass">
-    <div><h1>Mesa de precificação</h1><small id="escopo"></small></div>
+    <div><h1 id="titulo"></h1><small id="escopo"></small></div>
     <div class="acts">
-      <button id="bReset" title="Desfaz os ajustes manuais"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Restaurar</button>
-      <button id="bCsv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>Análise (CSV)</button>
-      <button id="bCopy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copiar importação</button>
-      <button id="bErp" class="pri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M5 3h14"/></svg>Importação ERP (TXT)</button>
-      <button id="bFs" title="Tela cheia (Esc para sair)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+      <button id="bAll" class="gr" data-ic="check">Aceitar todos</button>
+      <button id="bNone" data-ic="x">Limpar aceites</button>
+      <button id="bReset" data-ic="undo">Restaurar preços</button>
+      <span class="sep"></span>
+      <button id="bCsv" data-ic="down">Análise CSV</button>
+      <button id="bCopy" data-ic="copy">Copiar importação</button>
+      <button id="bErp" class="pri" data-ic="up">Importação ERP</button>
+      <span class="sep"></span>
+      <button id="bFoco" data-ic="foco">Modo foco</button>
+      <button id="bFs" data-ic="tela" title="Tela cheia (Esc para sair)"></button>
     </div>
   </div>
-
   <div class="params glass" id="params"></div>
   <div class="kpis" id="kpis"></div>
   <div class="viz">
-    <div class="glass"><h3>Variação do varejo (quantidade de itens)</h3><div class="hist" id="hist"></div><div class="hax"><span>−30% ou menos</span><span>0</span><span>+30% ou mais</span></div></div>
-    <div class="glass"><h3>Regra aplicada <span style="color:var(--faint);font-weight:400">(clique para filtrar)</span></h3><div class="regras" id="regras"></div></div>
+    <div class="glass"><h3 data-ic2="bars">Variação do varejo <small>itens por faixa</small></h3><div class="hist" id="hist"></div><div class="hax"><span>−30% ou menos</span><span>0</span><span>+30% ou mais</span></div></div>
+    <div class="glass"><h3 data-ic2="regra">Regra de negócio <small>clique para filtrar</small></h3><div class="lista" id="regras"></div></div>
+    <div class="glass"><h3 data-ic2="corte">Regra de alteração <small>clique para filtrar</small></h3><div class="lista" id="cortes"></div></div>
   </div>
-
   <div class="main">
     <div class="gridbox glass">
       <div class="tools">
         <input type="search" id="q" placeholder="Buscar produto, filial ou concorrente">
         <button class="chip" data-c="0">Curva A</button><button class="chip" data-c="1">Curva B</button><button class="chip" data-c="2">Curva C</button>
         <button class="chip" data-a="1">Sobe</button><button class="chip" data-a="-1">Baixa</button><button class="chip" data-a="0">Mantém</button>
+        <select id="fAce"><option value="">Aceite: todos</option><option value="ok">Aceitos</option><option value="no">Sem aceite</option><option value="nc">Sem alteração</option></select>
         <span class="cnt" id="cnt"></span>
       </div>
       <div id="scroll"><div class="hdr" id="hdr"></div><div id="body"></div></div>
     </div>
-    <div class="side glass" id="side"><div class="vazio">Clique em um item para ver a régua de preço: custo, mínimo, objetivo, mercado, moda, máximo, preço atual e o novo preço.</div></div>
+    <div class="side glass" id="side"></div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -131,9 +155,27 @@ input[type=range]{width:100%;accent-color:var(--primary);height:18px;margin:0}
 const B64 = "__DATA__", CHAVE = "__CHAVE__";
 const bin = atob(B64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
 const D = JSON.parse(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).text());
-const N = D.cu.length;
+const N = D.cu.length, $ = id => document.getElementById(id);
 
-/* ---------- arredondamento da companhia (mesma régua do relatório e do Preço Bot) ---------- */
+/* ---------- ícones ---------- */
+const P_ = { check: '<path d="m5 12 5 5 9-10"/>', x: '<path d="M6 6l12 12M18 6 6 18"/>', undo: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+  down: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>', up: '<path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M5 3h14"/>',
+  copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>', foco: '<circle cx="12" cy="12" r="3"/><path d="M3 9V5a2 2 0 0 1 2-2h4M15 3h4a2 2 0 0 1 2 2v4M21 15v4a2 2 0 0 1-2 2h-4M9 21H5a2 2 0 0 1-2-2v-4"/>',
+  tela: '<path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/>',
+  bars: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>', regra: '<path d="M4 6h16M4 12h10M4 18h6"/>', corte: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/>',
+  merc: '<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-6"/>', moda: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>', teto: '<path d="M5 4h14"/><path d="M12 20V8"/><path d="m7 13 5-5 5 5"/>',
+  piso: '<path d="M5 20h14"/><path d="M12 4v12"/><path d="m7 11 5 5 5-5"/>', obj: '<circle cx="12" cy="12" r="9"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>', mao: '<path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8a8 8 0 0 0 16 0v-3a2 2 0 0 0-4 0"/>',
+  alerta: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>', cal: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  tagi: '<path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3a1.4 1.4 0 0 1 0 2l-6.7 6.7a1.4 1.4 0 0 1-2 0Z"/><circle cx="8" cy="8" r="1.4"/>', loja: '<path d="M3 9 5 4h14l2 5M4 9v11h16V9M9 20v-6h6v6"/>',
+  cash: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>', pct: '<path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',
+  tdUp: '<path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/>', tdDn: '<path d="m3 7 6 6 4-4 8 8"/><path d="M14 17h7v-7"/>', conc: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
+  mesa: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/>' };
+const ic = (n, cor) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="${cor || 'currentColor'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${P_[n]}</svg>`;
+document.querySelectorAll('[data-ic]').forEach(b => b.insertAdjacentHTML('afterbegin', ic(b.dataset.ic)));
+document.querySelectorAll('[data-ic2]').forEach(h => h.insertAdjacentHTML('afterbegin', ic(h.dataset.ic2, 'var(--primary)')));
+$('titulo').innerHTML = ic('mesa', 'var(--primary)') + 'Mesa de precificação';
+
+/* ---------- arredondamento da companhia (régua do relatório e do Preço Bot) ---------- */
 const faixaOf = c => c <= 1099 ? 'A' : c <= 1999 ? 'B' : c <= 4000 ? 'C' : 'D';
 const VC = {}; for (const f of ['A','B','C','D']) { VC[f] = []; for (let c = 0; c < 100; c++) { const p = Math.floor(c/10), u = c % 10; let o;
   if (f === 'A') o = [5,8,9].includes(u); else if (f === 'B') o = p >= 1 && p <= 9 && [5,8,9].includes(u);
@@ -149,22 +191,34 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
   return pr >= vc ? vf : pr/100; }
 const r2 = v => Math.round(v*100)/100;
 
-/* ---------- parâmetros (mesmos da consulta de precificação) ---------- */
-const PADRAO = { mobj: 12, mmax: 30, min: 89, minEsp: 85, cent: 0.01, dHi: 60, dLo: -30, rnd: true };
+/* ---------- parâmetros: valem quando o item não tem regra no Profimetrics ---------- */
+const PADRAO = { mobj: 12, mmax: 30, min: 89, minEsp: 85, minCesta: -15, cent: 0.01, dHi: 60, dLo: -30, corte: 1.5, rnd: true };
 let P = Object.assign({}, PADRAO);
-const OV = new Map(), OVA = new Map();
+const OV = new Map(), OVA = new Map(), ACE = new Map();
+let LARG = null, FOCO = false;
 try { const s = JSON.parse(sessionStorage.getItem('mesa:' + CHAVE) || 'null');
-  if (s) { Object.assign(P, s.P || {}); (s.ov || []).forEach(([i,v]) => OV.set(i,v)); (s.ova || []).forEach(([i,v]) => OVA.set(i,v)); } } catch (e) {}
-const salvar = () => { try { sessionStorage.setItem('mesa:' + CHAVE, JSON.stringify({ P, ov: [...OV], ova: [...OVA] })); } catch (e) {} };
+  if (s) { Object.assign(P, s.P || {}); (s.ov || []).forEach(([i,v]) => OV.set(i,v)); (s.ova || []).forEach(([i,v]) => OVA.set(i,v)); (s.ace || []).forEach(([i,v]) => ACE.set(i,v)); }
+  LARG = JSON.parse(localStorage.getItem('mesa:larguras') || 'null'); } catch (e) {}
+const salvar = () => { try { sessionStorage.setItem('mesa:' + CHAVE, JSON.stringify({ P, ov: [...OV], ova: [...OVA], ace: [...ACE] })); } catch (e) {} };
 
-const REGRAS = ['Mercado − R$ 0,01', 'Moda − R$ 0,01 (pesquisa fora da curva)', 'Preço máximo', 'Margem mínima', 'Objetivo (moda sem margem)', 'Ajuste manual'];
-const COR_R = ['var(--primary)', 'var(--amber)', 'var(--down)', 'var(--up)', 'var(--faint)', '#B794FF'];
+const REGRAS = [['Mercado − R$ 0,01', 'merc', 'var(--primary)'], ['Moda − R$ 0,01', 'moda', 'var(--amber)'], ['Teto: margem máxima', 'teto', 'var(--down)'],
+  ['Piso: margem mínima', 'piso', 'var(--up)'], ['Margem objetivo', 'obj', 'var(--faint)'], ['Ajuste manual', 'mao', '#B794FF']];
+const CORTES = [['Variação acima do limite', 'tdUp'], ['Encarte, app ou mídia vigente', 'tagi'], ['Promoção comercial abaixo do mercado', 'alerta']];
 const NV = new Float64Array(N), NA = new Float64Array(N), RG = new Uint8Array(N), MN = new Float64Array(N), MX = new Float64Array(N), OB = new Float64Array(N);
+const UMIN = new Float64Array(N), UMAX = new Float64Array(N), UOBJ = new Float64Array(N), CT = new Uint8Array(N), MUD = new Uint8Array(N);
+const DF0 = Date.UTC(2020, 0, 1), hj = new Date(), HOJE = Math.floor((Date.UTC(hj.getFullYear(), hj.getMonth(), hj.getDate()) - DF0) / 864e5) + 1;
+const dfTxt = d => { const t = new Date(DF0 + (d - 1) * 864e5); return String(t.getUTCDate()).padStart(2, '0') + '/' + String(t.getUTCMonth() + 1).padStart(2, '0') + '/' + t.getUTCFullYear(); };
+const tipoPdv = i => (D.tipos[D.ti[i]] || '').toUpperCase();
 
 function calc(i){
   const c = D.cu[i], vmk = D.vmk[i], mo = D.mo[i] || 0, ma = D.ma[i] || 0, amk = D.amk[i] || 0, merch = D.merch[i] || 0;
-  const mn = c * ((D.esp[D.fi[i]] ? P.minEsp : P.min) / 100), mx = c / (1 - P.mmax/100), obj = c / (1 - P.mobj/100);
-  const delta = mo > 0 ? vmk/mo - 1 : 0, mM = (vmk - c) / vmk, fora = (delta > P.dHi/100 || delta < P.dLo/100) && mo > 0;
+  const mobj = D.pobj[i] ?? P.mobj, mmax = D.pmax[i] ?? P.mmax;
+  let mn, umin;
+  if (D.cesta[i]) { umin = P.minCesta; mn = c / (1 - umin / 100); }
+  else if (D.pmin[i] != null) { umin = D.pmin[i]; mn = c / (1 - umin / 100); }
+  else { const f = (D.esp[D.fi[i]] ? P.minEsp : P.min) / 100; mn = c * f; umin = (1 - 1 / f) * 100; }
+  const mx = c / (1 - mmax / 100), obj = c / (1 - mobj / 100);
+  const delta = mo > 0 ? vmk / mo - 1 : 0, mM = (vmk - c) / vmk, fora = (delta > P.dHi / 100 || delta < P.dLo / 100) && mo > 0;
   let sug, rg, teto = false;
   if (D.orig[i] === 1 && mM <= 0) { sug = obj; rg = 4; }
   else if (vmk > mx) { sug = mx; rg = 2; teto = true; }
@@ -173,17 +227,28 @@ function calc(i){
   const pf = Math.max(Math.min(sug, mx), mn); if (sug < mn) rg = 3;
   let nv = P.rnd ? roundVarejo(pf) : r2(pf);
   if (OV.has(i)) { nv = OV.get(i); rg = 5; }
-  const mxA = mx * (1 - merch/100);
+  const mxA = mx * (1 - merch / 100);
   let sa;
-  if (D.orig[i] === 1 && mM <= 0) sa = obj * (1 - merch/100);
-  else if (teto) sa = mxA;
+  if (D.orig[i] === 1 && mM <= 0) sa = obj * (1 - merch / 100);
+  else if (teto) sa = mxA;                                         // no teto, o atacado sai do máximo com a base de redução
   else if (fora && ma > 0) sa = Math.min(ma - P.cent, mxA);
-  else sa = amk > 0 ? amk - P.cent : nv * (1 - merch/100);
+  else sa = amk > 0 ? amk - P.cent : nv * (1 - merch / 100);
   const pa = Math.max(Math.min(sa, mxA), mn);
   let na = P.rnd ? roundAtacado(pa, nv) : Math.min(r2(pa), nv);
   if (OVA.has(i)) { na = OVA.get(i); rg = 5; }
-  NV[i] = nv; NA[i] = na; RG[i] = rg; MN[i] = mn; MX[i] = mx; OB[i] = obj;
+  NV[i] = nv; NA[i] = na; RG[i] = rg; MN[i] = mn; MX[i] = mx; OB[i] = obj; UMIN[i] = umin; UMAX[i] = mmax; UOBJ[i] = mobj;
+  // regra de alteração (corte): o que impede o aceite automático
+  const fimHoje = D.dfim[i] > 0 && D.dfim[i] === HOJE, tp = tipoPdv(i), ip = D.vm[i] / vmk;
+  let ct = 0;
+  if (!fimHoje) {
+    if (Math.abs(nv / D.vm[i] - 1) > P.corte / 100) ct |= 1;
+    if (/ENCARTE|APP|MIDIA/.test(tp)) ct |= 2;
+    if (/PROMOCAO COMERCIAL/.test(tp) && ip < 1) ct |= 4;
+  }
+  CT[i] = ct;
+  MUD[i] = (Math.abs(nv - D.vm[i]) >= 0.005 || (D.am[i] > 0 && Math.abs(na - D.am[i]) >= 0.005) || (!(D.am[i] > 0) && na > 0)) ? 1 : 0;
 }
+const aceito = i => MUD[i] ? (ACE.has(i) ? ACE.get(i) : CT[i] === 0) : false;
 const acao = i => NV[i] > D.vm[i] + 0.004 ? 1 : NV[i] < D.vm[i] - 0.004 ? -1 : 0;
 function calcTudo(){ for (let i = 0; i < N; i++) calc(i); }
 
@@ -192,74 +257,96 @@ const nf2 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFr
 const nf1 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const nf0 = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 });
 const brl = v => v == null || !isFinite(v) ? '–' : 'R$ ' + nf2.format(v);
-const pct = (v, d = 1) => v == null || !isFinite(v) ? '–' : (d === 1 ? nf1 : nf2).format(v*100) + '%';
+const pct = v => v == null || !isFinite(v) ? '–' : nf1.format(v * 100) + '%';
+const sinal = (v, txt) => `<span class="${v < -1e-9 ? 'neg' : ''}">${txt}</span>`;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
-const curto = s => String(s).replace(/^\d+\s*-\s*/, '');
-const $ = id => document.getElementById(id);
-function toast(t){ const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('on'), 2400); }
+const curto = s => String(s).replace(/^\d+\s*-\s*/, '').replace(/^-\s*/, '');
+function toast(t){ const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('on'), 2600); }
+const tagRegra = i => { const [t, n, c] = REGRAS[RG[i]]; let x = t;
+  if (RG[i] === 2) x = `Teto ${nf1.format(UMAX[i])}%`; else if (RG[i] === 3) x = D.cesta[i] ? 'Piso cesta −15%' : `Piso ${nf1.format(UMIN[i])}%`; else if (RG[i] === 4) x = `Objetivo ${nf1.format(UOBJ[i])}%`;
+  return `<span class="tag" style="color:${c}">${ic(n, c)}${x}</span>`; };
+const tagCorte = i => { if (!MUD[i]) return '<span class="tag" style="color:var(--faint)">Sem alteração</span>';
+  if (!CT[i]) return `<span class="tag" style="color:var(--up)">${ic('check')}Dentro da regra</span>`;
+  const l = CORTES.filter((_, k) => CT[i] & (1 << k)); return `<span class="tag" style="color:var(--down)" title="${l.map(x => x[0]).join(' / ')}">${ic(l[0][1])}${l[0][0]}${l.length > 1 ? ' +' + (l.length - 1) : ''}</span>`; };
 
-/* ---------- parâmetros na tela ---------- */
+/* ---------- parâmetros ---------- */
 const PRM = [
-  ['mobj', 'Margem objetivo', 0, 40, 0.5, v => nf1.format(v) + '%'],
-  ['mmax', 'Margem máxima (teto)', 5, 60, 0.5, v => nf1.format(v) + '%'],
-  ['min', 'Mínimo sobre o custo', 70, 100, 0.5, v => nf1.format(v) + '%'],
-  ['minEsp', 'Mínimo filiais 551, 278, 549, 282', 70, 100, 0.5, v => nf1.format(v) + '%'],
-  ['cent', 'Abaixo do mercado', 0, 0.5, 0.01, v => 'R$ ' + nf2.format(v)],
-  ['dHi', 'Fora da curva: acima da moda', 10, 150, 5, v => '+' + nf0.format(v) + '%'],
-  ['dLo', 'Fora da curva: abaixo da moda', -80, 0, 5, v => nf0.format(v) + '%'],
+  ['mobj', 'Margem objetivo', 0, 40, 0.5, v => nf1.format(v) + '%'], ['mmax', 'Margem máxima (teto)', 5, 60, 0.5, v => nf1.format(v) + '%'],
+  ['min', 'Piso: % do custo', 70, 100, 0.5, v => nf1.format(v) + '%'], ['minEsp', 'Piso filiais 551, 278, 549, 282', 70, 100, 0.5, v => nf1.format(v) + '%'],
+  ['minCesta', 'Margem mínima da cesta', -40, 10, 0.5, v => nf1.format(v) + '%'], ['cent', 'Abaixo do mercado', 0, 0.5, 0.01, v => 'R$ ' + nf2.format(v)],
+  ['dHi', 'Fora da curva: acima da moda', 10, 150, 5, v => '+' + nf0.format(v) + '%'], ['dLo', 'Fora da curva: abaixo da moda', -80, 0, 5, v => nf0.format(v) + '%'],
+  ['corte', 'Corte: variação sem aceite', 0, 10, 0.5, v => '±' + nf1.format(v) + '%'],
 ];
 function montaParams(){
+  const comRegra = D.pobj.filter(v => v != null).length;
   $('params').innerHTML = PRM.map(([k, t, a, b, s, f]) => `<div class="prm"><label>${t}<b id="v_${k}">${f(P[k])}</b></label><input type="range" min="${a}" max="${b}" step="${s}" value="${P[k]}" data-k="${k}"></div>`).join('')
-    + `<div class="prm"><label>Arredondamento</label><div class="seg"><button data-r="1" class="${P.rnd ? 'on' : ''}">Companhia</button><button data-r="0" class="${P.rnd ? '' : 'on'}">Exato</button></div></div>`;
+    + `<div class="prm"><label>Arredondamento</label><div class="seg"><button data-r="1" class="${P.rnd ? 'on' : ''}">Companhia</button><button data-r="0" class="${P.rnd ? '' : 'on'}">Exato</button></div></div>`
+    + `<div class="nota">${ic('obj', 'var(--primary)')}${nf0.format(comRegra)} de ${nf0.format(N)} itens usam as margens do Profimetrics (objetivo, mínima, máxima e base de redução). Os controles de margem valem para os demais. Cesta usa margem mínima de −15%.</div>`;
   let t;
   $('params').addEventListener('input', e => { const k = e.target.dataset.k; if (!k) return; P[k] = parseFloat(e.target.value);
-    const def = PRM.find(x => x[0] === k); $('v_' + k).textContent = def[5](P[k]); clearTimeout(t); t = setTimeout(() => { calcTudo(); atualizar(); salvar(); }, 60); });
+    $('v_' + k).textContent = PRM.find(x => x[0] === k)[5](P[k]); clearTimeout(t); t = setTimeout(() => { calcTudo(); atualizar(); salvar(); }, 60); });
   $('params').addEventListener('click', e => { const b = e.target.closest('[data-r]'); if (!b) return; P.rnd = b.dataset.r === '1';
     $('params').querySelectorAll('[data-r]').forEach(x => x.classList.toggle('on', x === b)); calcTudo(); atualizar(); salvar(); });
 }
 
-/* ---------- filtros, ordenação e seleção ---------- */
-const F = { q: '', curva: new Set(), acao: new Set(), regra: -1 };
-let ORD = { k: 'imp', d: -1 }, VIS = [], SEL = -1;
-const busca = new Array(N);
-for (let i = 0; i < N; i++) busca[i] = (D.produtos[D.pi[i]] + ' ' + D.filiais[D.fi[i]] + ' ' + D.concs[D.ki[i]]).toLowerCase();
+/* ---------- colunas ---------- */
 const imp = i => (NV[i] - D.vm[i]) * D.un[i];
 const COLS = [
-  ['Filial', 'fil', 150, i => esc(curto(D.filiais[D.fi[i]])), i => D.filiais[D.fi[i]]],
-  ['Produto', 'prod', 270, i => `<span title="${esc(D.produtos[D.pi[i]])}">${esc(D.produtos[D.pi[i]])}</span>`, i => D.produtos[D.pi[i]]],
-  ['ABC', 'cv', 46, i => `<span class="cv cv${'ABC'[D.curva[i]]}">${'ABC'[D.curva[i]]}</span>`, i => D.curva[i]],
-  ['Custo', 'cu', 76, i => nf2.format(D.cu[i]), i => D.cu[i], 'r num'],
-  ['Varejo atual', 'vm', 84, i => nf2.format(D.vm[i]), i => D.vm[i], 'r num'],
-  ['Margem atual', 'ma0', 78, i => pct((D.vm[i] - D.cu[i]) / D.vm[i]), i => (D.vm[i] - D.cu[i]) / D.vm[i], 'r num'],
-  ['Mercado', 'vmk', 80, i => `<span title="${esc(D.concs[D.ki[i]])}${D.orig[i] ? ' (moda)' : ''}">${nf2.format(D.vmk[i])}${D.orig[i] ? '*' : ''}</span>`, i => D.vmk[i], 'r num'],
-  ['Moda', 'mo', 70, i => D.mo[i] ? nf2.format(D.mo[i]) : '–', i => D.mo[i] || 0, 'r num'],
-  ['IP atual', 'ip', 66, i => nf1.format(100 * D.vm[i] / D.vmk[i]), i => D.vm[i] / D.vmk[i], 'r num'],
-  ['Regra', 'rg', 170, i => `<span class="tag" style="color:${COR_R[RG[i]]}">${REGRAS[RG[i]]}</span>`, i => RG[i]],
-  ['Novo varejo', 'nv', 92, i => `<input data-e="v" data-i="${i}" class="${OV.has(i) ? 'man' : ''}" value="${nf2.format(NV[i])}">`, i => NV[i], 'r ed'],
-  ['Nova margem', 'nm', 84, i => `<input data-e="m" data-i="${i}" value="${nf1.format(100 * (NV[i] - D.cu[i]) / NV[i])}">`, i => (NV[i] - D.cu[i]) / NV[i], 'r ed'],
-  ['Variação', 'var', 70, i => { const v = NV[i] / D.vm[i] - 1; return `<span class="${v > 0.0001 ? 'd-up' : v < -0.0001 ? 'd-dn' : ''}">${v > 0 ? '+' : ''}${pct(v)}</span>`; }, i => NV[i] / D.vm[i] - 1, 'r num'],
-  ['Novo atacado', 'na', 92, i => `<input data-e="a" data-i="${i}" class="${OVA.has(i) ? 'man' : ''}" value="${NA[i] > 0 ? nf2.format(NA[i]) : ''}">`, i => NA[i], 'r ed'],
-  ['Marg. atacado', 'mna', 80, i => NA[i] > 0 ? pct((NA[i] - D.cu[i]) / NA[i]) : '–', i => NA[i] > 0 ? (NA[i] - D.cu[i]) / NA[i] : -9, 'r num'],
-  ['Impacto/mês', 'imp', 92, i => { const v = imp(i); return `<span class="${v > 0.5 ? 'd-up' : v < -0.5 ? 'd-dn' : ''}">${v >= 0 ? '+' : '−'}R$ ${nf0.format(Math.abs(v))}</span>`; }, i => imp(i), 'r num'],
+  ['ok', 'Aceite', 62, i => `<span class="ok-box${MUD[i] ? (aceito(i) ? ' on' : '') : ' na'}" data-ok="${i}">${ic('check')}</span>`, i => (MUD[i] ? (aceito(i) ? 2 : 1) : 0)],
+  ['fil', 'Filial', 150, i => esc(curto(D.filiais[D.fi[i]])), i => D.filiais[D.fi[i]]],
+  ['prod', 'Produto', 260, i => `<span title="${esc(D.produtos[D.pi[i]])}">${esc(D.produtos[D.pi[i]])}</span>`, i => D.produtos[D.pi[i]]],
+  ['cv', 'Curva', 56, i => `<span class="cv cv${'ABC'[D.curva[i]]}">${'ABC'[D.curva[i]]}</span>`, i => D.curva[i]],
+  ['cu', 'Custo', 78, i => nf2.format(D.cu[i]), i => D.cu[i], 'r num'],
+  ['vm', 'Varejo atual', 84, i => nf2.format(D.vm[i]), i => D.vm[i], 'r num'],
+  ['m0', 'Margem atual', 78, i => { const v = (D.vm[i] - D.cu[i]) / D.vm[i]; return sinal(v, pct(v)); }, i => (D.vm[i] - D.cu[i]) / D.vm[i], 'r num'],
+  ['vmk', 'Varejo mercado', 86, i => `<span title="${esc(D.concs[D.ki[i]])}${D.orig[i] ? ' (moda)' : ''}">${nf2.format(D.vmk[i])}${D.orig[i] ? '*' : ''}</span>`, i => D.vmk[i], 'r num'],
+  ['amk', 'Atacado mercado', 86, i => D.amk[i] ? nf2.format(D.amk[i]) : '–', i => D.amk[i] || 0, 'r num'],
+  ['dt', 'Data pesquisa', 78, i => D.orig[i] ? '<span style="color:var(--faint)">moda</span>' : esc(D.datas[D.dti[i]] || '–'), i => D.datas[D.dti[i]] || ''],
+  ['ip', 'IP atual', 70, i => { const v = D.vm[i] / D.vmk[i]; return `<span class="${v > 1.005 ? 'neg' : ''}">${nf1.format(v * 100)}</span>`; }, i => D.vm[i] / D.vmk[i], 'r num'],
+  ['rg', 'Regra de negócio', 172, i => tagRegra(i), i => RG[i]],
+  ['ct', 'Regra de alteração', 196, i => tagCorte(i), i => CT[i] * 2 + MUD[i]],
+  ['nv', 'Novo varejo', 96, i => `<input type="text" data-e="v" data-i="${i}" class="${OV.has(i) ? 'man' : ''}" value="${nf2.format(NV[i])}">`, i => NV[i], 'r edc'],
+  ['na', 'Novo atacado', 96, i => `<input type="text" data-e="a" data-i="${i}" class="${OVA.has(i) ? 'man' : ''}" value="${NA[i] > 0 ? nf2.format(NA[i]) : ''}">`, i => NA[i], 'r edc'],
+  ['nm', 'Margem nova', 84, i => { const v = (NV[i] - D.cu[i]) / NV[i]; return `<input type="text" data-e="m" data-i="${i}" class="${v < 0 ? 'neg' : ''}" value="${nf1.format(v * 100)}">`; }, i => (NV[i] - D.cu[i]) / NV[i], 'r ed'],
+  ['ipn', 'IP novo', 70, i => { const v = NV[i] / D.vmk[i]; return `<span class="${v > 1.005 ? 'neg' : ''}">${nf1.format(v * 100)}</span>`; }, i => NV[i] / D.vmk[i], 'r num'],
+  ['ve', 'Venda mês', 96, i => 'R$ ' + nf0.format(D.venda[i]), i => D.venda[i], 'r num'],
+  ['imp', 'Impacto mês', 98, i => { const v = imp(i); return `<span class="${v > 0.5 ? 'pos' : v < -0.5 ? 'neg' : ''}">${v >= 0 ? '+' : '−'}R$ ${nf0.format(Math.abs(v))}</span>`; }, i => imp(i), 'r num'],
 ];
-document.documentElement.style.setProperty('--cols', COLS.map(c => c[2] + 'px').join(' '));
-$('hdr').innerHTML = COLS.map(c => `<div class="${c[5] || ''}" data-s="${c[1]}">${c[0]}</div>`).join('');
+const W = COLS.map((c, k) => (LARG && LARG[c[0]]) || c[2]);
+const aplicaLarg = () => document.documentElement.style.setProperty('--cols', W.map(w => w + 'px').join(' '));
+aplicaLarg();
+let ORD = { k: 'imp', d: -1 };
+function cabecalho(){ $('hdr').innerHTML = COLS.map((c, k) => `<div class="${c[5] || ''}" data-s="${c[0]}">${c[1]}${ORD.k === c[0] ? `<span class="ord">${ORD.d > 0 ? '▲' : '▼'}</span>` : ''}<span class="rz" data-rz="${k}"></span></div>`).join(''); }
+cabecalho();
+let arr = null;
+$('hdr').addEventListener('mousedown', e => { const r = e.target.closest('[data-rz]'); if (!r) return; e.preventDefault(); e.stopPropagation(); r.classList.add('on');
+  arr = { k: +r.dataset.rz, x: e.clientX, w: W[+r.dataset.rz], el: r }; });
+addEventListener('mousemove', e => { if (!arr) return; W[arr.k] = Math.max(48, arr.w + e.clientX - arr.x); aplicaLarg(); });
+addEventListener('mouseup', () => { if (!arr) return; arr.el.classList.remove('on'); arr = null;
+  try { localStorage.setItem('mesa:larguras', JSON.stringify(Object.fromEntries(COLS.map((c, k) => [c[0], W[k]])))); } catch (e) {} });
+$('hdr').addEventListener('click', e => { if (e.target.closest('[data-rz]')) return; const d = e.target.closest('[data-s]'); if (!d) return; const k = d.dataset.s;
+  ORD = { k, d: ORD.k === k ? -ORD.d : -1 }; cabecalho(); filtrar(); render(); });
 
+/* ---------- filtros ---------- */
+const F = { q: '', curva: new Set(), acao: new Set(), regra: -1, corte: -1, ace: '' };
+let VIS = [], SEL = -1;
+const busca = new Array(N); for (let i = 0; i < N; i++) busca[i] = (D.produtos[D.pi[i]] + ' ' + D.filiais[D.fi[i]] + ' ' + D.concs[D.ki[i]]).toLowerCase();
 function filtrar(){
   const q = F.q.trim().toLowerCase(), out = [];
   for (let i = 0; i < N; i++) {
     if (F.curva.size && !F.curva.has(D.curva[i])) continue;
     if (F.acao.size && !F.acao.has(acao(i))) continue;
     if (F.regra >= 0 && RG[i] !== F.regra) continue;
+    if (F.corte >= 0 && !(MUD[i] && (CT[i] & (1 << F.corte)))) continue;
+    if (F.ace === 'ok' && !aceito(i)) continue;
+    if (F.ace === 'no' && !(MUD[i] && !aceito(i))) continue;
+    if (F.ace === 'nc' && MUD[i]) continue;
     if (q && !busca[i].includes(q)) continue;
     out.push(i);
   }
-  const col = COLS.find(c => c[1] === ORD.k), g = col[4];
-  const chave = new Map(out.map(i => [i, g(i)]));
-  out.sort((a, b) => { const x = chave.get(a), y = chave.get(b); return (x > y ? 1 : x < y ? -1 : 0) * ORD.d; });
-  VIS = out;
-  $('cnt').textContent = nf0.format(out.length) + ' de ' + nf0.format(N) + ' itens';
-  $('hdr').querySelectorAll('div').forEach(d => d.style.color = d.dataset.s === ORD.k ? 'var(--primary)' : '');
+  const g = COLS.find(c => c[0] === ORD.k)[4], ch = new Map(out.map(i => [i, g(i)]));
+  out.sort((a, b) => { const x = ch.get(a), y = ch.get(b); return (x > y ? 1 : x < y ? -1 : 0) * ORD.d; });
+  VIS = out; $('cnt').textContent = nf0.format(out.length) + ' de ' + nf0.format(N) + ' itens';
 }
 
 /* ---------- grade virtualizada ---------- */
@@ -273,9 +360,7 @@ function render(){
   body.innerHTML = h;
 }
 let raf = 0; sc.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; render(); }); });
-$('hdr').addEventListener('click', e => { const d = e.target.closest('[data-s]'); if (!d) return; const k = d.dataset.s; ORD = { k, d: ORD.k === k ? -ORD.d : -1 }; filtrar(); render(); });
-
-const num = s => parseFloat(String(s).replace(/\s|R\$/g, '').replace(/\./g, '').replace(',', '.'));
+const num = s => parseFloat(String(s).replace(/\s|R\$|%/g, '').replace(/\./g, '').replace(',', '.'));
 body.addEventListener('change', e => {
   const t = e.target; if (!t.dataset.e) return; const i = +t.dataset.i, v = num(t.value);
   if (t.dataset.e === 'v') { if (v > 0) { const f = P.rnd ? roundVarejo(v) : r2(v); OV.set(i, f); if (Math.abs(f - v) > 0.001) toast(`Arredondado pela regra da companhia: ${brl(v)} → ${brl(f)}`); } else OV.delete(i); }
@@ -285,98 +370,125 @@ body.addEventListener('change', e => {
   calc(i); salvar(); atualizar(false); if (SEL === i) lateral(i);
 });
 body.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.dataset.e) e.target.blur(); });
-body.addEventListener('click', e => { if (e.target.tagName === 'INPUT') return; const r = e.target.closest('.row'); if (!r) return; SEL = +r.dataset.i; render(); lateral(SEL); });
+body.addEventListener('click', e => {
+  const ok = e.target.closest('[data-ok]'); if (ok) { const i = +ok.dataset.ok; if (!MUD[i]) return; ACE.set(i, !aceito(i)); salvar(); atualizar(false); if (SEL === i) lateral(i); return; }
+  if (e.target.tagName === 'INPUT') return; const r = e.target.closest('.row'); if (!r) return; SEL = +r.dataset.i; render(); lateral(SEL); });
 
-/* ---------- indicadores e gráficos ---------- */
+/* ---------- indicadores ---------- */
 function kpis(){
-  let sobe = 0, baixa = 0, man = 0, a = 0, b = 0, c_ = 0, m0n = 0, m0d = 0, m1n = 0, m1d = 0, ganho = 0, inv = 0;
-  const hb = new Array(13).fill(0), rc = new Array(REGRAS.length).fill(0);
+  let sobe = 0, baixa = 0, aceitos = 0, sem = 0, a = 0, b = 0, c_ = 0, m0n = 0, m0d = 0, m1n = 0, m1d = 0, ganho = 0, inv = 0;
+  const hb = new Array(13).fill(0), rc = new Array(REGRAS.length).fill(0), cc = new Array(CORTES.length).fill(0);
   for (let i = 0; i < N; i++) { const ac = acao(i), un = D.un[i], w = un > 0 ? un : 1, nv = NV[i], vm = D.vm[i], cu = D.cu[i];
-    if (ac > 0) sobe++; else if (ac < 0) baixa++; if (OV.has(i) || OVA.has(i)) man++;
+    if (ac > 0) sobe++; else if (ac < 0) baixa++;
+    if (MUD[i]) { if (aceito(i)) aceitos++; else sem++; for (let k = 0; k < CORTES.length; k++) if (CT[i] & (1 << k)) cc[k]++; }
     a += vm * w; b += D.vmk[i] * w; c_ += nv * w;
     if (un > 0) { m0n += (vm - cu) * un; m0d += vm * un; m1n += (nv - cu) * un; m1d += nv * un; }
     const d = (nv - vm) * un; if (d > 0) ganho += d; else inv -= d;
-    const v = nv / vm - 1; hb[Math.max(0, Math.min(12, Math.round(v * 20) + 6))]++; rc[RG[i]]++; }
-  const ip0 = a / b, ip1 = c_ / b, mg0 = m0n / m0d, mg1 = m1n / m1d;
+    hb[Math.max(0, Math.min(12, Math.round((nv / vm - 1) * 20) + 6))]++; rc[RG[i]]++; }
+  const ip0 = a / b, ip1 = c_ / b, mg0 = m0n / m0d, mg1 = m1n / m1d, saldo = ganho - inv;
   const K = [
-    ['Itens', nf0.format(N), `<i>${nf0.format(man)} ajustados à mão</i>`, 'var(--faint)'],
-    ['Sobem', nf0.format(sobe), `<i>${pct(sobe / N)}</i>`, 'var(--up)'],
-    ['Baixam', nf0.format(baixa), `<i>${pct(baixa / N)}</i>`, 'var(--down)'],
-    ['IP (nosso ÷ mercado)', nf1.format(ip1 * 100), `<i class="${Math.abs(ip1 - ip0) < 1e-4 ? '' : ip1 < ip0 ? 'd-up' : 'd-dn'}">hoje ${nf1.format(ip0 * 100)}</i>`, 'var(--primary)'],
-    ['Margem ponderada', pct(mg1), `<i class="${mg1 >= mg0 ? 'd-up' : 'd-dn'}">hoje ${pct(mg0)}</i>`, 'var(--amber)'],
-    ['Lucro adicional/mês', 'R$ ' + nf0.format(ganho), '<i>nas subidas</i>', 'var(--up)'],
-    ['Investimento/mês', 'R$ ' + nf0.format(inv), `<i>saldo ${ganho - inv >= 0 ? '+' : '−'}R$ ${nf0.format(Math.abs(ganho - inv))}</i>`, 'var(--down)'],
+    ['Aceitos', nf0.format(aceitos), `<i>${nf0.format(sem)} sem aceite</i>`, 'var(--up)', 'check'],
+    ['Sobem', nf0.format(sobe), `<i>${pct(sobe / N)} dos itens</i>`, 'var(--up)', 'tdUp'],
+    ['Baixam', nf0.format(baixa), `<i>${pct(baixa / N)} dos itens</i>`, 'var(--down)', 'tdDn'],
+    ['IP novo', nf1.format(ip1 * 100), `<i class="${ip1 < ip0 ? 'pos' : ip1 > ip0 ? 'neg' : ''}">hoje ${nf1.format(ip0 * 100)}</i>`, 'var(--primary)', 'merc'],
+    ['Margem nova', pct(mg1), `<i class="${mg1 >= mg0 ? 'pos' : 'neg'}">hoje ${pct(mg0)}</i>`, 'var(--amber)', 'pct'],
+    ['Lucro adicional/mês', 'R$ ' + nf0.format(ganho), `<i>investimento R$ ${nf0.format(inv)}</i>`, 'var(--up)', 'cash'],
+    ['Saldo/mês', `<span class="${saldo < 0 ? 'neg' : ''}">${saldo >= 0 ? '+' : '−'}R$ ${nf0.format(Math.abs(saldo))}</span>`, `<i>${nf0.format(N)} itens na mesa</i>`, saldo >= 0 ? 'var(--up)' : 'var(--down)', 'cash'],
   ];
-  $('kpis').innerHTML = K.map(([t, v, s, c]) => `<div class="k" style="--t:${c}"><span>${t}</span><b>${v}</b>${s}</div>`).join('');
+  $('kpis').innerHTML = K.map(([t, v, s, c, n]) => `<div class="k" style="--t:${c}"><span>${ic(n)}${t}</span><b>${v}</b>${s}</div>`).join('');
   const mx = Math.max(...hb, 1);
   $('hist').innerHTML = hb.map((v, k) => { const c = k < 6 ? 'var(--down)' : k > 6 ? 'var(--up)' : 'var(--faint)'; const lo = (k - 6) * 5;
-    return `<div title="${k === 0 ? '≤ −30%' : k === 12 ? '≥ +30%' : (lo > 0 ? '+' : '') + lo + '%'}: ${nf0.format(v)} itens" style="height:${Math.max(2, 92 * v / mx)}px;background:${c};opacity:${k === 6 ? .5 : .85}"></div>`; }).join('');
+    return `<div title="${k === 0 ? '≤ −30%' : k === 12 ? '≥ +30%' : (lo > 0 ? '+' : '') + lo + '%'}: ${nf0.format(v)} itens" style="height:${Math.max(2, 86 * v / mx)}px;background:${c};opacity:${k === 6 ? .5 : .85}"></div>`; }).join('');
   const rm = Math.max(...rc, 1);
-  $('regras').innerHTML = REGRAS.map((r, k) => `<div class="rg${F.regra === k ? ' on' : ''}" data-rg="${k}"><span>${r}</span><div class="bar"><i style="width:${100 * rc[k] / rm}%;background:${COR_R[k]}"></i></div><b>${nf0.format(rc[k])}</b></div>`).join('');
+  $('regras').innerHTML = REGRAS.map(([t, n, c], k) => `<div class="rg${F.regra === k ? ' on' : ''}" data-rg="${k}">${ic(n, c)}<span>${t}</span><div class="bar"><i style="width:${100 * rc[k] / rm}%;background:${c}"></i></div><b>${nf0.format(rc[k])}</b></div>`).join('');
+  const cm = Math.max(...cc, 1);
+  $('cortes').innerHTML = CORTES.map(([t, n], k) => `<div class="rg${F.corte === k ? ' on' : ''}" data-ct="${k}">${ic(n, 'var(--down)')}<span>${t}${k === 0 ? ` (±${nf1.format(P.corte)}%)` : ''}</span><div class="bar"><i style="width:${100 * cc[k] / cm}%;background:var(--down)"></i></div><b>${nf0.format(cc[k])}</b></div>`).join('')
+    + `<div class="rg" style="cursor:default">${ic('cal', 'var(--faint)')}<span style="color:var(--muted)">Preço com data fim hoje não sofre corte</span><span></span><span></span></div>`;
 }
 $('regras').addEventListener('click', e => { const r = e.target.closest('[data-rg]'); if (!r) return; const k = +r.dataset.rg; F.regra = F.regra === k ? -1 : k; atualizar(); });
+$('cortes').addEventListener('click', e => { const r = e.target.closest('[data-ct]'); if (!r) return; const k = +r.dataset.ct; F.corte = F.corte === k ? -1 : k; atualizar(); });
 
-/* ---------- régua de preço do item ---------- */
+/* ---------- painel do item ---------- */
 const EXPL = [
-  'Segue o menor preço do mercado, R$ 0,01 abaixo, dentro do mínimo e do teto.',
-  'A pesquisa está fora da curva em relação à moda (acima ou abaixo do limite), então o preço segue a moda − R$ 0,01.',
-  'O mercado está acima do preço máximo (custo ÷ (1 − margem máxima)): o preço fica no teto.',
-  'Seguir o mercado deixaria o preço abaixo do mínimo sobre o custo: o preço fica no mínimo.',
-  'Sem pesquisa direta e a moda não cobre o custo: usa o preço objetivo (custo ÷ (1 − margem objetivo)).',
-  'Preço definido manualmente na mesa.',
+  i => 'Segue o menor preço do mercado, R$ 0,01 abaixo, dentro do piso e do teto de margem.',
+  i => `A pesquisa está fora da curva em relação à moda (acima de +${nf0.format(P.dHi)}% ou abaixo de ${nf0.format(P.dLo)}%): o preço segue a moda − R$ 0,01.`,
+  i => `O mercado está acima do preço máximo (margem máxima de ${nf1.format(UMAX[i])}%): o varejo fica no teto e o atacado sai do teto com a base de redução de ${nf1.format(D.merch[i] || 0)}%.`,
+  i => D.cesta[i] ? 'Item da cesta: seguir o mercado deixaria a margem abaixo de −15%, então o preço fica no piso da cesta.' : `Seguir o mercado deixaria a margem abaixo da mínima (${nf1.format(UMIN[i])}%): o preço fica no piso.`,
+  i => `Sem pesquisa direta e a moda não cobre o custo: usa a margem objetivo de ${nf1.format(UOBJ[i])}%.`,
+  i => 'Preço definido manualmente na mesa.',
 ];
 function lateral(i){
-  const c = D.cu[i], pts = [['Custo', c, 'var(--faint)'], ['Mínimo', MN[i], 'var(--up)'], ['Objetivo', OB[i], 'var(--amber)'], ['Mercado', D.vmk[i], 'var(--primary)'],
-    ['Moda', D.mo[i] || null, '#B794FF'], ['Máximo', MX[i], 'var(--down)'], ['Atual', D.vm[i], 'var(--ink)'], ['Novo', NV[i], 'var(--primary)']].filter(p => p[1] > 0).sort((a, b) => a[1] - b[1]);
+  if (i < 0) { $('side').innerHTML = `<div class="vazio">${ic('tagi', 'var(--primary)')} Clique em um item para ver a régua de preço, os preços de moda, o concorrente e o motivo do novo preço.</div>`; return; }
+  const c = D.cu[i], pts = [['Custo', c, 'var(--faint)'], ['Piso', MN[i], 'var(--up)'], ['Objetivo', OB[i], 'var(--amber)'], ['Mercado', D.vmk[i], 'var(--primary)'],
+    ['Moda', D.mo[i] || null, '#B794FF'], ['Teto', MX[i], 'var(--down)'], ['Atual', D.vm[i], 'var(--ink)'], ['Novo', NV[i], 'var(--primary)']].filter(p => p[1] > 0).sort((a, b) => a[1] - b[1]);
   const vs = pts.map(p => p[1]), lo = Math.min(...vs) * 0.97, hi = Math.max(...vs) * 1.03, X = v => 14 + (v - lo) / (hi - lo) * 272;
-  let svg = `<svg class="lad" viewBox="0 0 300 190"><line x1="14" y1="95" x2="286" y2="95" stroke="var(--line)" stroke-width="6" stroke-linecap="round"/>`;
-  svg += `<line x1="${X(MN[i])}" y1="95" x2="${X(MX[i])}" y2="95" stroke="var(--up)" stroke-opacity=".35" stroke-width="6" stroke-linecap="round"/>`;
-  // rótulos em quatro alturas (dois acima, dois abaixo) para não se sobreporem
+  let svg = `<svg class="lad" viewBox="0 0 300 190"><line x1="14" y1="95" x2="286" y2="95" stroke="var(--line)" stroke-width="6" stroke-linecap="round"/>`
+    + `<line x1="${X(MN[i])}" y1="95" x2="${X(MX[i])}" y2="95" stroke="var(--up)" stroke-opacity=".35" stroke-width="6" stroke-linecap="round"/>`;
   pts.forEach(([t, v, cor], k) => { const lv = k % 4, up = lv % 2 === 0, longe = lv < 2, x = Math.min(270, Math.max(30, X(v))), xr = X(v), novo = t === 'Novo';
     const yt = up ? (longe ? 14 : 44) : (longe ? 162 : 132), yl = up ? (longe ? 30 : 60) : (longe ? 150 : 120);
     svg += `<line x1="${xr}" y1="95" x2="${x}" y2="${yl}" stroke="${cor}" stroke-width="${novo ? 2 : 1}" stroke-opacity=".7"/><circle cx="${xr}" cy="95" r="${novo ? 6 : 4}" fill="${cor}" stroke="var(--surface-solid)" stroke-width="2"/>
       <text x="${x}" y="${yt}" text-anchor="middle" font-size="9.5" fill="var(--muted)" font-family="Geist">${t}</text><text x="${x}" y="${yt + 12}" text-anchor="middle" font-size="10.5" fill="${cor}" font-family="Geist Mono" font-weight="${novo ? 600 : 500}">${nf2.format(v)}</text>`; });
   svg += '</svg>';
-  const d = D.mo[i] ? D.vmk[i] / D.mo[i] - 1 : null;
-  $('side').innerHTML = `<h2>${esc(D.produtos[D.pi[i]])}</h2><div class="sub">${esc(D.filiais[D.fi[i]])}, curva ${'ABC'[D.curva[i]]}</div>${svg}
-    <div class="facts"><span>Concorrente</span><b>${esc(curto(D.concs[D.ki[i]]) || '–')}${D.orig[i] ? ' (moda)' : ''}</b><span>Mercado ÷ moda</span><b>${d == null ? '–' : (d > 0 ? '+' : '') + pct(d)}</b>
-    <span>Margem no mercado</span><b>${pct((D.vmk[i] - c) / D.vmk[i])}</b><span>Base L7 do atacado</span><b>${nf1.format(D.merch[i] || 0)}%</b>
-    <span>Volume estimado/mês</span><b>${nf0.format(D.un[i])} un</b><span>Novo atacado</span><b>${brl(NA[i])}</b></div>
-    <div class="why"><b style="color:${COR_R[RG[i]]}">${REGRAS[RG[i]]}.</b> ${EXPL[RG[i]]}</div>
-    <div class="alts"><button data-alt="m">Mercado − 0,01</button><button data-alt="o">Moda − 0,01</button><button data-alt="b">Objetivo</button><button data-alt="r">Sugestão do motor</button></div>`;
+  const dm = D.mo[i] ? D.vmk[i] / D.mo[i] - 1 : null, m1 = (NV[i] - c) / NV[i], tp = D.tipos[D.ti[i]] || '–';
+  const mc = (t, v, n, cls) => `<div class="mc"><span>${ic(n)}${t}</span><b class="${cls || ''}">${v}</b></div>`;
+  $('side').innerHTML = `<h2>${esc(D.produtos[D.pi[i]])}</h2><div class="sub">${ic('loja')} ${esc(D.filiais[D.fi[i]])}, curva ${'ABC'[D.curva[i]]}${D.cesta[i] ? ', cesta' : ''}</div>
+    <div class="st">${tagRegra(i)}${tagCorte(i)}</div>${svg}
+    <div class="cards">${mc('Varejo mercado', brl(D.vmk[i]), 'merc')}${mc('Atacado mercado', brl(D.amk[i]), 'merc')}
+      ${mc('Moda varejo', brl(D.mo[i]), 'moda')}${mc('Moda atacado', brl(D.ma[i]), 'moda')}
+      ${mc('Menor ÷ moda', dm == null ? '–' : (dm > 0 ? '+' : '') + pct(dm), 'pct', dm < 0 ? 'neg' : '')}${mc('Margem nova', pct(m1), 'pct', m1 < 0 ? 'neg' : 'pos')}
+      ${mc('Novo varejo', brl(NV[i]), 'tagi')}${mc('Novo atacado', brl(NA[i]), 'tagi')}</div>
+    <div class="facts"><span>${ic('conc')}Concorrente</span><b title="${esc(D.concs[D.ki[i]])}">${esc(curto(D.concs[D.ki[i]]) || '–')}${D.orig[i] ? ' (moda)' : ''}</b>
+      <span>${ic('cal')}Data pesquisa</span><b>${D.orig[i] ? 'moda' : esc(D.datas[D.dti[i]] || '–')}</b>
+      <span>${ic('tagi')}Tipo de preço PDV</span><b title="${esc(tp)}">${esc(tp)}</b>
+      <span>${ic('cal')}Data fim do preço</span><b>${D.dfim[i] > 0 ? dfTxt(D.dfim[i]) : 'sem data fim'}</b>
+      <span>${ic('obj')}Margens (obj., mín., máx.)</span><b>${nf1.format(UOBJ[i])}% / ${nf1.format(UMIN[i])}% / ${nf1.format(UMAX[i])}%</b>
+      <span>${ic('pct')}Base redução atacado</span><b>${nf1.format(D.merch[i] || 0)}%</b>
+      <span>${ic('cash')}Venda mês</span><b>R$ ${nf0.format(D.venda[i])}</b></div>
+    <div class="why"><b style="color:${REGRAS[RG[i]][2]}">${REGRAS[RG[i]][0]}.</b> ${EXPL[RG[i]](i)}</div>
+    <div class="alts"><button data-alt="m">${ic('merc')}Mercado − 0,01</button><button data-alt="o">${ic('moda')}Moda − 0,01</button>
+      <button data-alt="b">${ic('obj')}Objetivo</button><button data-alt="r">${ic('undo')}Sugestão do motor</button>
+      <button data-alt="ok" class="${aceito(i) ? 'gr' : ''}" style="grid-column:1/-1" ${MUD[i] ? '' : 'disabled'}>${ic('check')}${aceito(i) ? 'Aceito (clique para retirar)' : 'Aceitar este preço'}</button></div>`;
 }
 $('side').addEventListener('click', e => { const b = e.target.closest('[data-alt]'); if (!b || SEL < 0) return; const i = SEL, k = b.dataset.alt;
+  if (k === 'ok') { if (MUD[i]) { ACE.set(i, !aceito(i)); salvar(); atualizar(false); lateral(i); } return; }
   if (k === 'r') { OV.delete(i); OVA.delete(i); }
   else { const v = k === 'm' ? D.vmk[i] - P.cent : k === 'o' ? (D.mo[i] ? D.mo[i] - P.cent : null) : OB[i]; if (!v) { toast('Sem moda para este item'); return; }
-    const f = Math.max(P.rnd ? roundVarejo(v) : r2(v), 0.01); OV.set(i, f); OVA.delete(i); }
+    OV.set(i, Math.max(P.rnd ? roundVarejo(v) : r2(v), 0.01)); OVA.delete(i); }
   calc(i); salvar(); atualizar(false); lateral(i); });
 
 /* ---------- ações ---------- */
 function atualizar(refiltrar = true){ kpis(); if (refiltrar) filtrar(); render(); }
 $('q').addEventListener('input', e => { F.q = e.target.value; clearTimeout(e.target._t); e.target._t = setTimeout(() => { filtrar(); sc.scrollTop = 0; render(); }, 150); });
+$('fAce').addEventListener('change', e => { F.ace = e.target.value; filtrar(); sc.scrollTop = 0; render(); });
 document.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => { const s = b.dataset.c != null ? F.curva : F.acao, v = +(b.dataset.c ?? b.dataset.a);
   s.has(v) ? s.delete(v) : s.add(v); b.classList.toggle('on'); filtrar(); sc.scrollTop = 0; render(); }));
-$('bReset').onclick = () => { if (!OV.size && !OVA.size) { toast('Não há ajustes manuais'); return; } OV.clear(); OVA.clear(); calcTudo(); salvar(); atualizar(); toast('Ajustes manuais desfeitos'); };
+$('bAll').onclick = () => { let n = 0; for (const i of VIS) if (MUD[i] && !aceito(i)) { ACE.set(i, true); n++; } salvar(); atualizar(false); if (SEL >= 0) lateral(SEL); toast(n ? `${nf0.format(n)} preços aceitos (itens filtrados)` : 'Todos os itens filtrados já estão aceitos'); };
+$('bNone').onclick = () => { let n = 0; for (const i of VIS) if (MUD[i] && aceito(i)) { ACE.set(i, false); n++; } salvar(); atualizar(false); if (SEL >= 0) lateral(SEL); toast(`${nf0.format(n)} aceites retirados (itens filtrados)`); };
+$('bReset').onclick = () => { if (!OV.size && !OVA.size && !ACE.size) { toast('Não há ajustes manuais'); return; } OV.clear(); OVA.clear(); ACE.clear(); calcTudo(); salvar(); atualizar(); toast('Preços e aceites voltaram à sugestão do motor'); };
 const f2 = v => v > 0 ? nf2.format(v).replace(/\./g, '') : '';
-function linhasErp(){ const l = []; for (let i = 0; i < N; i++) { if (Math.abs(NV[i] - D.vm[i]) < 0.004 && Math.abs((NA[i] || 0) - (D.am[i] || 0)) < 0.004) continue;
-  l.push([D.filial_cod[D.fi[i]], D.produto_cod[D.pi[i]], f2(NV[i]), f2(NA[i])].join('\t')); } return l; }
+function linhasErp(){ const l = []; for (let i = 0; i < N; i++) if (aceito(i)) l.push([D.filial_cod[D.fi[i]], D.produto_cod[D.pi[i]], f2(NV[i]), f2(NA[i])].join('\t')); return l; }
 function baixar(nome, texto, tipo){ const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([texto], { type: tipo })); a.download = nome; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 3000); }
 const hoje = () => new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
-$('bErp').onclick = () => { const l = linhasErp(); if (!l.length) { toast('Nenhum preço muda'); return; } baixar(`PriceSense_Regular_ERP_${hoje()}.txt`, l.join('\r\n'), 'text/plain'); toast(nf0.format(l.length) + ' preços exportados'); };
-$('bCopy').onclick = async () => { const l = linhasErp(); if (!l.length) { toast('Nenhum preço muda'); return; }
-  try { await navigator.clipboard.writeText(l.join('\n')); $('bCopy').classList.add('ok'); setTimeout(() => $('bCopy').classList.remove('ok'), 1800); toast(nf0.format(l.length) + ' linhas copiadas'); } catch (e) { toast('Não foi possível copiar; use o TXT'); } };
-$('bCsv').onclick = () => { const cab = ['Filial', 'Produto', 'Curva', 'Custo', 'Varejo atual', 'Atacado atual', 'Mercado varejo', 'Mercado atacado', 'Origem', 'Concorrente', 'Moda varejo', 'Moda atacado',
-    'Regra', 'Novo varejo', 'Novo atacado', 'Margem atual', 'Nova margem', 'Variação', 'Volume/mês', 'Impacto/mês', 'Ajuste manual'];
+$('bErp').onclick = () => { const l = linhasErp(); if (!l.length) { toast('Nenhum preço aceito para exportar'); return; } baixar(`PriceSense_Regular_ERP_${hoje()}.txt`, l.join('\r\n'), 'text/plain'); toast(nf0.format(l.length) + ' preços aceitos exportados'); };
+$('bCopy').onclick = async () => { const l = linhasErp(); if (!l.length) { toast('Nenhum preço aceito'); return; }
+  try { await navigator.clipboard.writeText(l.join('\n')); $('bCopy').classList.add('ok'); setTimeout(() => $('bCopy').classList.remove('ok'), 1800); toast(nf0.format(l.length) + ' linhas copiadas'); } catch (e) { toast('Não foi possível copiar; use o arquivo'); } };
+$('bCsv').onclick = () => { const cab = ['Aceite', 'Regra de alteração', 'Filial', 'Produto', 'Curva', 'Custo', 'Varejo atual', 'Margem atual', 'Varejo mercado', 'Atacado mercado', 'Data pesquisa', 'IP atual',
+    'Regra de negócio', 'Novo varejo', 'Novo atacado', 'Margem nova', 'IP novo', 'Moda varejo', 'Moda atacado', 'Concorrente', 'Tipo de preço PDV', 'Venda mês', 'Impacto mês'];
   const n = v => v == null || !isFinite(v) ? '' : String(Math.round(v * 10000) / 10000).replace('.', ',');
-  const lin = VIS.map(i => [D.filiais[D.fi[i]], D.produtos[D.pi[i]], 'ABC'[D.curva[i]], n(D.cu[i]), n(D.vm[i]), n(D.am[i]), n(D.vmk[i]), n(D.amk[i]), D.orig[i] ? 'Moda' : 'Pesquisa', D.concs[D.ki[i]],
-    n(D.mo[i]), n(D.ma[i]), REGRAS[RG[i]], n(NV[i]), n(NA[i]), n((D.vm[i] - D.cu[i]) / D.vm[i]), n((NV[i] - D.cu[i]) / NV[i]), n(NV[i] / D.vm[i] - 1), n(D.un[i]), n(imp(i)), OV.has(i) || OVA.has(i) ? 'Sim' : 'Não']
-    .map(x => String(x).includes(';') ? '"' + x + '"' : x).join(';'));
+  const lin = VIS.map(i => [aceito(i) ? 'Sim' : 'Não', MUD[i] ? (CT[i] ? CORTES.filter((_, k) => CT[i] & (1 << k)).map(x => x[0]).join(' / ') : 'Dentro da regra') : 'Sem alteração',
+    D.filiais[D.fi[i]], D.produtos[D.pi[i]], 'ABC'[D.curva[i]], n(D.cu[i]), n(D.vm[i]), n((D.vm[i] - D.cu[i]) / D.vm[i]), n(D.vmk[i]), n(D.amk[i]), D.orig[i] ? 'moda' : D.datas[D.dti[i]], n(D.vm[i] / D.vmk[i]),
+    REGRAS[RG[i]][0], n(NV[i]), n(NA[i]), n((NV[i] - D.cu[i]) / NV[i]), n(NV[i] / D.vmk[i]), n(D.mo[i]), n(D.ma[i]), D.concs[D.ki[i]], D.tipos[D.ti[i]], n(D.venda[i]), n(imp(i))]
+    .map(x => String(x ?? '').includes(';') ? '"' + x + '"' : (x ?? '')).join(';'));
   baixar(`PriceSense_Regular_Analise_${hoje()}.csv`, '\ufeff' + [cab.join(';')].concat(lin).join('\r\n'), 'text/csv'); toast(nf0.format(lin.length) + ' itens exportados (filtro atual)'); };
-$('bFs').onclick = () => { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => toast('Tela cheia indisponível neste navegador')); };
-document.addEventListener('fullscreenchange', () => { document.body.classList.toggle('fs', !!document.fullscreenElement); render(); });
+const telaCheia = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen().catch(() => toast('Tela cheia indisponível neste navegador'));
+$('bFs').onclick = telaCheia;
+$('bFoco').onclick = () => { FOCO = !FOCO; document.body.classList.toggle('foco', FOCO); $('bFoco').classList.toggle('on', FOCO);
+  if (FOCO && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {}); if (!FOCO && document.fullscreenElement) document.exitFullscreen(); render(); };
+document.addEventListener('fullscreenchange', () => { const fs = !!document.fullscreenElement; document.body.classList.toggle('fs', fs);
+  if (!fs && FOCO) { FOCO = false; document.body.classList.remove('foco'); $('bFoco').classList.remove('on'); } render(); });
 addEventListener('resize', () => render());
 
 $('escopo').textContent = `${nf0.format(N)} itens, ${D.filiais.length} filiais, ${nf0.format(D.produtos.length)} produtos. * = sem pesquisa direta, usa a moda.`;
-montaParams(); calcTudo(); atualizar();
+montaParams(); calcTudo(); atualizar(); lateral(-1);
 })();
 </script></body></html>

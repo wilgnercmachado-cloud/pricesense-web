@@ -341,6 +341,16 @@ def menu_ao_passar_mouse() -> None:
     """Abre os menus do topo ao passar o mouse (só em dispositivos com mouse) e fecha ao sair."""
     components.html("""<script>
 const d = window.parent.document, w = window.parent;
+/* botão de tela cheia do site, ao lado do botão de tema (recriado a cada execução) */
+{
+  const velho = d.getElementById('ps-fs'); if (velho) velho.remove();
+  const ab = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>';
+  const fe = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg>';
+  const b = d.createElement('button'); b.id = 'ps-fs'; b.type = 'button';
+  const marca = () => { const on = !!d.fullscreenElement; b.innerHTML = on ? fe : ab; b.title = on ? 'Sair da tela cheia' : 'Tela cheia'; b.setAttribute('aria-label', b.title); };
+  b.addEventListener('click', () => { d.fullscreenElement ? d.exitFullscreen() : d.documentElement.requestFullscreen().catch(() => {}); });
+  marca(); d.addEventListener('fullscreenchange', marca); d.body.appendChild(b);
+}
 if (!d.__psHover && w.matchMedia('(hover: hover)').matches) {
   d.__psHover = true;
   let aberto = null, timer = null, abertoEm = 0;

@@ -130,6 +130,15 @@ html, body, .stApp, button, input, textarea, select, [data-testid="stMarkdownCon
   box-shadow: 0 0 0 4px var(--ps-primary-soft); }}
 .st-key-ps_tema button [data-testid="stIconMaterial"] {{ color: var(--ps-ink); font-size: 20px; }}
 @media (max-width: 760px) {{ .st-key-ps_tema {{ top: 9px; right: 12px; }} }}
+#ps-fs {{
+  position: fixed; top: 11px; right: 66px; z-index: 1000002; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--ps-surface); border: 1px solid var(--ps-line); color: var(--ps-ink); cursor: pointer;
+  backdrop-filter: var(--ps-glass); -webkit-backdrop-filter: var(--ps-glass);
+  transition: transform .25s cubic-bezier(.2,.7,.2,1), border-color .2s ease, box-shadow .2s ease;
+}}
+#ps-fs svg {{ width: 18px; height: 18px; }}
+#ps-fs:hover {{ transform: scale(1.06); border-color: var(--ps-primary); box-shadow: 0 0 0 4px var(--ps-primary-soft); }}
+@media (max-width: 760px) {{ #ps-fs {{ top: 9px; right: 58px; }} }}
 
 /* presença */
 .ps-user-meta {{ display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: .45rem; font-size: .78rem; color: var(--ps-muted); }}
