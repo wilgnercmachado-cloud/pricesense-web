@@ -78,6 +78,8 @@ def ler_relatorio(html: bytes) -> tuple[pd.DataFrame, dict]:
     df["erro_pesquisa"] = col["E"].astype(bool) if "E" in col else False
     df["pesquisado"] = col["Q"].astype(bool) if "Q" in col else True
     df["freq_moda"] = col["fq"] if "fq" in col else 0
+    # data fim do preço vigente no PDV: dias desde 01/01/2020 (1 = 01/01/2020; 0 = sem data fim)
+    df["data_fim"] = col["df"].astype(np.int32) if "df" in col else np.int32(0)
     if "K" in col:
         k_ = np.asarray(dic["K"], dtype=object)
         df["Concorrente menor"] = pd.Categorical(k_[np.minimum(col["K"], len(k_) - 1)])
