@@ -11,6 +11,7 @@ import streamlit.components.v1 as components
 
 from core import gmat_reader as gr
 from core import precificacao as pr
+from core import profimetrics as pf
 from core import reports
 from ui import components as ui
 from ui import theme
@@ -74,16 +75,41 @@ def _recorte(df: pd.DataFrame) -> tuple[pd.DataFrame, bool, bool]:
             if sel:
                 mask &= df[col].isin(sel).to_numpy()
         cesta = cols[-2].toggle("Só cesta", value=True, key="reg_cesta", help="Como na consulta de precificação: itens da cesta.")
-        acoes = cols[-1].toggle("Sem ações", value=True, key="reg_sem_acao",
-                                help="Deixa de fora encarte, mídia, vencimento e itens travados, como no relatório.")
+        acoes = cols[-1].toggle("Sem ações", value=False, key="reg_sem_acao",
+                                help="Tira da mesa encarte, mídia, vencimento e itens travados. Desligado, eles entram e caem na regra de corte.")
     return df[mask], cesta, acoes
 
 
 def _tokens_css() -> str:
     t = theme.tokens()
-    nomes = ["canvas", "surface", "surface_solid", "field", "raised", "ink", "muted", "faint", "line", "primary", "primary_hover",
-             "primary_soft", "up", "down", "amber", "amber_soft"]
+    nomes = ["canvas", "surface", "surface_solid", "field", "raised", "ink", "muted", "faint", "line", "line_strong", "primary", "primary_hover",
+             "primary_soft", "up", "up_soft", "down", "amber", "amber_soft"]
     return "".join(f"--{k.replace('_', '-')}:{t[k]};" for k in nomes) + f"--shadow:{t['shadow']};"
+
+
+def _profimetrics() -> pd.DataFrame:
+    regras, meta = pf.carregar()
+    titulo = (f"Regras de margem (Profimetrics): {ui.numero(meta['linhas'])} regras, {meta['zonas']} zonas, atualizadas em {meta['atualizado_em']}"
+              if meta else "Regras de margem (Profimetrics): nenhuma regra salva")
+    with st.expander(titulo, icon=":material/tune:", expanded=False):
+        st.caption("Envie a planilha Detalhes Produtos do Profimetrics. As regras ficam salvas no Supabase até o próximo envio: "
+                   "o que vier no arquivo novo substitui a regra do mesmo produto na mesma zona, e o resto é mantido. "
+                   "Cada filial puxa a regra da sua zona de preço (tabela filiais do Supabase).")
+        c1, c2 = st.columns([3, 1], vertical_alignment="bottom")
+        arq = c1.file_uploader("Planilha Profimetrics (XLSX)", type=["xlsx", "xls"], key="reg_pf")
+        if c2.button("Salvar no Supabase", type="primary", width="stretch", icon=":material/cloud_upload:", disabled=arq is None, key="reg_pf_salvar"):
+            try:
+                with st.spinner("Lendo a planilha e mesclando com as regras salvas"):
+                    novo = pf.ler_planilha(arq)
+                    r = pf.salvar(novo, st.session_state.get("usuario_logado", ""))
+                st.toast(f"Regras salvas: {ui.numero(r['novas'])} novas, {ui.numero(r['substituidas'])} substituídas, "
+                         f"{ui.numero(r['mantidas'])} mantidas. Total {ui.numero(r['total'])}.", icon=":material/check_circle:")
+                st.rerun()
+            except pf.ErroProfimetrics as exc:
+                st.error(str(exc), icon=":material/error:")
+            except Exception as exc:
+                st.error(f"Não foi possível salvar no Supabase: {exc}", icon=":material/error:")
+    return regras
 
 
 def render() -> None:
@@ -96,8 +122,9 @@ def render() -> None:
                                    "ou envie o HTML do relatório. Nada é alterado no ERP: o resultado é um arquivo de importação.")
         return
     df_all, meta = fonte
+    regras = _profimetrics()
     recorte, so_cesta, sem_acao = _recorte(df_all)
-    b = pr.base(recorte, so_cesta=so_cesta, ignorar_acoes=sem_acao)
+    b = pr.base(recorte, so_cesta=so_cesta, ignorar_acoes=sem_acao, regras=regras)
     if b.empty:
         ui.vazio("Nada para precificar no recorte", "Amplie os filtros: são considerados itens com custo e com preço de mercado (pesquisa ou moda).")
         return
@@ -107,7 +134,7 @@ def render() -> None:
         return
     st.caption(f"Base de {meta.get('atualizado')}, pesquisa de {' a '.join(meta.get('periodo') or [])}.")
     dados = pr.payload(b)
-    chave = hashlib.md5((dados[:2000] + str(len(dados))).encode()).hexdigest()[:12]
+    chave = hashlib.md5((dados[:4000] + dados[-4000:] + str(len(dados))).encode()).hexdigest()[:12]
     html = (MESA.read_text(encoding="utf-8").replace("__FONTE__", theme.FONTE_URL).replace("__TOKENS__", _tokens_css())
             .replace("__CHAVE__", chave).replace("__DATA__", dados))
-    components.html(html, height=1240, scrolling=False)
+    components.html(html, height=1320, scrolling=False)

@@ -155,7 +155,7 @@ def render() -> None:
         _depois_de_entrar()
         return
 
-    st.html("<style>header[data-testid='stHeader']{display:none}"
+    st.html("<style>header[data-testid='stHeader'],#ps-fs{display:none !important}"
             "[data-testid='stMainBlockContainer']{padding-top:6vh}</style>")
     t = theme.tokens()
     esq, _, dir_ = st.columns([1.3, 0.08, 0.82], vertical_alignment="center")
