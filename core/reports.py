@@ -251,3 +251,9 @@ def definir_favorito(login: str, rid: str, favorito: bool) -> None:
     except Exception as exc:
         raise ErroRelatorio("Não foi possível salvar o favorito. Confira se a tabela relatorios_usuario "
                             "existe no Supabase (supabase/migrations.sql).") from exc
+
+
+def baixar_conteudo(rel: dict) -> bytes:
+    """Arquivo inteiro do relatório (partes juntadas), ainda compactado se foi publicado assim."""
+    partes = [db.sb().storage.from_(BUCKET).download(c) for c in _caminhos(rel["arquivo_path"], int(rel.get("partes") or 1))]
+    return b"".join(partes)
