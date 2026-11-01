@@ -60,7 +60,7 @@ def _filtros(df: pd.DataFrame) -> dict:
     """Filtros recolhidos num botão, como no relatório: abre, escolhe e aplica."""
     atual = st.session_state.setdefault("reg_filtros", dict(PADRAO))
     ativos = sum(bool(atual[f]) for f in FILTROS) + (atual["pesquisa"] != "Com pesquisa") + (not atual["cesta"]) + atual["sem_acoes"]
-    with st.popover(f"Filtros{f' ({ativos})' if ativos else ''}", icon=":material/filter_list:"):
+    with st.popover(f"{ativos}" if ativos else "", icon=":material/filter_list:", help="Filtros da análise"):
         with st.form("reg_form_filtros", border=False):
             pesquisa = st.segmented_control("Itens", ["Com pesquisa", "Sem pesquisa"], default=atual["pesquisa"], required=True,
                                             help="Sem pesquisa: o varejo vai para a margem objetiva e o atacado sai do objetivo com a base de redução.")
@@ -76,19 +76,21 @@ def _filtros(df: pd.DataFrame) -> dict:
             c5, c6 = st.columns(2)
             aplicar = c5.form_submit_button("Aplicar", type="primary", width="stretch", icon=":material/check:")
             limpar = c6.form_submit_button("Limpar", width="stretch", icon=":material/filter_alt_off:")
-        if aplicar:
-            st.session_state.reg_filtros = {**sel, "cesta": cesta, "sem_acoes": sem_acoes, "pesquisa": pesquisa}
+        if aplicar or limpar:
+            st.session_state.reg_filtros = dict(PADRAO) if limpar else {**sel, "cesta": cesta, "sem_acoes": sem_acoes, "pesquisa": pesquisa}
+            st.session_state._fechar_popover = True
             st.rerun()
-        if limpar:
-            st.session_state.reg_filtros = dict(PADRAO)
-            st.rerun()
+    if st.session_state.pop("_fechar_popover", False):
+        # fecha o painel de filtros depois de aplicar (o Streamlit o mantém aberto entre execuções)
+        components.html("<script>const d=window.parent.document;setTimeout(()=>{d.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));"
+                        "d.body.dispatchEvent(new MouseEvent('mousedown',{bubbles:true}));d.body.dispatchEvent(new MouseEvent('mouseup',{bubbles:true}));"
+                        "d.body.click();},150)</script>", height=0, width=0)
     return st.session_state.reg_filtros
 
 
 def _profimetrics() -> pd.DataFrame:
     regras, meta = pf.carregar()
-    rotulo = f"Regras de margem ({ui.numero(meta['linhas'])})" if meta else "Regras de margem"
-    with st.popover(rotulo, icon=":material/tune:"):
+    with st.popover("", icon=":material/tune:", help="Regras de margem (Profimetrics)"):
         if meta:
             st.caption(f"{ui.numero(meta['linhas'])} regras do Profimetrics, {meta['zonas']} zonas, {ui.numero(meta['produtos'])} produtos. "
                        f"Atualizadas em {meta['atualizado_em']}.")
@@ -119,21 +121,23 @@ def _tokens_css() -> str:
 
 
 def render() -> None:
-    st.html("<style>[data-testid='stMainBlockContainer']{max-width:none !important;padding-left:1.4rem !important;"
-            "padding-right:1.4rem !important;padding-top:4.6rem !important}"
-            ".ps-head h1{font-size:1.9rem !important}</style>")
-    ui.cabecalho("Pricing Regular")
+    st.html("<style>[data-testid='stMainBlockContainer']{max-width:none !important;padding:4.1rem 1rem 0 1rem !important}"
+            # filtros e regras ficam na barra do topo, ao lado dos botões de tela cheia e tema
+            ".st-key-reg_topo{position:fixed !important;top:11px;right:122px;z-index:1000002;width:auto !important;gap:6px}"
+            ".st-key-reg_topo [data-testid='stPopover'] > div > button,.st-key-reg_topo [data-testid='stPopover'] button{height:38px;min-height:38px;"
+            "border-radius:19px;padding:0 12px;background:var(--ps-surface);border:1px solid var(--ps-line)}"
+            "[data-testid='stMainBlockContainer'] [data-testid='stVerticalBlock']{gap:.4rem}</style>")
     fonte = _fonte()
     if fonte is None:
         return
     df_all, meta, rel = fonte
 
-    with st.container(horizontal=True, vertical_alignment="center", gap="small"):
+    with st.container(horizontal=True, vertical_alignment="center", gap="small", key="reg_topo"):
         f = _filtros(df_all)
         regras = _profimetrics()
-        dtfim = meta.get("com_data_fim", 0)
-        st.caption(f"{rel.get('titulo')}: base de {meta.get('atualizado')}, pesquisa de {' a '.join(meta.get('periodo') or [])}. "
-                   + (f"Data fim (DTFIM) em {ui.numero(dtfim)} itens." if dtfim else "DTFIM vazia nesta base."))
+    dtfim = meta.get("com_data_fim", 0)
+    info = (f"{rel.get('titulo')}: base de {meta.get('atualizado')}, pesquisa de {' a '.join(meta.get('periodo') or [])}. "
+            + (f"Data fim (DTFIM) em {ui.numero(dtfim)} itens." if dtfim else "DTFIM vazia nesta base."))
 
     mask = np.ones(len(df_all), dtype=bool)
     for col in FILTROS:
@@ -154,7 +158,7 @@ def render() -> None:
         st.session_state.reg_visao = db.carregar_visao(usuario, TELA)
     chave = hashlib.md5((dados[:4000] + dados[-4000:] + str(len(dados)) + theme.modo()).encode()).hexdigest()[:12]
     retorno = _MESA(dados=dados, chave=chave, tokens=_tokens_css(), fonte=theme.FONTE_URL, visao=st.session_state.reg_visao,
-                    altura=1560, key="mesa_regular", default=None)
+                    altura=900, info=info, key="mesa_regular", default=None)
     if isinstance(retorno, dict) and retorno.get("acao") == "salvar_visao" and retorno.get("ts") != st.session_state.get("_reg_ts"):
         st.session_state._reg_ts = retorno.get("ts")
         try:
