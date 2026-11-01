@@ -14,7 +14,7 @@ body.fs #app{padding:12px}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;flex-wrap:wrap;position:relative;z-index:30}
 .top h1{margin:0;font-size:16px;font-weight:600;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
 .top small{color:var(--muted);font-size:11.5px;display:block;margin-top:2px}
-.acts{display:flex;gap:6px;align-items:center;position:relative}
+
 .acts .sep{width:1px;height:22px;background:var(--line);margin:0 4px}
 .ib{width:36px;height:36px;border-radius:11px;border:1px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer;display:grid;place-items:center;
   transition:transform .15s,border-color .2s,color .2s,box-shadow .2s,background .2s}
@@ -173,13 +173,61 @@ h3 small{color:var(--faint);font-weight:400;overflow:hidden;text-overflow:ellips
 .regp .lista{margin-bottom:10px}
 body.foco .kpis,body.foco .linha2{display:none}
 @media (max-width:1100px){.linha2{grid-template-columns:1fr}}
+/* ---- PriceMetrics: v4 minimalista ---- */
+#app{gap:8px;padding:2px 58px 2px 2px}
+.topo{display:flex;align-items:center;gap:14px;min-height:44px}
+.marca{display:flex;align-items:baseline;gap:10px;flex:none}
+.marca h1{margin:0;font-size:17px;font-weight:650;letter-spacing:-.03em;display:flex;align-items:center;gap:8px}
+.marca h1 span{color:var(--primary)}
+.marca h1 .logo{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;background:linear-gradient(135deg,var(--primary),var(--up));box-shadow:0 6px 16px -8px var(--primary)}
+.marca h1 .logo svg{width:14px;height:14px}
+.marca small{color:var(--muted);font-size:11.5px;cursor:help}
+.kstrip{display:flex;gap:6px;flex:1;overflow-x:auto;scrollbar-width:none;justify-content:safe flex-end}
+.kc span{font-size:11px;color:var(--muted)}
+.kc{flex:none;display:flex;align-items:center;gap:7px;padding:6px 11px;border-radius:11px;background:var(--surface);border:1px solid var(--line);backdrop-filter:blur(14px);white-space:nowrap}
+.kc svg{width:14px;height:14px}
+.kc b{font:550 14px 'Geist Mono',monospace;letter-spacing:-.02em}
+.kc i{font-style:normal;font-size:10.5px;color:var(--faint);font-family:'Geist Mono',monospace}
+.linha2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(330px,1fr);gap:8px}
+.histc{padding:8px 12px 4px;min-width:0;height:212px}
+.hhead{display:flex;align-items:center;gap:10px;margin-bottom:2px}
+.htit{font-size:12px;font-weight:600;white-space:nowrap}
+.htit small{color:var(--faint);font-weight:400;margin-left:4px}
+.hchips{flex:1;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding:0;margin:0}
+.hchip{flex:none;height:24px;padding:0 9px;border-radius:999px;font-size:11px;display:inline-flex;align-items:center;gap:5px}
+.hchip .pt{width:5px;height:5px;border-radius:50%;background:var(--up);display:inline-block}
+#hist svg{width:100%;height:166px;display:block}
+.hvazio{color:var(--muted);font-size:12px;padding:30px 0;line-height:1.6}
+.resumo{padding:9px 12px;height:212px;overflow:auto}
+.rtop{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.rnome{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rsub{font-size:11px;color:var(--muted);margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.resumo .lad{width:100%;height:70px;display:block;margin:2px 0}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 10px}
+.ms span{display:block;font-size:10px;color:var(--faint)}
+.ms b{font:550 12.5px 'Geist Mono',monospace}
+.ralts{display:flex;align-items:center;gap:5px;margin-top:6px}
+.ib2{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer;display:grid;place-items:center;padding:0}
+.ib2:hover{border-color:var(--primary);color:var(--primary)}
+.ib2 svg{width:14px;height:14px}
+.rwhy{font-size:11px;color:var(--muted);display:inline-flex;align-items:center;gap:4px;cursor:help;margin-left:2px}
+.ralts .tx{margin-left:auto}
+button.tx.sm{height:28px;padding:0 10px;font-size:12px}
+.gridbox{flex:1;min-height:0}
+.dock{position:fixed;right:6px;top:50%;transform:translateY(-50%);z-index:40;display:flex;flex-direction:column;gap:6px;padding:8px 6px;border-radius:16px}
+.dock .sep{height:1px;width:24px;background:var(--line);margin:2px auto}
+.dock .ib{width:36px;height:36px}
+.pop{position:fixed!important;right:60px!important;top:80px;left:auto!important}
+.kstrip .kc:hover{border-color:var(--line-strong)}
+body.fs #app{padding:10px 60px 10px 10px}
+body.foco .kpis,body.foco .linha2{display:grid}
 
 #root{display:block} #app{height:100%}
 </style>
 <script src="xlsx.mini.min.js"></script>
 </head><body><div id="root"></div>
 <script>
-const MARCACAO = "<div id=\"app\">\n  <div class=\"top glass\">\n    <div><h1 id=\"titulo\"></h1><small id=\"escopo\"></small></div>\n    <div class=\"acts\">\n      <button class=\"ib gr\" id=\"bAll\" data-tip=\"Aceitar todos os itens filtrados\" data-ic=\"check\"></button>\n      <button class=\"ib\" id=\"bNone\" data-tip=\"Retirar aceite dos itens filtrados\" data-ic=\"x\"></button>\n      <button class=\"ib\" id=\"bReset\" data-tip=\"Voltar pre\u00e7os e aceites para a sugest\u00e3o do motor\" data-ic=\"undo\"></button>\n      <button class=\"ib\" id=\"bRegras\" data-tip=\"Regra de neg\u00f3cio e regra de altera\u00e7\u00e3o\" data-ic=\"regra\"></button>\n      <span class=\"sep\"></span>\n      <button class=\"ib\" id=\"bCols\" data-tip=\"Colunas e vis\u00e3o salva no seu perfil\" data-ic=\"cols\"></button>\n      <button class=\"ib\" id=\"bRnd\" data-tip=\"Regra de arredondamento\" data-ic=\"rnd\"></button>\n      <button class=\"ib\" id=\"bPiso\" data-tip=\"Piso de margem por estado\" data-ic=\"piso\"></button>\n      <span class=\"sep\"></span>\n      <button class=\"ib pri\" id=\"bExp\" data-tip=\"Importa\u00e7\u00e3o: baixar Excel ou copiar (layout PRICE do Pre\u00e7o Bot)\" data-ic=\"up\"></button>\n      <button class=\"ib\" id=\"bFoco\" data-tip=\"Modo foco: s\u00f3 a grade, em tela cheia\" data-ic=\"foco\"></button>\n      <div class=\"pop glass\" id=\"pRegras\"></div>\n      <div class=\"pop glass larga\" id=\"pCols\"></div>\n      <div class=\"pop glass\" id=\"pRnd\"></div>\n      <div class=\"pop glass\" id=\"pPiso\"></div>\n      <div class=\"pop glass\" id=\"pExp\"></div>\n    </div>\n  </div>\n  <div class=\"kpis\" id=\"kpis\"></div>\n  <div class=\"linha2\">\n    <div class=\"glass histc\"><h3 data-ic2=\"hist\" style=\"justify-content:space-between\"><span style=\"display:flex;align-items:center;gap:6px;min-width:0\">Hist\u00f3rico de pre\u00e7o do mercado <small id=\"histSub\"></small></span>\n      <span class=\"hseg\" id=\"hSeg\"><button data-hm=\"v\" class=\"on\">Varejo</button><button data-hm=\"a\">Atacado</button></span></h3>\n      <div class=\"hchips\" id=\"hChips\"></div><div id=\"hist\"></div></div>\n    <div class=\"glass resumo\" id=\"resumo\"></div>\n  </div>\n  <div class=\"gridbox glass\" style=\"flex:1;min-height:0\">\n    <div class=\"tools\">\n      <input type=\"search\" id=\"q\" placeholder=\"Buscar produto, filial ou concorrente\">\n      <button class=\"chip\" data-rg=\"3\" data-ic=\"piso\">Trava m\u00ednima</button>\n      <button class=\"chip\" data-rg=\"2\" data-ic=\"teto\">Trava m\u00e1xima</button>\n      <button class=\"chip\" data-rg=\"4\" data-ic=\"obj\">Trava objetiva</button>\n      <span class=\"cnt\" id=\"cnt\"></span>\n    </div>\n    <div id=\"scroll\" tabindex=\"0\"><div class=\"hdr\" id=\"hdr\"></div><div id=\"body\"></div></div>\n  </div>\n</div>\n<div id=\"tip\"></div><div class=\"toast\" id=\"toast\"></div>\n";
+const MARCACAO = "<div id=\"app\">\n  <div class=\"topo\">\n    <div class=\"marca\"><h1 id=\"titulo\"></h1><small id=\"escopo\"></small></div>\n    <div class=\"kstrip\" id=\"kpis\"></div>\n  </div>\n  <div class=\"linha2\">\n    <div class=\"glass histc\">\n      <div class=\"hhead\"><span class=\"htit\">Concorr\u00eancia <small id=\"histSub\"></small></span><div class=\"hchips\" id=\"hChips\"></div>\n        <span class=\"hseg\" id=\"hSeg\"><button data-hm=\"v\" class=\"on\">Varejo</button><button data-hm=\"a\">Atacado</button></span></div>\n      <div id=\"hist\"></div>\n    </div>\n    <div class=\"glass resumo\" id=\"resumo\"></div>\n  </div>\n  <div class=\"gridbox glass\">\n    <div class=\"tools\">\n      <input type=\"search\" id=\"q\" placeholder=\"Buscar produto, filial ou concorrente\">\n      <button class=\"chip\" data-rg=\"3\" data-ic=\"piso\">Trava m\u00ednima</button>\n      <button class=\"chip\" data-rg=\"2\" data-ic=\"teto\">Trava m\u00e1xima</button>\n      <button class=\"chip\" data-rg=\"4\" data-ic=\"obj\">Trava objetiva</button>\n      <span class=\"cnt\" id=\"cnt\"></span>\n    </div>\n    <div id=\"scroll\" tabindex=\"0\"><div class=\"hdr\" id=\"hdr\"></div><div id=\"body\"></div></div>\n  </div>\n</div>\n<nav class=\"dock glass\" id=\"dock\">\n  <button class=\"ib gr\" id=\"bAll\" data-tip=\"Aceitar todos os itens filtrados\" data-ic=\"check\"></button>\n  <button class=\"ib\" id=\"bProx\" data-tip=\"Pr\u00f3ximo pre\u00e7o pendente (N)\" data-ic=\"prox\"></button>\n  <button class=\"ib\" id=\"bNone\" data-tip=\"Retirar aceite dos itens filtrados\" data-ic=\"x\"></button>\n  <button class=\"ib\" id=\"bReset\" data-tip=\"Voltar pre\u00e7os e aceites para a sugest\u00e3o do motor\" data-ic=\"undo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib\" id=\"bRegras\" data-tip=\"Regra de neg\u00f3cio e regra de altera\u00e7\u00e3o\" data-ic=\"regra\"></button>\n  <button class=\"ib\" id=\"bCols\" data-tip=\"Colunas e vis\u00e3o salva no seu perfil\" data-ic=\"cols\"></button>\n  <button class=\"ib\" id=\"bRnd\" data-tip=\"Regra de arredondamento\" data-ic=\"rnd\"></button>\n  <button class=\"ib\" id=\"bPiso\" data-tip=\"Piso de margem por estado\" data-ic=\"piso\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib pri\" id=\"bExp\" data-tip=\"Importa\u00e7\u00e3o (layout PRICE do Pre\u00e7o Bot)\" data-ic=\"up\"></button>\n  <button class=\"ib\" id=\"bFoco\" data-tip=\"Modo foco em tela cheia\" data-ic=\"foco\"></button>\n</nav>\n<div class=\"pop glass\" id=\"pRegras\"></div>\n<div class=\"pop glass larga\" id=\"pCols\"></div>\n<div class=\"pop glass\" id=\"pRnd\"></div>\n<div class=\"pop glass\" id=\"pPiso\"></div>\n<div class=\"pop glass\" id=\"pExp\"></div>\n<div id=\"tip\"></div><div class=\"toast\" id=\"toast\"></div>\n";
 /* ===================== protocolo de componente do Streamlit (sem biblioteca) ===================== */
 const ST = {
   send(type, extra){ window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type }, extra || {}), '*'); },
@@ -196,7 +244,12 @@ async function montar(A){
   if (CTL) CTL.abort(); CTL = new AbortController(); const SIG = { signal: CTL.signal };
   const on = (alvo, ev, fn, op) => alvo.addEventListener(ev, fn, Object.assign({}, SIG, op || {}));
   document.getElementById('estilo-tema').textContent = `@import url('${A.fonte}');:root{${A.tokens}}`;
-  const ALT = A.altura || 1500; document.getElementById('root').style.height = ALT + 'px'; ST.altura(ALT);
+  /* a PriceMetrics ocupa a janela inteira abaixo do topo: a grade rola por dentro e o menu lateral fica sempre à vista */
+  let ALT = A.altura || 1200;
+  const medirAltura = () => { try { const fe = window.frameElement, pw = window.parent; const main = pw.document.querySelector('[data-testid="stMain"]');
+      const topo = fe.getBoundingClientRect().top + (main ? main.scrollTop : 0); return Math.max(620, Math.round(pw.innerHeight - topo - 10)); } catch (e) { return A.altura || 1200; } };
+  const ajustarAltura = () => { if (document.fullscreenElement) return; ALT = medirAltura(); document.getElementById('root').style.height = ALT + 'px'; ST.altura(ALT); };
+  ajustarAltura(); try { on(window.parent, 'resize', () => { ajustarAltura(); }); } catch (e) {}
   document.getElementById('root').innerHTML = MARCACAO;
   const bin = atob(A.dados), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
   const D = JSON.parse(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).text());
@@ -219,13 +272,15 @@ const ic = (n, cor) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="$
 document.querySelectorAll('[data-ic2]').forEach(h => h.insertAdjacentHTML('afterbegin', ic(h.dataset.ic2, 'var(--primary)')));
 
   Object.assign(P_, { cols: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>', save: '<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h8V3M8 21v-7h8v7"/>',
-    seta_c: '<path d="m6 15 6-6 6 6"/>', seta_b: '<path d="m6 9 6 6 6-6"/>', grip: '<circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>' });
+    seta_c: '<path d="m6 15 6-6 6 6"/>', prox: '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>', seta_b: '<path d="m6 9 6 6 6-6"/>', grip: '<circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>' });
   document.querySelectorAll('[data-ic]').forEach(b => { if (!b.querySelector('svg')) b.insertAdjacentHTML('afterbegin', ic(b.dataset.ic)); });
-  $('titulo').innerHTML = ic('mesa', 'var(--primary)') + 'Mesa de precificação';
+  $('titulo').innerHTML = `<span class="logo">${ic('mesa', '#fff')}</span>Price<span>Metrics</span>`;
   const tip = $('tip');
   on(document, 'mouseover', e => { const t = e.target.closest('[data-tip]'); if (!t) { tip.classList.remove('on'); return; }
     tip.textContent = t.dataset.tip; const r = t.getBoundingClientRect(); tip.classList.add('on');
-    const w = tip.offsetWidth; tip.style.left = Math.max(6, Math.min(innerWidth - w - 6, r.left + r.width / 2 - w / 2)) + 'px'; tip.style.top = (r.bottom + 8) + 'px'; });
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    if (t.closest('.dock')) { tip.style.left = (r.left - w - 10) + 'px'; tip.style.top = (r.top + r.height / 2 - h / 2) + 'px'; }
+    else { tip.style.left = Math.max(6, Math.min(innerWidth - w - 6, r.left + r.width / 2 - w / 2)) + 'px'; tip.style.top = (r.bottom + h + 14 > innerHeight ? r.top - h - 8 : r.bottom + 8) + 'px'; } });
 
   const MOBJ = 10, MMAX = 30, CENT = 0.01, CORTE = 1.5;
   const REGRA_RND = {
@@ -420,6 +475,10 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
   on(body, 'keydown', e => { if (e.key === 'Enter' && e.target.dataset.e) e.target.blur(); });
   on(body, 'click', e => { const ok = e.target.closest('[data-ok]'); if (ok) { alternarAceite(+ok.dataset.ok); return; }
     if (e.target.tagName === 'INPUT') return; const r = e.target.closest('.row'); if (!r) return; selecionar(+r.dataset.i); sc.focus({ preventScroll: true }); });
+  function proximoPendente(){ const k0 = VIS.indexOf(SEL);
+    for (let d = 1; d <= VIS.length; d++) { const k = (Math.max(k0, -1) + d) % VIS.length, i = VIS[k]; if (MUD[i] && !aceito(i)) {
+      const y = k * H; sc.scrollTop = Math.max(0, y - sc.clientHeight / 3); selecionar(i); return; } }
+    toast('Nenhum preço pendente de aceite neste filtro'); }
   function alternarAceite(i){ if (!MUD[i]) return; ACE.set(i, !aceito(i)); salvar(); atualizar(false); if (SEL === i) resumo(i); }
   function selecionar(i){ SEL = i; render(); resumo(i); historico(i); }
   on(document, 'keydown', e => {
@@ -427,6 +486,7 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); let k = VIS.indexOf(SEL); k = k < 0 ? 0 : Math.max(0, Math.min(VIS.length - 1, k + (e.key === 'ArrowDown' ? 1 : -1)));
       const y = k * H; if (y < sc.scrollTop + H) sc.scrollTop = Math.max(0, y - H); else if (y > sc.scrollTop + sc.clientHeight - 2 * H) sc.scrollTop = y - sc.clientHeight + 2 * H; selecionar(VIS[k]); }
     else if (e.key === ' ' && SEL >= 0) { e.preventDefault(); alternarAceite(SEL); }
+    else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); proximoPendente(); }
   });
 
   /* ---------- indicadores e painel de regras ---------- */
@@ -447,7 +507,7 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
       ['Margem nova', vneg(mg1, pct(mg1)), `<i class="${mg1 >= mg0 ? 'pos' : 'neg'}">hoje ${pct(mg0)}</i>`, 'var(--amber)', 'pct'],
       ['Lucro adicional/mês', 'R$ ' + nf0.format(ganho), `<i>investimento R$ ${nf0.format(inv)}</i>`, 'var(--up)', 'cash'],
       ['Saldo/mês', vneg(saldo, `${saldo >= 0 ? '+' : '−'}R$ ${nf0.format(Math.abs(saldo))}`), `<i>${nf0.format(N)} itens</i>`, saldo >= 0 ? 'var(--up)' : 'var(--down)', 'cash']];
-    $('kpis').innerHTML = K.map(([t, v, s, c, n]) => `<div class="k" style="--t:${c}"><span>${ic(n)}${t}</span><b>${v}</b>${s}</div>`).join('');
+    $('kpis').innerHTML = K.map(([t, v, sub, c, n]) => `<div class="kc" style="--t:${c}" data-tip="${t}: ${sub.replace(/<[^>]+>/g, '')}">${ic(n, c)}<span>${t}</span><b>${v}</b></div>`).join('');
     const rm = Math.max(...rc, 1), cm = Math.max(...cc, sem, 1);
     $('pRegras').innerHTML = `<div class="regp"><h4>Regra de negócio</h4><p>Motivo da formação do novo preço. Clique para filtrar a grade.</p><div class="lista">`
       + ORDEM_R.map(k => { const [t, n, c] = REGRAS[k]; return `<div class="rg${F.regra === k ? ' on' : ''}" data-rgf="${k}">${ic(n, c)}<span>${t}</span><div class="bar"><i style="width:${100 * rc[k] / rm}%;background:${c}"></i></div><b>${nf0.format(rc[k])}</b></div>`; }).join('')
@@ -470,51 +530,48 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
   const empresa = k => D.hE[k] ? titulo_(D.hE[k]) : curto(D.hK[k]);
   function historico(i){
     const box = $('hist'), chips = $('hChips');
-    if (i < 0) { $('histSub').textContent = ''; chips.innerHTML = ''; box.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:40px 0">Selecione um item.</div>'; return; }
+    if (i < 0) { $('histSub').textContent = ''; chips.innerHTML = ''; box.innerHTML = '<div class="hvazio">Selecione um item.</div>'; return; }
     const p = D.pi[i], u = D.ui[i], T = D.hT.length, rows = HD.get(p * 64 + u) || [], fil = new Set(D.fk[D.fi[i]] || []);
-    $('histSub').textContent = `${curto(D.produtos[D.pi[i]])}, ${curto(D.filiais[D.fi[i]])} (${D.ufs[u] || ''})`;
+    $('histSub').textContent = `${curto(D.filiais[D.fi[i]])}, ${D.ufs[u] || ''}`;
     const cont = new Map(), daFil = new Set();
     for (const j of rows) { const e = empresa(D.dk[j]); cont.set(e, (cont.get(e) || 0) + 1); if (fil.has(D.dk[j])) daFil.add(e); }
     const nFil = rows.filter(j => fil.has(D.dk[j])).length;
     if (HSEL === 'fil' && !nFil) HSEL = 'uf';
     if (HSEL.startsWith('e:') && !cont.has(HSEL.slice(2))) HSEL = nFil ? 'fil' : 'uf';
     const sig = e => e.split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
-    chips.innerHTML = (nFil ? `<button class="hchip${HSEL === 'fil' ? ' on' : ''}" data-hs="fil">Concorrentes da filial<small>${nf0.format(nFil)} coletas</small></button>` : '')
-      + `<button class="hchip${HSEL === 'uf' ? ' on' : ''}" data-hs="uf">Todo o estado<small>${nf0.format(rows.length)} coletas</small></button>`
-      + [...cont.entries()].sort((a, b) => b[1] - a[1]).map(([e, n]) => `<button class="hchip${HSEL === 'e:' + e ? ' on' : ''}" data-hs="e:${esc(e)}"><b style="font-size:9.5px;opacity:.7">${sig(e)}</b> ${esc(e)}${daFil.has(e) ? ' ●' : ''}<small>${nf0.format(n)} coletas</small></button>`).join('');
+    chips.innerHTML = (nFil ? `<button class="hchip${HSEL === 'fil' ? ' on' : ''}" data-hs="fil" data-tip="${nf0.format(nFil)} coletas">Da filial</button>` : '')
+      + `<button class="hchip${HSEL === 'uf' ? ' on' : ''}" data-hs="uf" data-tip="${nf0.format(rows.length)} coletas">Estado</button>`
+      + [...cont.entries()].sort((a, b) => b[1] - a[1]).map(([e, n]) => `<button class="hchip${HSEL === 'e:' + e ? ' on' : ''}" data-hs="e:${esc(e)}" data-tip="${esc(e)}: ${nf0.format(n)} coletas${daFil.has(e) ? ', concorre com a filial' : ''}">${esc(e.split(/\s+/)[0])}${daFil.has(e) ? '<i class="pt"></i>' : ''}</button>`).join('');
     const ok = HSEL === 'fil' ? (k => fil.has(k)) : HSEL === 'uf' ? (() => true) : (k => 'e:' + empresa(k) === HSEL);
     const mn = new Array(T).fill(Infinity), quem = new Array(T).fill(-1), dia = [...Array(T)].map(() => new Map()), nos = new Array(T).fill(0), nn = new Array(T).fill(0), og = [...Array(T)].map(() => new Map());
     for (const j of rows) { if (!ok(D.dk[j])) continue; const t = D.dt[j], v = (HMODO === 'a' ? Math.min(D.da[j] || D.dv[j], D.dv[j]) : D.dv[j]) / 100; if (!(v > 0)) continue;
       if (v < mn[t]) { mn[t] = v; quem[t] = D.dk[j]; } const e = empresa(D.dk[j]), cur = dia[t].get(e); if (!cur || v < cur.v) dia[t].set(e, { v, tp: D.dtp[j] }); }
     for (const j of HO.get(p * 64 + u) || []) { const t = D.ot[j], v = (HMODO === 'a' ? D.oa[j] : D.ov[j]) / 100; if (v > 0 && t < T) { nos[t] += v; nn[t]++; const o = D.hOG[D.oo[j]] || ''; og[t].set(o, (og[t].get(o) || 0) + 1); } }
     const dias = [...Array(T).keys()].filter(t => isFinite(mn[t]) || nn[t]);
-    if (!dias.length) { box.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:40px 0">Sem histórico de pesquisa para este item no estado.</div>'; HDADOS = null; return; }
+    if (!dias.length) { box.innerHTML = '<div class="hvazio">Sem histórico de pesquisa para este item no estado.</div>'; HDADOS = null; return; }
     const our = dias.map(t => nn[t] ? nos[t] / nn[t] : null), mer = dias.map(t => isFinite(mn[t]) ? mn[t] : null), moda = HMODO === 'a' ? D.ma[i] : D.mo[i];
-    const vals = our.concat(mer).filter(v => v > 0).concat(moda > 0 ? [moda] : []);
-    const lo = Math.min(...vals) * 0.985, hi = Math.max(...vals) * 1.015, Wd = Math.max(500, box.clientWidth || 900), Ht = 280, pl = 58, pr = 66, pt = 22, pb = 26;
+    const vals = mer.filter(v => v > 0).concat(moda > 0 ? [moda] : []);
+    if (!vals.length) { box.innerHTML = '<div class="hvazio">Sem coletas da concorrência para este filtro.</div>'; HDADOS = null; return; }
+    const lo = Math.min(...vals) * 0.97, hi = Math.max(...vals) * 1.03, Wd = Math.max(420, box.clientWidth || 800), Ht = 156, pl = 8, pr = 54, pt = 16, pb = 16;
     const X = n => pl + (Wd - pl - pr) * (dias.length > 1 ? n / (dias.length - 1) : 0.5), Y = v => pt + (Ht - pt - pb) * (1 - (v - lo) / (hi - lo || 1));
-    const suave = arr => { const pts = arr.map((v, n) => v == null ? null : [X(n), Y(v)]); let d = '', prev = null;
-      pts.forEach(q => { if (!q) { prev = null; return; } if (!prev) d += `M${q[0].toFixed(1)},${q[1].toFixed(1)}`; else { const cx = (prev[0] + q[0]) / 2; d += `C${cx.toFixed(1)},${prev[1].toFixed(1)} ${cx.toFixed(1)},${q[1].toFixed(1)} ${q[0].toFixed(1)},${q[1].toFixed(1)}`; } prev = q; }); return d; };
-    const area = arr => { const pts = arr.map((v, n) => v == null ? null : [X(n), Y(v)]).filter(Boolean); if (pts.length < 2) return '';
-      let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`; for (let k = 1; k < pts.length; k++) { const a = pts[k - 1], b = pts[k], cx = (a[0] + b[0]) / 2; d += `C${cx.toFixed(1)},${a[1].toFixed(1)} ${cx.toFixed(1)},${b[1].toFixed(1)} ${b[0].toFixed(1)},${b[1].toFixed(1)}`; }
-      return d + `L${pts[pts.length - 1][0]},${Ht - pb}L${pts[0][0]},${Ht - pb}Z`; };
-    let g = `<svg viewBox="0 0 ${Wd} ${Ht}"><defs><linearGradient id="gM" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--down)" stop-opacity=".18"/><stop offset="1" stop-color="var(--down)" stop-opacity="0"/></linearGradient>
-      <linearGradient id="gN" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--primary)" stop-opacity=".16"/><stop offset="1" stop-color="var(--primary)" stop-opacity="0"/></linearGradient></defs>`;
-    for (let q = 0; q <= 4; q++) { const v = lo + (hi - lo) * q / 4, y = Y(v); g += `<line x1="${pl}" x2="${Wd - pr}" y1="${y}" y2="${y}" stroke="var(--line)" stroke-dasharray="2 3"/><text x="${pl - 8}" y="${y + 3}" text-anchor="end" font-size="10" fill="var(--faint)" font-family="Geist Mono">R$ ${nf2.format(v)}</text>`; }
-    dias.forEach((t, n) => { g += `<text x="${X(n)}" y="${Ht - 7}" text-anchor="middle" font-size="10" fill="var(--faint)" font-family="Geist Mono">${D.hT[t]}</text>`; });
-    g += `<path d="${area(our)}" fill="url(#gN)"/><path d="${area(mer)}" fill="url(#gM)"/>`;
-    if (moda > 0) g += `<line x1="${pl}" x2="${Wd - pr}" y1="${Y(moda)}" y2="${Y(moda)}" stroke="#B794FF" stroke-dasharray="6 4" stroke-width="1.3"/>`;
-    g += `<path d="${suave(our)}" fill="none" stroke="var(--primary)" stroke-width="2.4"/><path d="${suave(mer)}" fill="none" stroke="var(--down)" stroke-width="2.4"/>`;
-    const esp = (Wd - pl - pr) / Math.max(1, dias.length - 1), cada = esp >= 34 ? 1 : esp >= 18 ? 2 : 3, rot = n => n % cada === 0 || n === dias.length - 1;
-    dias.forEach((t, n) => {
-      if (our[n] != null) { g += `<circle cx="${X(n)}" cy="${Y(our[n])}" r="3" fill="var(--surface-solid)" stroke="var(--primary)" stroke-width="1.8"/>`; if (rot(n)) g += `<text x="${X(n)}" y="${Y(our[n]) - 8}" text-anchor="middle" font-size="9.5" fill="var(--primary)" font-family="Geist Mono" font-weight="600">${nf2.format(our[n])}</text>`; }
-      if (mer[n] != null) { g += `<circle cx="${X(n)}" cy="${Y(mer[n])}" r="3" fill="var(--surface-solid)" stroke="var(--down)" stroke-width="1.8"/>`; if (rot(n)) g += `<text x="${X(n)}" y="${Y(mer[n]) + 15}" text-anchor="middle" font-size="9.5" fill="var(--down)" font-family="Geist Mono" font-weight="600">${nf2.format(mer[n])}</text>`; }
-    });
-    const ultimo = arr => { for (let n = arr.length - 1; n >= 0; n--) if (arr[n] != null) return arr[n]; return null; };
-    const badge = (v, cor) => v == null ? '' : `<rect x="${Wd - pr + 6}" y="${Y(v) - 9}" width="${pr - 8}" height="18" rx="5" fill="${cor}"/><text x="${Wd - pr / 2 + 2}" y="${Y(v) + 4}" text-anchor="middle" font-size="10" fill="#fff" font-family="Geist Mono" font-weight="600">${nf2.format(v)}</text>`;
-    g += badge(ultimo(our), 'var(--primary)') + badge(ultimo(mer), 'var(--down)') + `<line id="hGuia" x1="0" x2="0" y1="${pt}" y2="${Ht - pb}" stroke="var(--faint)" stroke-dasharray="3 3" style="display:none"/></svg>`;
-    box.innerHTML = `<div class="hbox">${g}<div class="htip" id="hTip"></div></div><div class="leg"><span><i style="background:var(--down)"></i>Mercado: menor preço</span><span><i style="background:var(--primary)"></i>Nosso preço (média do estado)</span>`
-      + (moda > 0 ? `<span><i style="background:#B794FF"></i>Moda R$ ${nf2.format(moda)}</span>` : '') + `<span style="color:var(--faint)">● concorrente da filial</span></div>`;
+    const pts = mer.map((v, n) => v == null ? null : [X(n), Y(v), v, n]).filter(Boolean);
+    let linha = '', area = '';
+    if (pts.length) { linha = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+      for (let k = 1; k < pts.length; k++) { const a = pts[k - 1], b = pts[k], cx = (a[0] + b[0]) / 2; linha += `C${cx.toFixed(1)},${a[1].toFixed(1)} ${cx.toFixed(1)},${b[1].toFixed(1)} ${b[0].toFixed(1)},${b[1].toFixed(1)}`; }
+      area = linha + `L${pts[pts.length - 1][0]},${Ht - pb}L${pts[0][0]},${Ht - pb}Z`; }
+    const vMin = Math.min(...pts.map(q => q[2])), vMax = Math.max(...pts.map(q => q[2]));
+    let g = `<svg viewBox="0 0 ${Wd} ${Ht}"><defs><linearGradient id="gM" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--down)" stop-opacity=".20"/><stop offset="1" stop-color="var(--down)" stop-opacity="0"/></linearGradient></defs>`;
+    dias.forEach((t, n) => { const mostra = dias.length <= 16 || n % 2 === 0 || n === dias.length - 1;
+      if (mostra) g += `<text x="${X(n)}" y="${Ht - 3}" text-anchor="middle" font-size="9" fill="var(--faint)" font-family="Geist Mono">${D.hT[t]}</text>`; });
+    if (moda > 0) g += `<line x1="${pl}" x2="${Wd - pr}" y1="${Y(moda)}" y2="${Y(moda)}" stroke="#B794FF" stroke-dasharray="5 4"/><text x="${Wd - pr + 4}" y="${Y(moda) + 3}" font-size="9" fill="#B794FF" font-family="Geist Mono">moda</text>`;
+    if (D.vm[i] > 0 && D.vm[i] >= lo && D.vm[i] <= hi) g += `<line x1="${pl}" x2="${Wd - pr}" y1="${Y(D.vm[i])}" y2="${Y(D.vm[i])}" stroke="var(--ink)" stroke-opacity=".35" stroke-dasharray="2 4"/><text x="${Wd - pr + 4}" y="${Y(D.vm[i]) + 3}" font-size="9" fill="var(--muted)" font-family="Geist Mono">atual</text>`;
+    g += `<path d="${area}" fill="url(#gM)"/><path d="${linha}" fill="none" stroke="var(--down)" stroke-width="2.2"/>`;
+    pts.forEach(([x, y, v]) => { const ext = v === vMin || v === vMax; g += `<circle cx="${x}" cy="${y}" r="${ext ? 3.4 : 2.4}" fill="${ext ? 'var(--down)' : 'var(--surface-solid)'}" stroke="var(--down)" stroke-width="1.6"/>`;
+      if (ext) g += `<text x="${x}" y="${v === vMax ? y - 7 : y + 13}" text-anchor="middle" font-size="9.5" fill="var(--down)" font-family="Geist Mono" font-weight="600">${nf2.format(v)}</text>`; });
+    const ult = pts.length ? pts[pts.length - 1] : null;
+    if (ult) g += `<rect x="${Wd - pr + 4}" y="${ult[1] - 8}" width="${pr - 6}" height="16" rx="5" fill="var(--down)"/><text x="${Wd - pr / 2 + 2}" y="${ult[1] + 3.5}" text-anchor="middle" font-size="9.5" fill="#fff" font-family="Geist Mono" font-weight="600">${nf2.format(ult[2])}</text>`;
+    g += `<line id="hGuia" x1="0" x2="0" y1="${pt}" y2="${Ht - pb}" stroke="var(--faint)" stroke-dasharray="3 3" style="display:none"/></svg>`;
+    box.innerHTML = `<div class="hbox">${g}<div class="htip" id="hTip"></div></div>`;
     HDADOS = { dias, our, mer, quem, dia, og, X, Wd, pl, pr };
   }
   on($('hist'), 'mousemove', e => { if (!HDADOS) return; const svg = $('hist').querySelector('svg'); if (!svg) return; const r = svg.getBoundingClientRect();
@@ -522,7 +579,7 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
     const t = HDADOS.dias[n], gl = $('hGuia'), tp = $('hTip'); gl.setAttribute('x1', HDADOS.X(n)); gl.setAttribute('x2', HDADOS.X(n)); gl.style.display = '';
     const l = [...HDADOS.dia[t]].sort((a, b) => a[1].v - b[1].v), ogm = [...HDADOS.og[t]].sort((a, b) => b[1] - a[1])[0];
     tp.innerHTML = `<div class="t">${D.hT[t]}</div>` + (HDADOS.mer[n] != null ? `<div class="r"><i style="background:var(--down)"></i>Mercado: menor preço <b>R$ ${nf2.format(HDADOS.mer[n])}</b></div>` : '')
-      + (HDADOS.our[n] != null ? `<div class="r"><i style="background:var(--primary)"></i>Nosso preço <b>R$ ${nf2.format(HDADOS.our[n])}</b>${ogm ? `<em style="font-style:normal;color:var(--faint);margin-left:4px">${esc(titulo_(ogm[0]))}</em>` : ''}</div>` : '')
+
       + (l.length ? '<div class="l">' + l.slice(0, 10).map(([e, x]) => `<span>${esc(e)}</span><em>${TPN[x.tp] || ''}</em><b>R$ ${nf2.format(x.v)}</b>`).join('') + '</div>' : '');
     tp.style.display = 'block'; const px = HDADOS.X(n) * r.width / HDADOS.Wd; tp.style.left = (px > r.width * 0.6 ? px - tp.offsetWidth - 14 : px + 14) + 'px'; tp.style.top = '10px'; });
   on($('hist'), 'mouseleave', () => { const tp = $('hTip'), gl = $('hGuia'); if (tp) tp.style.display = 'none'; if (gl) gl.style.display = 'none'; });
@@ -536,33 +593,27 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
     i => `Sem pesquisa direta: o varejo vai para a margem objetiva de ${nf1.format(UOBJ[i])}% e o atacado sai do objetivo com a base de redução de ${nf1.format(D.merch[i] || 0)}%.`,
     i => 'Preço definido manualmente na mesa.'];
   function resumo(i){
-    if (i < 0) { $('resumo').innerHTML = `<div class="vazio">${ic('tagi', 'var(--primary)')} Clique em um item. Use <span class="kbd">↑</span> <span class="kbd">↓</span> para navegar e <span class="kbd">espaço</span> para aceitar.</div>`; return; }
-    const c = D.cu[i], pts = [['Custo', c, 'var(--faint)'], ['Mínimo', MN[i], 'var(--up)'], ['Objetivo', OB[i], 'var(--amber)'], ['Mercado', D.vmk[i] || null, 'var(--primary)'],
-      ['Moda', D.mo[i] || null, '#B794FF'], ['Máximo', MX[i], 'var(--down)'], ['Atual', D.vm[i], 'var(--ink)'], ['Novo', NV[i], 'var(--primary)']].filter(p => p[1] > 0).sort((a, b) => a[1] - b[1]);
-    const vs = pts.map(p => p[1]), lo = Math.min(...vs) * 0.97, hi = Math.max(...vs) * 1.03, X = v => 14 + (v - lo) / (hi - lo) * 272;
-    let svg = `<svg class="lad" viewBox="0 0 300 150"><line x1="14" y1="75" x2="286" y2="75" stroke="var(--line)" stroke-width="6" stroke-linecap="round"/><line x1="${X(MN[i])}" y1="75" x2="${X(MX[i])}" y2="75" stroke="var(--up)" stroke-opacity=".35" stroke-width="6" stroke-linecap="round"/>`;
-    pts.forEach(([t, v, cor], k) => { const lv = k % 4, up = lv % 2 === 0, longe = lv < 2, x = Math.min(270, Math.max(30, X(v))), xr = X(v), novo = t === 'Novo';
-      const yt = up ? (longe ? 11 : 36) : (longe ? 131 : 106), yl = up ? (longe ? 26 : 50) : (longe ? 120 : 96);
-      svg += `<line x1="${xr}" y1="75" x2="${x}" y2="${yl}" stroke="${cor}" stroke-width="${novo ? 2 : 1}" stroke-opacity=".7"/><circle cx="${xr}" cy="75" r="${novo ? 6 : 4}" fill="${cor}" stroke="var(--surface-solid)" stroke-width="2"/><text x="${x}" y="${yt}" text-anchor="middle" font-size="9.5" fill="var(--muted)" font-family="Geist">${t}</text><text x="${x}" y="${yt + 12}" text-anchor="middle" font-size="10.5" fill="${cor}" font-family="Geist Mono" font-weight="${novo ? 600 : 500}">${nf2.format(v)}</text>`; });
+    if (i < 0) { $('resumo').innerHTML = `<div class="hvazio">Clique em um item. <span class="kbd">↑</span><span class="kbd">↓</span> navegam, <span class="kbd">espaço</span> aceita, <span class="kbd">N</span> vai ao próximo pendente.</div>`; return; }
+    const c = D.cu[i], pts = [['Custo', c, 'var(--faint)'], ['Mín', MN[i], 'var(--up)'], ['Obj', OB[i], 'var(--amber)'], ['Merc', D.vmk[i] || null, 'var(--primary)'],
+      ['Moda', D.mo[i] || null, '#B794FF'], ['Máx', MX[i], 'var(--down)'], ['Atual', D.vm[i], 'var(--ink)'], ['Novo', NV[i], 'var(--primary)']].filter(p => p[1] > 0).sort((a, b) => a[1] - b[1]);
+    const vs = pts.map(p => p[1]), lo = Math.min(...vs) * 0.98, hi = Math.max(...vs) * 1.02, X = v => 10 + (v - lo) / (hi - lo) * 280;
+    let svg = `<svg class="lad" viewBox="0 0 300 74"><line x1="10" y1="37" x2="290" y2="37" stroke="var(--line)" stroke-width="4" stroke-linecap="round"/><line x1="${X(MN[i])}" y1="37" x2="${X(MX[i])}" y2="37" stroke="var(--up)" stroke-opacity=".35" stroke-width="4" stroke-linecap="round"/>`;
+    const rot = pts.filter(p => ['Atual', 'Novo', 'Merc', 'Mín', 'Máx', 'Moda'].includes(p[0]));
+    pts.forEach(([t, v, cor]) => { const novo = t === 'Novo'; svg += `<circle cx="${X(v)}" cy="37" r="${novo ? 5 : 3.2}" fill="${cor}" stroke="var(--surface-solid)" stroke-width="1.5"><title>${t}: R$ ${nf2.format(v)}</title></circle>`; });
+    rot.forEach(([t, v, cor], k) => { const nivel = k % 4, y = [10, 70, 22, 58][nivel], x = Math.min(276, Math.max(24, X(v))), novo = t === 'Novo';
+      svg += `<line x1="${X(v)}" y1="37" x2="${x}" y2="${nivel % 2 === 0 ? y + 2 : y - 9}" stroke="${cor}" stroke-opacity=".45"/><text x="${x}" y="${y}" text-anchor="middle" font-size="9" fill="${cor}" font-family="Geist Mono" font-weight="${novo ? 700 : 500}">${t} ${nf2.format(v)}</text>`; });
     svg += '</svg>';
     const dm = D.mo[i] && D.vmk[i] > 0 && !D.orig[i] ? D.vmk[i] / D.mo[i] - 1 : null, m1 = (NV[i] - c) / NV[i];
-    const mc = (t, v, n, k) => `<div class="mc"><span>${ic(n)}${t}</span><b class="${k || ''}">${v}</b></div>`;
-    $('resumo').innerHTML = `<h2>${esc(D.produtos[D.pi[i]])}</h2><div class="sub">${ic('loja')}${esc(D.filiais[D.fi[i]])}, curva ${'ABC'[D.curva[i]]}${D.cesta[i] ? ', cesta' : ''}</div>
-      <div class="st">${tagRegra(i)}${tagCorte(i)}</div>${svg}
-      <div class="cards">${mc('Moda varejo', brl(D.mo[i]), 'moda')}${mc('Moda atacado', brl(D.ma[i]), 'moda')}${mc('Menor varejo', brl(D.vmk[i]), 'merc')}${mc('Menor atacado', brl(D.amk[i]), 'merc')}
-        ${mc('Menor ÷ moda', dm == null ? '–' : (dm > 0 ? '+' : '') + pct(dm), 'pct', dm < 0 ? 'neg' : '')}${mc('Margem nova', pct(m1), 'pct', m1 < 0 ? 'neg' : 'pos')}</div>
-      <div class="facts"><span>${ic('conc')}Concorrente</span><b>${esc(D.orig[i] ? 'moda (sem pesquisa direta)' : curto(D.concs[D.ki[i]]) || '–')}</b>
-        <span>${ic('cal')}Data pesquisa</span><b>${D.orig[i] ? 'moda' : esc(D.datas[D.dti[i]] || '–')}</b>
-        <span>${ic('tagi')}Tipo de preço PDV</span><b>${esc(D.tipos[D.ti[i]] || '–')}</b>
-        <span>${ic('cal')}Data fim do preço</span><b>${D.dfim[i] > 0 ? dfTxt(D.dfim[i]) : 'sem data fim'}</b>
-        <span>${ic('obj')}Margens obj. / mín. / máx.</span><b>${nf1.format(UOBJ[i])}% / ${nf1.format(UMIN[i])}% / ${nf1.format(UMAX[i])}%</b>
-        <span>${ic('pct')}Base redução atacado</span><b>${nf1.format(D.merch[i] || 0)}%</b>
-        <span>${ic('cash')}Estoque / DDE</span><b>${D.estoque[i] != null ? 'R$ ' + nf0.format(D.estoque[i]) : '–'} / ${D.dde[i] != null ? nf0.format(D.dde[i]) + ' dias' : '–'}</b>
-        <span>${ic('cash')}Venda mês</span><b>R$ ${nf0.format(D.venda[i])}</b></div>
-      <div class="why"><b style="color:${REGRAS[RG[i]][2]}">${rotRegra(i)}.</b> ${EXPL[RG[i]](i)}</div>
-      <div class="alts"><button class="tx" data-alt="m">${ic('merc')}Mercado − 0,01</button><button class="tx" data-alt="o">${ic('moda')}Moda − 0,01</button>
-        <button class="tx" data-alt="b">${ic('obj')}Objetivo</button><button class="tx" data-alt="r">${ic('undo')}Sugestão</button>
-        <button class="tx ${aceito(i) ? 'ok' : ''}" data-alt="ok" style="grid-column:1/-1" ${MUD[i] ? '' : 'disabled'}>${ic('check')}${aceito(i) ? 'Aceito' : 'Aceitar este preço'}</button></div>`;
+    const st = (t, v, k) => `<div class="ms"><span>${t}</span><b class="${k || ''}">${v}</b></div>`;
+    $('resumo').innerHTML = `<div class="rtop"><div class="rnome" title="${esc(D.produtos[D.pi[i]])}">${esc(curto(D.produtos[D.pi[i]]))}</div>${tagRegra(i)}</div>
+      <div class="rsub">${esc(curto(D.filiais[D.fi[i]]))}, curva ${'ABC'[D.curva[i]]}${D.cesta[i] ? ', cesta' : ''}. ${esc(D.orig[i] ? 'Moda (sem pesquisa direta)' : titulo_(curto(D.concs[D.ki[i]]).split(' - ')[0]))}${D.orig[i] ? '' : ', ' + esc(D.datas[D.dti[i]] || '')}. ${esc(titulo_(D.tipos[D.ti[i]] || ''))}${D.dfim[i] > 0 ? ' até ' + dfTxt(D.dfim[i]) : ''}.</div>
+      ${svg}
+      <div class="mgrid">${st('Moda var.', brl(D.mo[i]))}${st('Moda atac.', brl(D.ma[i]))}${st('Menor ÷ moda', dm == null ? '–' : (dm > 0 ? '+' : '') + pct(dm), dm < 0 ? 'neg' : '')}
+        ${st('Menor var.', brl(D.vmk[i]))}${st('Menor atac.', brl(D.amk[i]))}${st('Margem nova', pct(m1), m1 < 0 ? 'neg' : 'pos')}</div>
+      <div class="ralts"><button class="ib2" data-alt="m" data-tip="Usar mercado − 0,01">${ic('merc')}</button><button class="ib2" data-alt="o" data-tip="Usar moda − 0,01">${ic('moda')}</button>
+        <button class="ib2" data-alt="b" data-tip="Usar objetivo">${ic('obj')}</button><button class="ib2" data-alt="r" data-tip="Voltar à sugestão do motor">${ic('undo')}</button>
+        <span class="rwhy" data-tip="${esc(EXPL[RG[i]](i))}">${ic('regra')}por quê?</span>
+        <button class="tx sm ${aceito(i) ? 'ok' : ''}" data-alt="ok" ${MUD[i] ? '' : 'disabled'}>${ic('check')}${aceito(i) ? 'Aceito' : 'Aceitar'}</button></div>`;
   }
   on($('resumo'), 'click', e => { const b = e.target.closest('[data-alt]'); if (!b || SEL < 0) return; const i = SEL, k = b.dataset.alt;
     if (k === 'ok') { alternarAceite(i); return; } if (k === 'r') { OV.delete(i); OVA.delete(i); }
@@ -601,8 +652,10 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
 
   /* ---------- painéis: arredondamento, piso e importação ---------- */
   const pops = ['pRegras', 'pCols', 'pRnd', 'pPiso', 'pExp'];
-  function abrir(id){ pops.forEach(p => $(p).classList.toggle('on', p === id && !$(p).classList.contains('on'))); }
+  function abrir(id, botao){ pops.forEach(p => $(p).classList.toggle('on', p === id && !$(p).classList.contains('on')));
+    const p = $(id); if (p.classList.contains('on') && botao) { const r = botao.getBoundingClientRect(); p.style.top = Math.max(8, Math.min(innerHeight - p.offsetHeight - 8, r.top - 10)) + 'px'; } }
   on(document, 'click', e => { if (!e.target.closest('.pop') && !e.target.closest('#bRegras,#bCols,#bRnd,#bPiso,#bExp')) pops.forEach(p => $(p).classList.remove('on')); });
+  on(document, 'keydown', e => { if (e.key === 'Escape') pops.forEach(p => $(p).classList.remove('on')); });
   const faixas = [['A', 'Até R$ 10,99'], ['B', 'R$ 11,00 a R$ 19,99'], ['C', 'R$ 20,00 a R$ 40,00'], ['D', 'Acima de R$ 40,00']];
   const fimTxt = (reg, f) => f === 'A' ? `centavos terminando em ${reg[f].join(', ')}` : f === 'B' ? `dezena 1 a 9, final ${reg[f].join(', ')}` : `dezena 3 a 9, final ${reg[f].filter(x => x).join(', ')}${reg[f].includes(0) ? ' (ou ,50 e ,90)' : ''}`;
   function montaRnd(){ $('pRnd').innerHTML = `<h4>Regra de arredondamento</h4><p>O novo varejo vai para o centavo permitido mais próximo. O atacado sempre termina no mesmo dígito do varejo e nunca passa dele.</p>
@@ -632,11 +685,11 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
     if (b.id === 'eXls') { if (!window.XLSX) { toast('Biblioteca de Excel indisponível'); return; } const ws = XLSX.utils.aoa_to_sheet([CAB, ...l]), wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Importacao');
       XLSX.writeFile(wb, `PriceSense_Regular_PRICE_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`); toast(nf0.format(l.length) + ' linhas no Excel'); }
     if (b.id === 'eCopy') { try { await navigator.clipboard.writeText(l.map(r => r.join('\t')).join('\n')); b.classList.add('ok'); setTimeout(() => b.classList.remove('ok'), 1800); toast(nf0.format(l.length) + ' linhas copiadas'); } catch (err) { toast('Não foi possível copiar; use o Excel'); } } });
-  $('bRegras').onclick = () => abrir('pRegras');
-  $('bCols').onclick = () => { montaColunas(); abrir('pCols'); };
-  $('bRnd').onclick = () => { montaRnd(); abrir('pRnd'); };
-  $('bPiso').onclick = () => { montaPiso(); abrir('pPiso'); };
-  $('bExp').onclick = () => { if (!$('pExp').innerHTML) montaExp(); abrir('pExp'); };
+  $('bRegras').onclick = e => abrir('pRegras', e.currentTarget);
+  $('bCols').onclick = e => { montaColunas(); abrir('pCols', e.currentTarget); };
+  $('bRnd').onclick = e => { montaRnd(); abrir('pRnd', e.currentTarget); };
+  $('bPiso').onclick = e => { montaPiso(); abrir('pPiso', e.currentTarget); };
+  $('bExp').onclick = e => { if (!$('pExp').innerHTML) montaExp(); abrir('pExp', e.currentTarget); };
 
   /* ---------- ações ---------- */
   function atualizar(refiltrar = true){ kpis(); if (refiltrar) filtrar(); render(); }
@@ -644,15 +697,17 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
   document.querySelectorAll('.chip').forEach(b => on(b, 'click', () => { const v = +b.dataset.rg; F.travas.has(v) ? F.travas.delete(v) : F.travas.add(v); b.classList.toggle('on'); filtrar(); sc.scrollTop = 0; render(); }));
   $('bAll').onclick = () => { let n = 0; for (const i of VIS) if (MUD[i] && !aceito(i)) { ACE.set(i, true); n++; } salvar(); atualizar(false); if (SEL >= 0) resumo(SEL); toast(n ? `${nf0.format(n)} preços aceitos` : 'Itens filtrados já estão aceitos'); };
   $('bNone').onclick = () => { let n = 0; for (const i of VIS) if (MUD[i] && aceito(i)) { ACE.set(i, false); n++; } salvar(); atualizar(false); if (SEL >= 0) resumo(SEL); toast(`${nf0.format(n)} aceites retirados`); };
+  $('bProx').onclick = () => proximoPendente();
   $('bReset').onclick = () => { if (!OV.size && !OVA.size && !ACE.size) { toast('Não há ajustes manuais'); return; } OV.clear(); OVA.clear(); ACE.clear(); calcTudo(); salvar(); atualizar(); if (SEL >= 0) resumo(SEL); toast('Preços e aceites voltaram à sugestão do motor'); };
   $('bFoco').onclick = () => { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => { document.body.classList.toggle('foco'); render(); }); };
   on(document, 'fullscreenchange', () => { const fs = !!document.fullscreenElement; document.body.classList.toggle('fs', fs); document.body.classList.toggle('foco', fs); $('bFoco').classList.toggle('on', fs);
-    $('root').style.height = fs ? '100vh' : ALT + 'px'; render(); });
+    $('root').style.height = fs ? '100vh' : ALT + 'px'; if (!fs) ajustarAltura(); render(); if (SEL >= 0) historico(SEL); });
   on(window, 'resize', () => { render(); if (SEL >= 0) historico(SEL); });
   if (A.aviso) setTimeout(() => toast(A.aviso), 300);
 
   const comPesq = D.orig.some(o => o === 0), nRegra = D.pobj.filter(v => v != null).length;
-  $('escopo').textContent = `${nf0.format(N)} itens ${comPesq ? 'com pesquisa' : 'sem pesquisa'}, ${D.filiais.length} filiais, ${nf0.format(D.produtos.length)} produtos. ${nRegra ? nf0.format(nRegra) + ' com regra do Profimetrics.' : 'Sem regras do Profimetrics: margem objetiva 10% e máxima 30%.'}`;
+  $('escopo').textContent = `${nf0.format(N)} itens ${comPesq ? 'com pesquisa' : 'sem pesquisa'}, ${D.filiais.length} filiais`;
+  $('escopo').dataset.tip = `${nf0.format(D.produtos.length)} produtos. ${nRegra ? nf0.format(nRegra) + ' itens com regra do Profimetrics.' : 'Sem regras do Profimetrics: margem objetiva 10% e máxima 30%.'} ${A.info || ''}`;
   aplicaColunas(); calcTudo(); filtrar(); kpis();
   if (VIS.length) selecionar(VIS[0]); else { render(); resumo(-1); historico(-1); }
 }
