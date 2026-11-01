@@ -119,15 +119,17 @@ def _profimetrics() -> pd.DataFrame:
         arq_p = st.file_uploader("Base PROP% (XLSX)", type=["xlsx", "xls"], key="reg_prop", label_visibility="collapsed")
         if st.button("Salvar proporções", width="stretch", icon=":material/cloud_upload:", disabled=arq_p is None, key="reg_prop_salvar"):
             try:
-                with st.spinner("Lendo a base e gravando na dim_produto"):
-                    r = pp.salvar(pp.ler_planilha(arq_p))
+                barra = st.progress(0.0, text="Cruzando com a dim_produto e gravando as proporções")
+                r = pp.salvar(pp.ler_planilha(arq_p), progresso=lambda x: barra.progress(x, text="Gravando as proporções"))
+                barra.empty()
                 st.toast(f"{ui.numero(r['salvas'])} proporções gravadas"
                          + (f"; {ui.numero(r['fora_da_dim'])} produtos não existem na dim_produto." if r["fora_da_dim"] else "."), icon=":material/check_circle:")
                 st.rerun()
             except pp.ErroProporcao as exc:
                 st.error(str(exc), icon=":material/error:")
             except Exception as exc:
-                st.error(f"Não foi possível gravar: {exc}. Confira se as colunas id_pai e proporcao existem na dim_produto.", icon=":material/error:")
+                st.error(f"Não foi possível gravar: {exc}. Confira se as colunas id_pai e proporcao existem na dim_produto "
+                         "(supabase/migrations.sql).", icon=":material/error:")
     return regras
 
 
