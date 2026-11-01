@@ -9,6 +9,7 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
+from core import db
 from core import gmat_reader as gr
 from core import precificacao as pr
 from core import profimetrics as pf
@@ -17,8 +18,9 @@ from ui import components as ui
 from ui import theme
 
 RAIZ = Path(__file__).resolve().parent.parent
-MESA = RAIZ / "ui" / "mesa.html"
-XLSX = RAIZ / "assets" / "vendor" / "xlsx.mini.min.js"
+# Componente bidirecional: a mesa roda no navegador e devolve ao Python só a visão que o usuário salvar.
+_MESA = components.declare_component("mesa_precificacao", path=str(RAIZ / "ui" / "mesa_comp"))
+TELA = "pricing_regular"
 FILTROS = ["Estado", "Diretor regional", "Filial", "Departamento", "Comprador", "Categoria"]
 PADRAO = {"cesta": True, "sem_acoes": False, "pesquisa": "Com pesquisa", **{f: [] for f in FILTROS}}
 LIMITE = 120_000
@@ -116,13 +118,6 @@ def _tokens_css() -> str:
     return "".join(f"--{k.replace('_', '-')}:{t[k]};" for k in nomes) + f"--shadow:{t['shadow']};"
 
 
-def _xlsx_js() -> str:
-    try:
-        return "<script>" + XLSX.read_text(encoding="utf-8").replace("</script", "<\\/script") + "</script>"
-    except OSError:
-        return '<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.mini.min.js"></script>'
-
-
 def render() -> None:
     st.html("<style>[data-testid='stMainBlockContainer']{max-width:none !important;padding-left:1.4rem !important;"
             "padding-right:1.4rem !important;padding-top:4.6rem !important}"
@@ -136,7 +131,9 @@ def render() -> None:
     with st.container(horizontal=True, vertical_alignment="center", gap="small"):
         f = _filtros(df_all)
         regras = _profimetrics()
-        st.caption(f"{rel.get('titulo')}: base de {meta.get('atualizado')}, pesquisa de {' a '.join(meta.get('periodo') or [])}")
+        dtfim = meta.get("com_data_fim", 0)
+        st.caption(f"{rel.get('titulo')}: base de {meta.get('atualizado')}, pesquisa de {' a '.join(meta.get('periodo') or [])}. "
+                   + (f"Data fim (DTFIM) em {ui.numero(dtfim)} itens." if dtfim else "DTFIM vazia nesta base."))
 
     mask = np.ones(len(df_all), dtype=bool)
     for col in FILTROS:
@@ -152,7 +149,17 @@ def render() -> None:
                    f"para ficar abaixo de {ui.numero(LIMITE)} e a mesa responder na hora.", icon=":material/filter_alt:")
         return
     dados = pr.payload(b, meta.get("hist"))
-    chave = hashlib.md5((dados[:4000] + dados[-4000:] + str(len(dados))).encode()).hexdigest()[:12]
-    html = (MESA.read_text(encoding="utf-8").replace("__FONTE__", theme.FONTE_URL).replace("__TOKENS__", _tokens_css())
-            .replace("__CHAVE__", chave).replace("__XLSX__", _xlsx_js()).replace("__DATA__", dados))
-    components.html(html, height=1340, scrolling=False)
+    usuario = st.session_state.get("usuario_login", "")
+    if "reg_visao" not in st.session_state:
+        st.session_state.reg_visao = db.carregar_visao(usuario, TELA)
+    chave = hashlib.md5((dados[:4000] + dados[-4000:] + str(len(dados)) + theme.modo()).encode()).hexdigest()[:12]
+    retorno = _MESA(dados=dados, chave=chave, tokens=_tokens_css(), fonte=theme.FONTE_URL, visao=st.session_state.reg_visao,
+                    altura=1560, key="mesa_regular", default=None)
+    if isinstance(retorno, dict) and retorno.get("acao") == "salvar_visao" and retorno.get("ts") != st.session_state.get("_reg_ts"):
+        st.session_state._reg_ts = retorno.get("ts")
+        try:
+            db.salvar_visao(usuario, TELA, retorno.get("visao") or {})
+            st.session_state.reg_visao = retorno.get("visao")
+            st.toast("Visão salva no seu perfil. Ela abre assim sempre que você entrar.", icon=":material/bookmark_added:")
+        except Exception:
+            st.toast("Não foi possível salvar a visão: crie a tabela visoes_usuario no Supabase (supabase/migrations.sql).", icon=":material/error:")
