@@ -27,7 +27,7 @@ LIMITE = 120_000
 
 
 @st.cache_resource(show_spinner=False, max_entries=2)
-def _base_publicada(caminho: str, partes: int, versao: str) -> tuple[pd.DataFrame, dict]:
+def _base_publicada(caminho: str, partes: int, versao: str, leitor: str = "") -> tuple[pd.DataFrame, dict]:
     return gr.ler_de_gzip_ou_html(reports.baixar_conteudo({"arquivo_path": caminho, "partes": partes}))
 
 
@@ -47,7 +47,7 @@ def _fonte() -> tuple[pd.DataFrame, dict, dict] | None:
         return None
     try:
         with st.spinner("Lendo a base do Competitividade Pricing GMAT (alguns segundos na primeira vez)"):
-            df, meta = _base_publicada(rel["arquivo_path"], int(rel.get("partes") or 1), str(rel.get("atualizado_em")))
+            df, meta = _base_publicada(rel["arquivo_path"], int(rel.get("partes") or 1), str(rel.get("atualizado_em")), gr.VERSAO)
         return df, meta, rel
     except gr.ErroLeitura as exc:
         st.error(str(exc), icon=":material/error:")
