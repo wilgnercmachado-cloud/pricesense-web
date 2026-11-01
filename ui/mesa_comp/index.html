@@ -245,6 +245,15 @@ body.foco .kpis,body.foco .linha2{display:grid}
 .olist td,.olist th{font-size:11.5px;white-space:nowrap}
 .regras-opt{font-size:11.5px;color:var(--muted);line-height:1.55;background:var(--raised);border-radius:10px;padding:9px 11px;margin-bottom:8px}
 
+.ctx{position:fixed;z-index:90;display:none;min-width:240px;padding:6px;background:var(--surface-solid)!important;border-radius:12px;box-shadow:0 18px 40px -16px rgba(15,23,42,.45)}
+.ctx.on{display:flex;flex-direction:column}
+.ctx-t{font-size:12px;font-weight:600;padding:6px 8px 4px;max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctx-t small{display:block;font-weight:400;color:var(--muted);font-size:11px}
+.ctx button{display:flex;align-items:center;gap:8px;border:0;background:transparent;color:var(--ink);font:500 12.5px 'Geist',sans-serif;padding:7px 8px;border-radius:8px;cursor:pointer;text-align:left}
+.ctx button:hover{background:var(--primary-soft);color:var(--primary)}
+.ctx button:disabled{opacity:.35;cursor:default;background:transparent;color:var(--ink)}
+.ctx button svg{width:14px;height:14px}
+.ctx-s{height:1px;background:var(--line);margin:3px 4px}
 #root{display:block} #app{height:100%}
 </style>
 <script src="xlsx.mini.min.js"></script>
@@ -369,6 +378,16 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
   const dfTxt = d => { const t = new Date(DF0 + (d - 1) * 864e5); return String(t.getUTCDate()).padStart(2, '0') + '/' + String(t.getUTCMonth() + 1).padStart(2, '0') + '/' + t.getUTCFullYear(); };
   const semPesq = i => D.orig[i] === 1 || !(D.vmk[i] > 0);
 
+  /* Arredonda o alvo (mercado − 0,01) sem passar do mercado: se o alvo não é um final válido, vale o próprio
+     preço do mercado (IP 100%) quando ele é válido; senão, o maior final válido abaixo do alvo. Nunca fica abaixo do mínimo. */
+  function arredMercado(alvo, ref, mn){
+    const a = Math.round(alvo * 100), r = Math.round(ref * 100), ok = c => ciaCands(c).includes(c);
+    let v;
+    if (ok(a)) v = a; else if (ok(r)) v = r;
+    else { const l = ciaCands(a).filter(x => x <= a); v = l.length ? Math.max(...l) : Math.round(roundVarejo(alvo) * 100); }
+    if (mn && v / 100 < mn - 1e-9) { const m = Math.round(mn * 100), l = ciaCands(m).filter(x => x >= m); v = l.length ? Math.min(...l) : Math.round(roundVarejo(mn) * 100); }
+    return v / 100;
+  }
   function calc(i){
     const c = D.cu[i], vmk = D.vmk[i], amk = D.amk[i] || 0, merch = D.merch[i] || 0;
     const mobj = D.pobj[i] ?? MOBJ, mmax = (D.pmax[i] > 0 ? D.pmax[i] : MMAX), ps = PISO[D.ui[i]] || { cesta: -15, sem: 0 };
@@ -377,7 +396,8 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
     let sug, rg, teto = false;
     if (semPesq(i)) { sug = obj; rg = 4; } else if (vmk > mx) { sug = mx; rg = 2; teto = true; } else { sug = vmk - CENT; rg = 0; }
     const pf = Math.max(Math.min(sug, mx), mn); if (rg !== 4 && sug < mn) rg = 3;
-    let nv = roundVarejo(pf); if (OV.has(i)) { nv = OV.get(i); rg = OPT.has(i) ? 6 : 5; }
+    let nv = rg === 0 && pf === sug ? arredMercado(pf, vmk, mn) : roundVarejo(pf);
+    if (OV.has(i)) { nv = OV.get(i); rg = OPT.has(i) ? 6 : 5; }
     let sa; if (rg === 4 || (OV.has(i) && semPesq(i))) sa = obj * red; else if (teto) sa = mx * red; else sa = amk > 0 ? amk - CENT : nv * red;
     const pa = Math.max(Math.min(sa, mx * red), mn);
     let na = roundAtacado(pa, nv);
@@ -435,7 +455,8 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
       else L.push('2. Sem moda confiável para comparar.');
       if (o.dec) L.push(`3. Decisão: ${o.dec}${o.al != null ? ' = ' + R$(o.al) : ''}.`);
       if (o.nota) L.push(`4. Limite: o alvo passou do ${o.nota === 'teto' ? 'máximo' : 'mínimo'} e ficou em ${R$(o.nota === 'teto' ? MX[i] : MN[i])}.`);
-      if (o.dde) L.push(`DDE de ${nf0.format(o.dde)} dias, acima da meta de ${DDE_META}: arredondado para baixo para o IP não passar de 100%.`);
+      if (o.dde) L.push(`DDE de ${nf0.format(o.dde)} dias, acima da meta de ${DDE_META}: prioridade para a menor referência de mercado, com IP no máximo 100%.`);
+      if (o.al != null && Math.abs(NV[i] - o.al) > 0.004 && !o.nota) L.push(`Arredondamento: ${R$(o.al)} não é um final válido na regra ${REGRA_RND[RND].nome.toLowerCase()}; ficou em ${R$(NV[i])}, sem passar do preço de referência.`);
       L.push(`Atacado: ${o.vm ? 'mantém a relação atacado/varejo do mercado' : 'base de redução de ' + nf1.format(D.merch[i] || 0) + '%'}, com no máximo 15% de desconto.`); }
     L.push(resultado(i));
     return L.join('\n');
@@ -593,6 +614,29 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
     m.querySelector('[data-r="1"]').onclick = () => fim(true); m.querySelector('[data-r="0"]').onclick = () => fim(false);
     setTimeout(() => m.querySelector('[data-r="0"]').focus(), 120); }); }
   on(body, 'keydown', e => { if (e.key === 'Enter' && e.target.dataset.e) { e.preventDefault(); e.target.blur(); } });
+  document.querySelectorAll('.ctx').forEach(x => x.remove());
+  const cm = document.createElement('div'); cm.className = 'ctx glass'; document.body.appendChild(cm);
+  const fechaCtx = () => cm.classList.remove('on');
+  on(body, 'contextmenu', e => { const r = e.target.closest('.row'); if (!r) return; e.preventDefault(); const i = +r.dataset.i; selecionar(i);
+    const it = (acao, icone, txt, des) => `<button data-ctx="${acao}" ${des ? 'disabled' : ''}>${ic(icone)}${txt}</button>`;
+    cm.innerHTML = `<div class="ctx-t">${esc(curto(D.produtos[D.pi[i]]))}<small>${esc(curto(D.filiais[D.fi[i]]))}</small></div>`
+      + it('aceitar', 'check', 'Aceitar preço', !MUD[i] || aceito(i)) + it('anular', 'x', 'Anular aceite', !aceito(i))
+      + '<span class="ctx-s"></span>' + it('objetiva', 'obj', `Aplicar objetiva (R$ ${nf2.format(roundVarejo(OB[i]))})`) + it('optimus', 'robo', 'Aplicar Optimus', semPesq(i))
+      + '<span class="ctx-s"></span>' + it('motor', 'undo', 'Sugestão do motor', !OV.has(i) && !OVA.has(i) && !ACE.has(i));
+    cm.classList.add('on'); const w = cm.offsetWidth, h = cm.offsetHeight;
+    cm.style.left = Math.min(e.clientX, innerWidth - w - 8) + 'px'; cm.style.top = Math.min(e.clientY, innerHeight - h - 8) + 'px'; cm.dataset.i = i; });
+  on(cm, 'click', async e => { const b = e.target.closest('[data-ctx]'); if (!b || b.disabled) return; const i = +cm.dataset.i, a = b.dataset.ctx; fechaCtx();
+    if (a === 'aceitar') { ACE.set(i, true); }
+    if (a === 'anular') { ACE.set(i, false); }
+    if (a === 'objetiva') { const f = roundVarejo(OB[i]);
+      if (f > MX[i] + 0.004 && !(await confirmar('Objetiva acima da máxima', `R$ ${nf2.format(f)} passa do máximo de R$ ${nf2.format(MX[i])}. Deseja seguir?`))) return;
+      OV.set(i, f); OVA.delete(i); OPT.delete(i); calc(i); }
+    if (a === 'optimus') { optimusItem(i); return; }
+    if (a === 'motor') { OV.delete(i); OVA.delete(i); OPT.delete(i); ACE.delete(i); calc(i); }
+    salvar(); atualizar(false); resumo(i); historico(i); });
+  on(document, 'click', e => { if (!e.target.closest('.ctx')) fechaCtx(); });
+  on(document, 'keydown', e => { if (e.key === 'Escape') fechaCtx(); });
+  on(sc, 'scroll', fechaCtx);
   on(body, 'click', e => { const ok = e.target.closest('[data-ok]'); if (ok) { alternarAceite(+ok.dataset.ok); return; }
     if (e.target.tagName === 'INPUT') return; const r = e.target.closest('.row'); if (!r) return; selecionar(+r.dataset.i); sc.focus({ preventScroll: true }); });
   function proximoPendente(){ const k0 = VIS.indexOf(SEL);
@@ -788,8 +832,10 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
       <button class="tx" id="pisoPad">${ic('undo')}Voltar ao padrão</button>`; }
   on($('pPiso'), 'change', e => { const t = e.target; if (!t.dataset.uf) return; const v = parseFloat(String(t.value).replace(',', '.')); if (!isFinite(v)) return; PISO[+t.dataset.uf][t.dataset.c] = v; calcTudo(); salvar(); atualizar(); if (SEL >= 0) resumo(SEL); });
   on($('pPiso'), 'click', e => { if (!e.target.closest('#pisoPad')) return; D.ufs.forEach((_, u) => PISO[u] = { cesta: -15, sem: 0 }); montaPiso(); calcTudo(); salvar(); atualizar(); });
-  const iso = d => d.toISOString().slice(0, 10), br = s => s.split('-').reverse().join('/');
-  function montaExp(){ const h = new Date(), f = new Date(); f.setDate(f.getDate() + 3);
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`, br = s => s.split('-').reverse().join('/');
+  function datasImportacao(){ const ini = new Date(), fim = new Date(); ini.setDate(ini.getDate() + 1); fim.setDate(fim.getDate() + 4);
+    if (fim.getDay() === 6) fim.setDate(fim.getDate() + 2); else if (fim.getDay() === 0) fim.setDate(fim.getDate() + 1); return [ini, fim]; }
+  function montaExp(){ const [h, f] = datasImportacao();
     $('pExp').innerHTML = `<h4>Importação de preços</h4><p>Layout PRICE do Preço Bot, tipo de oferta 21. Vão só os preços aceitos: varejo (tipo 1) e atacado (tipo 2).</p>
       <div class="opt"><label class="on"><input type="radio" name="op" value="1" checked><b>Aplicar preço</b></label><label><input type="radio" name="op" value="2"><b>Cancelar preço</b></label></div>
       <div class="grid2"><div><span>Data início</span><input type="date" id="eIni" value="${iso(h)}"></div><div><span>Data fim</span><input type="date" id="eFim" value="${iso(f)}"></div>
@@ -810,7 +856,7 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
   $('bCols').onclick = e => { montaColunas(); abrir('pCols', e.currentTarget); };
   $('bRnd').onclick = e => { montaRnd(); abrir('pRnd', e.currentTarget); };
   $('bPiso').onclick = e => { montaPiso(); abrir('pPiso', e.currentTarget); };
-  $('bExp').onclick = e => { if (!$('pExp').innerHTML) montaExp(); abrir('pExp', e.currentTarget); };
+  $('bExp').onclick = e => { montaExp(); abrir('pExp', e.currentTarget); };
 
   /* ===================== OPTIMUS: análise inteligente da pesquisa ===================== */
   const TIPO_OK = new Set([0, 1, 4]);                        // Regular, Promoção e Ponto extra (fora: Encarte e Mídia)
@@ -839,19 +885,19 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
     const fonte = propria != null ? `moda do próprio ${nomeV}` : modas.length ? 'menor moda entre os concorrentes da filial' : 'moda do relatório';
     const comum = { venc, nomeV, tpV, diaV, fonte, menorModa, filial: daFilial };
     if (!(moda > 0)) return { ...comum, alvo: venc - CENT, motivo: 'sem moda para comparar', moda: null, delta: null, lim: null, tipo: 'ok', decisao: 'segue o menor preço − 0,01' };
-    const delta = venc / moda - 1, abaixoCusto = venc < c, lim = abaixoCusto ? 0.15 : 0.20;
+    const delta = venc / moda - 1, abaixoCusto = venc < c, lim = abaixoCusto ? 0.15 : 0.25;
     if (Math.abs(delta) <= lim) return { ...comum, alvo: venc - CENT, motivo: abaixoCusto ? 'abaixo do custo, consistente' : 'pesquisa consistente', moda, delta, lim, abaixoCusto, tipo: abaixoCusto ? 'custo' : 'ok', decisao: 'dentro do limite: segue o menor preço − 0,01' };
-    const base = abaixoCusto ? menorModa : moda;
+    const base = menorModa != null ? Math.min(moda, menorModa) : moda;      // fora do limite: a menor moda confiável (própria ou de outro concorrente da filial)
     return { ...comum, alvo: base - CENT, motivo: 'possível erro de pesquisa', moda, delta, lim, abaixoCusto, base, tipo: 'erro',
-      decisao: `fora do limite: usa ${abaixoCusto ? 'a menor moda da filial' : 'a moda'} (R$ ${nf2.format(base)}) − 0,01` };
+      decisao: base < moda - 0.004 ? `fora do limite: usa a menor moda entre os concorrentes da filial (R$ ${nf2.format(base)}, abaixo da moda do vencedor) − 0,01` : `fora do limite: usa a moda (R$ ${nf2.format(base)}) − 0,01` };
   }
   function precoOptimus(i, a){
     const dde = D.dde[i] != null && D.dde[i] > DDE_META;
     let alvo = a.alvo, nota = '';
     if (alvo > MX[i]) { alvo = MX[i]; nota = 'teto'; }
     if (alvo < MN[i]) { alvo = MN[i]; nota = 'piso'; }
-    let nv = dde ? roundAbaixo(alvo) : roundVarejo(alvo);       // DDE acima da meta: arredonda para baixo para o IP não passar de 100%
-    if (nv < MN[i] - 0.004 && nota !== 'piso') nv = roundVarejo(MN[i]);
+    // nunca passa da referência de mercado: alvo válido, ou o próprio preço da referência (IP 100%), ou o final válido logo abaixo
+    let nv = nota === 'teto' ? roundAbaixo(alvo) : nota === 'piso' ? arredMercado(alvo, alvo, MN[i]) : arredMercado(alvo, a.alvo + CENT, MN[i]);
     const red = 1 - (D.merch[i] || 0) / 100;
     const viaMerc = D.amk[i] > 0 && D.vmk[i] > 0;
     let sa = viaMerc ? nv * Math.min(1, D.amk[i] / D.vmk[i]) : nv * red;
@@ -860,6 +906,11 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
     return { nv, na, motivo: a.motivo, dde, nota, viaMerc, alvoBruto: a.alvo };
   }
   let PREVIA = null;
+  function gravaOptimus(x){ OV.set(x.i, x.nv); OVA.set(x.i, x.na);
+    OPT.set(x.i, { m: x.motivo, t: x.tipo, v: x.venc, n: x.nomeV, tp: x.tpV, dia: x.diaV, mo: x.moda, f: x.fonte, d: x.delta, lim: x.lim, ac: !!x.abaixoCusto,
+      dec: x.decisao, al: x.alvoBruto, nota: x.nota, dde: x.dde ? D.dde[x.i] : null, vm: x.viaMerc, fil: x.filial }); calc(x.i); }
+  function optimusItem(i){ const a = analisar(i); if (!a) { toast('Item sem pesquisa direta: o Optimus não se aplica'); return; }
+    gravaOptimus({ i, ...a, ...precoOptimus(i, a) }); salvar(); atualizar(false); if (SEL === i) { resumo(i); historico(i); } toast(`Optimus: ${a.motivo}, novo varejo R$ ${nf2.format(NV[i])}`); }
   function rodarOptimus(){
     const b = $('bOpt'); b.classList.add('rodando');
     setTimeout(() => {
@@ -874,7 +925,7 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
       let imp0 = 0, imp1 = 0; mud.forEach(x => { imp0 += (NV[x.i] - D.vm[x.i]) * D.un[x.i]; imp1 += (x.nv - D.vm[x.i]) * D.un[x.i]; });
       PREVIA = itens; b.classList.remove('rodando');
       $('pOpt').innerHTML = `<h4>${ic('robo', '#7A3FD1')} Optimus</h4>
-        <div class="regras-opt">Para cada item, o Optimus pega o menor preço entre as coletas mais recentes dos concorrentes da filial (regular, promoção e ponto extra) e compara com a moda do próprio concorrente, ou com a menor moda da filial quando faltam dados. Acima do custo, tolera ±20%; abaixo do custo, ±15%. Dentro da faixa, segue o menor preço − R$ 0,01; fora, usa a moda − R$ 0,01. Respeita mínima, máxima, piso da cesta, arredondamento e o limite de 15% no atacado. Com DDE acima de ${DDE_META} dias, arredonda para baixo para manter o IP perto de 100%. Itens ajustados à mão não são alterados.</div>
+        <div class="regras-opt">Para cada item, o Optimus pega o menor preço entre as coletas mais recentes dos concorrentes da filial (regular, promoção e ponto extra) e compara com a moda do próprio concorrente, ou com a menor moda da filial quando faltam dados. Acima do custo, tolera ±25%; abaixo do custo, ±15%. Dentro da faixa, segue o menor preço − R$ 0,01; fora, usa a menor moda confiável (do vencedor ou de outro concorrente da filial) − R$ 0,01. O arredondamento nunca passa do preço de referência: quando o centavo abaixo não é válido, fica igual ao mercado. Respeita mínima, máxima, piso da cesta, arredondamento e o limite de 15% no atacado. Com DDE acima de ${DDE_META} dias, mantém o IP no máximo em 100%. Itens ajustados à mão não são alterados.</div>
         <div class="oresumo"><div><span>Analisados</span><b>${nf0.format(itens.length)}</b></div><div><span>Mudam de preço</span><b>${nf0.format(mud.length)}</b></div>
           <div><span>Possíveis erros de pesquisa</span><b class="neg">${nf0.format(erros)}</b></div><div><span>DDE acima de ${DDE_META}</span><b>${nf0.format(ddeN)}</b></div>
           <div><span>Abaixo do custo (consistente)</span><b>${nf0.format(custo)}</b></div><div><span>Ajustados à mão (mantidos)</span><b>${nf0.format(manuais)}</b></div>
@@ -889,9 +940,7 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
   }
   on($('pOpt'), 'click', e => {
     if (e.target.closest('#optAplica') && PREVIA) { let n = 0;
-      for (const x of PREVIA) { if (Math.abs(x.nv - NV[x.i]) < 0.005 && Math.abs(x.na - NA[x.i]) < 0.005) continue; OV.set(x.i, x.nv); OVA.set(x.i, x.na);
-        OPT.set(x.i, { m: x.motivo, t: x.tipo, v: x.venc, n: x.nomeV, tp: x.tpV, dia: x.diaV, mo: x.moda, f: x.fonte, d: x.delta, lim: x.lim, ac: !!x.abaixoCusto,
-          dec: x.decisao, al: x.alvoBruto, nota: x.nota, dde: x.dde ? D.dde[x.i] : null, vm: x.viaMerc, fil: x.filial }); calc(x.i); n++; }
+      for (const x of PREVIA) { if (Math.abs(x.nv - NV[x.i]) < 0.005 && Math.abs(x.na - NA[x.i]) < 0.005) continue; gravaOptimus(x); n++; }
       salvar(); atualizar(); if (SEL >= 0) { resumo(SEL); historico(SEL); } $('pOpt').classList.remove('on'); toast(`Optimus ajustou ${nf0.format(n)} preços`); }
     if (e.target.closest('#optDesfaz')) { let n = 0; for (const i of VIS) if (OPT.has(i)) { OPT.delete(i); OV.delete(i); OVA.delete(i); calc(i); n++; }
       salvar(); atualizar(); if (SEL >= 0) resumo(SEL); $('pOpt').classList.remove('on'); toast(`${nf0.format(n)} ajustes do Optimus desfeitos`); }
@@ -901,7 +950,7 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
   /* ===================== proporcionais (filhos do PAI) ===================== */
   const FILHOS = new Map(); for (const [pai, filho, prop] of (D.props || [])) { const k = String(pai); if (!FILHOS.has(k)) FILHOS.set(k, []); FILHOS.get(k).push([filho, prop]); }
   function montaProp(){
-    const h = new Date(), f = new Date(); f.setDate(f.getDate() + 3); let pais = 0, filhos = 0, estranhos = 0;
+    const [h, f] = datasImportacao(); let pais = 0, filhos = 0, estranhos = 0;
     for (let i = 0; i < N; i++) { const l = FILHOS.get(String(D.produto_cod[D.pi[i]])); if (!l || !aceito(i)) continue; pais++; filhos += l.length; estranhos += l.filter(x => x[1] > 1000).length; }
     $('pProp').innerHTML = `<h4>${ic('prop', 'var(--primary)')} Importação de proporcionais</h4>
       <p>Para cada preço PAI aceito, os produtos filhos recebem o preço proporcional (ex.: pacote de 2,5 kg = 250%), arredondado pela regra da mesa. Proporção 100 fica de fora.</p>
