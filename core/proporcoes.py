@@ -50,8 +50,12 @@ def ler_planilha(arquivo) -> pd.DataFrame:
     return df.drop_duplicates("id_produto", keep="last").reset_index(drop=True)
 
 
-def salvar(df: pd.DataFrame) -> dict:
-    """Atualiza id_pai e proporcao na dim_produto (só produtos que já existem nela)."""
+def salvar(df: pd.DataFrame, progresso=None) -> dict:
+    """Cruza com a dim_produto e grava só id_pai e proporcao nos produtos que já existem nela.
+
+    Nenhuma outra coluna da dim_produto é tocada e nenhum produto novo é criado. Usa a função
+    atualizar_proporcoes do Supabase (uma chamada por lote); sem ela, atualiza produto a produto.
+    """
     ids = df["id_produto"].tolist()
     existentes: set[int] = set()
     for i in range(0, len(ids), 300):
@@ -59,8 +63,20 @@ def salvar(df: pd.DataFrame) -> dict:
         existentes.update(int(r["id_produto"]) for r in (resp.data or []))
     validos = df[df["id_produto"].isin(existentes)]
     registros = [{"id_produto": int(r.id_produto), "id_pai": int(r.id_pai), "proporcao": float(r.proporcao)} for r in validos.itertuples()]
-    for i in range(0, len(registros), 500):
-        db.sb().table("dim_produto").upsert(registros[i:i + 500], on_conflict="id_produto").execute()
+    try:
+        for i in range(0, len(registros), 1000):
+            db.sb().rpc("atualizar_proporcoes", {"dados": registros[i:i + 1000]}).execute()
+            if progresso:
+                progresso(min(1.0, (i + 1000) / max(1, len(registros))))
+    except Exception:
+        # sem a função no banco: UPDATE produto a produto (mais lento, mesmo resultado)
+        from concurrent.futures import ThreadPoolExecutor
+        def um(r):
+            db.sb().table("dim_produto").update({"id_pai": r["id_pai"], "proporcao": r["proporcao"]}).eq("id_produto", r["id_produto"]).execute()
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            for n, _ in enumerate(ex.map(um, registros), 1):
+                if progresso and n % 50 == 0:
+                    progresso(n / len(registros))
     carregar.clear()
     return {"salvas": len(registros), "fora_da_dim": len(df) - len(registros)}
 
