@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style id="estilo-tema"></style>
+<style>
+@import url('__FONTE__');
+:root{__TOKENS__}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:transparent;color:var(--ink);font:13px 'Geist',-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+body.fs{background:var(--canvas)}
+svg.i{width:15px;height:15px;flex:none;vertical-align:-2px}
+#app{display:flex;flex-direction:column;gap:10px;height:100%;padding:2px}
+body.fs #app{padding:12px}
+.glass{background:var(--surface);border:1px solid var(--line);border-radius:16px;backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);box-shadow:var(--shadow)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;flex-wrap:wrap;position:relative;z-index:30}
+.top h1{margin:0;font-size:16px;font-weight:600;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.top small{color:var(--muted);font-size:11.5px;display:block;margin-top:2px}
+.acts{display:flex;gap:6px;align-items:center;position:relative}
+.acts .sep{width:1px;height:22px;background:var(--line);margin:0 4px}
+.ib{width:36px;height:36px;border-radius:11px;border:1px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer;display:grid;place-items:center;
+  transition:transform .15s,border-color .2s,color .2s,box-shadow .2s,background .2s}
+.ib svg{width:17px;height:17px}
+.ib:hover{transform:translateY(-1px);border-color:var(--primary);color:var(--primary);box-shadow:0 8px 20px -12px var(--primary)}
+.ib.pri{background:linear-gradient(180deg,var(--primary-hover),var(--primary));color:#fff;border-color:transparent}
+.ib.gr{background:var(--up-soft);color:var(--up);border-color:color-mix(in srgb,var(--up) 40%,transparent)}
+.ib.on{background:var(--primary-soft);color:var(--primary);border-color:color-mix(in srgb,var(--primary) 50%,transparent)}
+button.tx{font:550 12.5px 'Geist',sans-serif;height:32px;padding:0 12px;border-radius:9px;border:1px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+button.tx:hover{border-color:var(--primary);color:var(--primary)}
+button.tx.pri{background:linear-gradient(180deg,var(--primary-hover),var(--primary));color:#fff;border-color:transparent}
+button.tx.ok{background:var(--up);border-color:var(--up);color:#fff}
+#tip{position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:var(--canvas);font-size:11.5px;padding:5px 9px;border-radius:7px;opacity:0;transform:translateY(4px);transition:opacity .12s,transform .12s;white-space:nowrap}
+#tip.on{opacity:1;transform:none}
+.pop{position:absolute;top:44px;right:0;z-index:20;width:420px;padding:14px;display:none;background:var(--surface-solid)!important;box-shadow:0 24px 48px -20px rgba(15,23,42,.45)}
+.pop.on{display:block;animation:pin .18s cubic-bezier(.2,.8,.2,1)}
+@keyframes pin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.pop h4{margin:0 0 4px;font-size:13px;font-weight:600}
+.pop p{margin:0 0 10px;font-size:11.5px;color:var(--muted);line-height:1.45}
+.pop table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px}
+.pop th{text-align:left;color:var(--faint);font-weight:500;padding:5px 6px;border-bottom:1px solid var(--line)}
+.pop td{padding:6px;border-bottom:1px solid var(--line)}
+.pop input[type=number],.pop input[type=date],.pop select{width:100%;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--ink);padding:0 8px;font:12.5px 'Geist Mono',monospace}
+.opt{display:flex;gap:6px;margin-bottom:10px}
+.opt label{flex:1;border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer;font-size:12px}
+.opt label.on{border-color:var(--primary);background:var(--primary-soft);color:var(--primary)}
+.opt input{display:none}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.grid2 span{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
+.kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+.k{padding:10px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--line);backdrop-filter:blur(16px);position:relative;overflow:hidden}
+.k::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent,var(--t,var(--faint)),transparent)}
+.k span{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);font-weight:500}
+.k span svg{color:var(--t)}
+.k b{display:block;font:500 19px 'Geist Mono',monospace;letter-spacing:-.03em;margin-top:3px;white-space:nowrap}
+.k i{font-style:normal;font-size:11px;color:var(--faint);font-family:'Geist Mono',monospace}
+.pos{color:var(--up)}.neg{color:var(--down)!important}
+
+
+h3{margin:0 0 8px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden}
+h3 small{color:var(--faint);font-weight:400;overflow:hidden;text-overflow:ellipsis}
+
+.hseg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex:none}
+.hseg button{border:0;background:transparent;color:var(--muted);font:550 11px 'Geist',sans-serif;padding:3px 10px;cursor:pointer}
+.hseg button.on{background:var(--primary);color:#fff}
+.hchips{display:flex;gap:5px;overflow-x:auto;padding-bottom:4px;margin-bottom:2px;scrollbar-width:thin}
+.hchip{flex:none;border:1px solid var(--line);background:var(--field);border-radius:9px;padding:3px 9px;font-size:11px;cursor:pointer;color:var(--ink);text-align:left;line-height:1.2}
+.hchip small{display:block;color:var(--faint);font-size:10px}
+.hchip.on{border-color:var(--primary);background:var(--primary-soft);color:var(--primary)}
+.leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:var(--muted);margin-top:4px}
+.leg i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:5px;vertical-align:2px}
+.lista{display:flex;flex-direction:column;gap:3px}
+.rg{display:grid;grid-template-columns:18px minmax(0,1fr) 70px 54px;gap:8px;align-items:center;font-size:12px;cursor:pointer;padding:4px 5px;border-radius:7px}
+.rg:hover,.rg.on{background:var(--primary-soft)}
+.rg span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rg .bar{height:6px;border-radius:5px;background:var(--raised);overflow:hidden}
+.rg .bar i{display:block;height:100%;border-radius:5px;transition:width .3s}
+.rg b{font-family:'Geist Mono',monospace;font-weight:500;text-align:right}
+
+.gridbox{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.tools{display:flex;gap:7px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tools input[type=search]{height:32px;border-radius:9px;border:1px solid var(--line);background:var(--field);color:var(--ink);padding:0 10px;font:12.5px 'Geist',sans-serif;width:260px}
+.chip{height:30px;padding:0 11px;border-radius:999px;font:550 12px 'Geist',sans-serif;border:1px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.chip:hover{border-color:var(--primary);color:var(--primary)}
+.chip.on{background:var(--primary-soft);color:var(--primary);border-color:color-mix(in srgb,var(--primary) 50%,transparent)}
+.tools .cnt{margin-left:auto;color:var(--muted);font-size:12px}
+#scroll{flex:1;overflow:auto;position:relative;outline:none}
+.row,.hdr{display:grid;grid-template-columns:var(--cols);width:max-content;min-width:100%}
+.hdr{position:sticky;top:0;z-index:4;background:var(--surface-solid);border-bottom:1px solid var(--line);min-height:44px}
+.hdr>div{position:relative;padding:6px 12px 6px 8px;font-size:11.5px;line-height:1.25;color:var(--muted);font-weight:600;cursor:pointer;user-select:none;
+  display:flex;align-items:center;gap:4px;white-space:normal;background:var(--surface-solid)}
+.hdr>div.r{justify-content:flex-end;text-align:right}
+.hdr>div:hover{color:var(--primary)}
+.hdr>div.edc{background:color-mix(in srgb,var(--primary) 10%,var(--surface-solid));color:var(--primary)}
+.hdr .rz{position:absolute;right:0;top:8px;bottom:8px;width:6px;cursor:col-resize;border-right:2px solid transparent}
+.hdr .rz:hover,.hdr .rz.on{border-right-color:var(--primary)}
+.hdr .ord{font-size:9px;color:var(--primary)}
+.fx{position:sticky;z-index:2}
+.hdr>div.fx{position:sticky;z-index:5}
+.fxl{box-shadow:6px 0 8px -6px rgba(15,23,42,.18)}
+#body{position:relative}
+.row{position:absolute;left:0;height:34px;font-size:12.5px;cursor:pointer;align-items:stretch}
+.row>div{padding:0 8px;white-space:nowrap;display:flex;align-items:center;border-bottom:1px solid var(--line);background:var(--surface-solid)}
+.row:hover>div{background:color-mix(in srgb,var(--primary) 4%,var(--surface-solid))}
+.row.sel>div{background:color-mix(in srgb,var(--primary) 12%,var(--surface-solid))}
+.row>div.r{justify-content:flex-end}
+.row>div.edc{background:color-mix(in srgb,var(--primary) 7%,var(--surface-solid));padding:0 4px}
+.row>div.ed{padding:0 4px}
+.row input[type=text]{width:100%;height:26px;border-radius:7px;border:1px solid color-mix(in srgb,var(--primary) 30%,var(--line));background:var(--field);color:var(--ink);text-align:right;padding:0 6px;font:600 12.5px 'Geist Mono',monospace}
+.edc input[type=text]{color:var(--primary)}
+.row input[type=text]:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+.row input.man{border-color:var(--amber)!important;background:var(--amber-soft)!important}
+.num{font-family:'Geist Mono',monospace;font-variant-numeric:tabular-nums}
+.ok-box{width:18px;height:18px;border-radius:6px;border:1.5px solid var(--line-strong);display:grid;place-items:center;cursor:pointer;transition:all .15s;color:transparent}
+.ok-box.on{background:var(--up);border-color:var(--up);color:#fff}
+.ok-box.na{opacity:.25;cursor:default}
+.cv{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;font:600 11px 'Geist Mono',monospace;color:#fff}
+.cvA{background:var(--up)}.cvB{background:var(--primary)}.cvC{background:var(--faint)}
+.tag{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:11px;background:var(--raised);white-space:nowrap}
+.side{padding:14px;overflow:auto}
+.side .vazio{color:var(--muted);font-size:12.5px;line-height:1.5}
+.side h2{margin:0;font-size:14px;font-weight:600;line-height:1.3}
+.side .sub{color:var(--muted);font-size:12px;margin:4px 0 10px;display:flex;align-items:center;gap:5px}
+.st{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.lad{width:100%;height:180px;display:block}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}
+.mc{background:var(--raised);border-radius:10px;padding:8px 10px}
+.mc span{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.mc b{display:block;font:500 15px 'Geist Mono',monospace;margin-top:2px}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:5px 10px;font-size:12px;margin:8px 0}
+.facts span{color:var(--muted);display:flex;align-items:center;gap:5px}
+.facts b{font-family:'Geist Mono',monospace;font-weight:500;text-align:right;word-break:break-word}
+.why{font-size:12px;line-height:1.5;color:var(--muted);background:var(--raised);border-radius:10px;padding:10px;margin:8px 0 10px}
+.alts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.alts button{justify-content:center}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--surface-solid);border:1px solid var(--line);border-radius:10px;padding:9px 14px;font-size:12.5px;transition:all .25s;pointer-events:none;box-shadow:0 18px 40px -20px rgba(0,0,0,.5);z-index:60}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.kbd{font:11px 'Geist Mono',monospace;border:1px solid var(--line);border-radius:5px;padding:0 4px;color:var(--faint)}
+
+@media (max-width:1100px){.kpis{grid-template-columns:repeat(4,1fr)}.main{grid-template-columns:1fr}.side{display:none}.viz{grid-template-columns:1fr}}
+/* ---- layout v3 ---- */
+.linha2{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(320px,1fr);gap:10px}
+.histc{padding:12px 14px;min-width:0;position:relative}
+.resumo{padding:12px 14px;height:430px;overflow:auto}
+#hist svg{width:100%;height:280px;display:block}
+.hbox{position:relative}
+.htip{position:absolute;z-index:8;pointer-events:none;background:var(--surface-solid);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:11.5px;min-width:230px;box-shadow:0 18px 40px -18px rgba(15,23,42,.45);display:none}
+.htip b{font-family:'Geist Mono',monospace;font-weight:600}
+.htip .l{display:grid;grid-template-columns:1fr auto auto;gap:3px 10px;margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}
+.htip .l em{font-style:normal;color:var(--faint);font-size:10.5px}
+.htip .t{font-weight:600;margin-bottom:4px}
+.htip .r{display:flex;align-items:center;gap:6px}
+.htip .r i{width:10px;height:3px;border-radius:2px;display:inline-block}
+.resumo h2{margin:0;font-size:14px;font-weight:600;line-height:1.3}
+.resumo .sub{color:var(--muted);font-size:12px;margin:3px 0 8px;display:flex;align-items:center;gap:5px}
+.resumo .lad{height:150px}
+.badge{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;border-radius:8px;background:var(--down);color:#fff;font:600 10px 'Geist Mono',monospace;display:grid;place-items:center;padding:0 3px}
+.ib{position:relative}
+.pop.larga{width:760px}
+.cm{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.cm h5{margin:0 0 2px;font-size:12.5px;font-weight:600}
+.cm small{color:var(--muted);font-size:11px;display:block;margin-bottom:6px}
+.cm .lst{max-height:380px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px}
+.cm .it{display:grid;grid-template-columns:16px 1fr auto auto auto;gap:6px;align-items:center;padding:5px 6px;border-radius:8px;background:var(--raised);margin-bottom:4px;font-size:12px;cursor:grab}
+.cm .it.drag{opacity:.4}
+.cm .it.sobre{outline:2px dashed var(--primary)}
+.cm .it em{font-style:normal;color:var(--faint);font-size:10.5px}
+.cm .it button{width:24px;height:24px;border-radius:6px;border:1px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer;display:grid;place-items:center;padding:0}
+.cm .it button:disabled{opacity:.3;cursor:default}
+.cm .it button svg{width:13px;height:13px}
+.cm .grp{font-size:11px;font-weight:600;color:var(--muted);margin:8px 2px 3px}
+.cm label{display:flex;align-items:center;gap:7px;font-size:12px;padding:3px 4px;border-radius:6px;cursor:pointer}
+.cm label:hover{background:var(--raised)}
+.cm input[type=search]{width:100%;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--ink);padding:0 8px;font:12.5px 'Geist',sans-serif;margin-bottom:6px}
+.cm-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.regp .lista{margin-bottom:10px}
+body.foco .kpis,body.foco .linha2{display:none}
+@media (max-width:1100px){.linha2{grid-template-columns:1fr}}
+
+#root{display:block} #app{height:100%}
+</style>
+<script src="xlsx.mini.min.js"></script>
+</head><body><div id="root"></div>
+<script>
+const MARCACAO = "<div id=\"app\">\n  <div class=\"top glass\">\n    <div><h1 id=\"titulo\"></h1><small id=\"escopo\"></small></div>\n    <div class=\"acts\">\n      <button class=\"ib gr\" id=\"bAll\" data-tip=\"Aceitar todos os itens filtrados\" data-ic=\"check\"></button>\n      <button class=\"ib\" id=\"bNone\" data-tip=\"Retirar aceite dos itens filtrados\" data-ic=\"x\"></button>\n      <button class=\"ib\" id=\"bReset\" data-tip=\"Voltar pre\u00e7os e aceites para a sugest\u00e3o do motor\" data-ic=\"undo\"></button>\n      <button class=\"ib\" id=\"bRegras\" data-tip=\"Regra de neg\u00f3cio e regra de altera\u00e7\u00e3o\" data-ic=\"regra\"></button>\n      <span class=\"sep\"></span>\n      <button class=\"ib\" id=\"bCols\" data-tip=\"Colunas e vis\u00e3o salva no seu perfil\" data-ic=\"cols\"></button>\n      <button class=\"ib\" id=\"bRnd\" data-tip=\"Regra de arredondamento\" data-ic=\"rnd\"></button>\n      <button class=\"ib\" id=\"bPiso\" data-tip=\"Piso de margem por estado\" data-ic=\"piso\"></button>\n      <span class=\"sep\"></span>\n      <button class=\"ib pri\" id=\"bExp\" data-tip=\"Importa\u00e7\u00e3o: baixar Excel ou copiar (layout PRICE do Pre\u00e7o Bot)\" data-ic=\"up\"></button>\n      <button class=\"ib\" id=\"bFoco\" data-tip=\"Modo foco: s\u00f3 a grade, em tela cheia\" data-ic=\"foco\"></button>\n      <div class=\"pop glass\" id=\"pRegras\"></div>\n      <div class=\"pop glass larga\" id=\"pCols\"></div>\n      <div class=\"pop glass\" id=\"pRnd\"></div>\n      <div class=\"pop glass\" id=\"pPiso\"></div>\n      <div class=\"pop glass\" id=\"pExp\"></div>\n    </div>\n  </div>\n  <div class=\"kpis\" id=\"kpis\"></div>\n  <div class=\"linha2\">\n    <div class=\"glass histc\"><h3 data-ic2=\"hist\" style=\"justify-content:space-between\"><span style=\"display:flex;align-items:center;gap:6px;min-width:0\">Hist\u00f3rico de pre\u00e7o do mercado <small id=\"histSub\"></small></span>\n      <span class=\"hseg\" id=\"hSeg\"><button data-hm=\"v\" class=\"on\">Varejo</button><button data-hm=\"a\">Atacado</button></span></h3>\n      <div class=\"hchips\" id=\"hChips\"></div><div id=\"hist\"></div></div>\n    <div class=\"glass resumo\" id=\"resumo\"></div>\n  </div>\n  <div class=\"gridbox glass\" style=\"flex:1;min-height:0\">\n    <div class=\"tools\">\n      <input type=\"search\" id=\"q\" placeholder=\"Buscar produto, filial ou concorrente\">\n      <button class=\"chip\" data-rg=\"3\" data-ic=\"piso\">Trava m\u00ednima</button>\n      <button class=\"chip\" data-rg=\"2\" data-ic=\"teto\">Trava m\u00e1xima</button>\n      <button class=\"chip\" data-rg=\"4\" data-ic=\"obj\">Trava objetiva</button>\n      <span class=\"cnt\" id=\"cnt\"></span>\n    </div>\n    <div id=\"scroll\" tabindex=\"0\"><div class=\"hdr\" id=\"hdr\"></div><div id=\"body\"></div></div>\n  </div>\n</div>\n<div id=\"tip\"></div><div class=\"toast\" id=\"toast\"></div>\n";
+/* ===================== protocolo de componente do Streamlit (sem biblioteca) ===================== */
+const ST = {
+  send(type, extra){ window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type }, extra || {}), '*'); },
+  pronto(){ this.send('streamlit:componentReady', { apiVersion: 1 }); },
+  altura(h){ this.send('streamlit:setFrameHeight', { height: h }); },
+  valor(v){ this.send('streamlit:setComponentValue', { value: v, dataType: 'json' }); },
+};
+let CHAVE_ATUAL = null, CTL = null;
+window.addEventListener('message', ev => { const d = ev.data; if (!d || d.type !== 'streamlit:render') return;
+  const a = d.args || {}; if (a.chave === CHAVE_ATUAL) return; CHAVE_ATUAL = a.chave; montar(a); });
+ST.pronto();
+
+async function montar(A){
+  if (CTL) CTL.abort(); CTL = new AbortController(); const SIG = { signal: CTL.signal };
+  const on = (alvo, ev, fn, op) => alvo.addEventListener(ev, fn, Object.assign({}, SIG, op || {}));
+  document.getElementById('estilo-tema').textContent = `@import url('${A.fonte}');:root{${A.tokens}}`;
+  const ALT = A.altura || 1500; document.getElementById('root').style.height = ALT + 'px'; ST.altura(ALT);
+  document.getElementById('root').innerHTML = MARCACAO;
+  const bin = atob(A.dados), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  const D = JSON.parse(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).text());
+  const N = D.cu.length, $ = id => document.getElementById(id), CHAVE = A.chave;
+
+  const P_ = { check: '<path d="m5 12 5 5 9-10"/>', x: '<path d="M6 6l12 12M18 6 6 18"/>', undo: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+  up: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>', copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+  foco: '<circle cx="12" cy="12" r="3"/><path d="M3 9V5a2 2 0 0 1 2-2h4M15 3h4a2 2 0 0 1 2 2v4M21 15v4a2 2 0 0 1-2 2h-4M9 21H5a2 2 0 0 1-2-2v-4"/>',
+  rnd: '<path d="M4 12h3l3-7 4 14 3-7h3"/>', regra: '<path d="M4 6h16M4 12h10M4 18h6"/>', hist: '<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-6"/>',
+  corte: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/>',
+  merc: '<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-6"/>', teto: '<path d="M5 4h14"/><path d="M12 20V8"/><path d="m7 13 5-5 5 5"/>',
+  piso: '<path d="M5 20h14"/><path d="M12 4v12"/><path d="m7 11 5 5 5-5"/>', obj: '<circle cx="12" cy="12" r="9"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>',
+  mao: '<path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8a8 8 0 0 0 16 0v-3a2 2 0 0 0-4 0"/>',
+  alerta: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>', cal: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  tagi: '<path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3a1.4 1.4 0 0 1 0 2l-6.7 6.7a1.4 1.4 0 0 1-2 0Z"/><circle cx="8" cy="8" r="1.4"/>', loja: '<path d="M3 9 5 4h14l2 5M4 9v11h16V9M9 20v-6h6v6"/>',
+  cash: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>', pct: '<path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',
+  tdUp: '<path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/>', tdDn: '<path d="m3 7 6 6 4-4 8 8"/><path d="M14 17h7v-7"/>', conc: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
+  mesa: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/>', moda: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>' };
+const ic = (n, cor) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="${cor || 'currentColor'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${P_[n]}</svg>`;
+document.querySelectorAll('[data-ic2]').forEach(h => h.insertAdjacentHTML('afterbegin', ic(h.dataset.ic2, 'var(--primary)')));
+
+  Object.assign(P_, { cols: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>', save: '<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h8V3M8 21v-7h8v7"/>',
+    seta_c: '<path d="m6 15 6-6 6 6"/>', seta_b: '<path d="m6 9 6 6 6-6"/>', grip: '<circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>' });
+  document.querySelectorAll('[data-ic]').forEach(b => { if (!b.querySelector('svg')) b.insertAdjacentHTML('afterbegin', ic(b.dataset.ic)); });
+  $('titulo').innerHTML = ic('mesa', 'var(--primary)') + 'Mesa de precificação';
+  const tip = $('tip');
+  on(document, 'mouseover', e => { const t = e.target.closest('[data-tip]'); if (!t) { tip.classList.remove('on'); return; }
+    tip.textContent = t.dataset.tip; const r = t.getBoundingClientRect(); tip.classList.add('on');
+    const w = tip.offsetWidth; tip.style.left = Math.max(6, Math.min(innerWidth - w - 6, r.left + r.width / 2 - w / 2)) + 'px'; tip.style.top = (r.bottom + 8) + 'px'; });
+
+  const MOBJ = 10, MMAX = 30, CENT = 0.01, CORTE = 1.5;
+  const REGRA_RND = {
+  '8': { nome: 'Com final 8', A: [5,8,9], B: [5,8,9], C: [0,5,8,9], D: [9] },
+  'sem8': { nome: 'Sem final 8', A: [5,9], B: [5,9], C: [0,5,9], D: [9] },
+};
+const faixaOf = c => c <= 1099 ? 'A' : c <= 1999 ? 'B' : c <= 4000 ? 'C' : 'D';
+function tabelaVC(reg){ const VC = {}; for (const f of ['A','B','C','D']) { VC[f] = []; const fins = reg[f];
+  for (let c = 0; c < 100; c++) { const p = Math.floor(c/10), u = c % 10; let o;
+    if (f === 'A') o = fins.includes(u); else if (f === 'B') o = p >= 1 && p <= 9 && fins.includes(u);
+    else o = p >= 3 && p <= 9 && (u === 0 ? [5,9].includes(p) && fins.includes(0) : fins.includes(u));
+    if (o) VC[f].push(c); } } return VC; }
+let RND = '8', VC = tabelaVC(REGRA_RND[RND]);
+function ciaCands(pc){ const f = faixaOf(pc), b = Math.floor(pc/100), l = []; for (const bb of [b-1,b,b+1]) for (const c of VC[f]) { const v = bb*100+c; if (v > 0) l.push(v); } return l; }
+function roundVarejo(p){ const pc = Math.round(p*100); const l = ciaCands(pc); if (!l.length) return pc/100; if (l.includes(pc)) return pc/100;
+  let best = l[0], bd = Infinity; for (const v of l) { const d = Math.abs(v-pc); if (d < bd) { bd = d; best = v; } } return best/100; }
+function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc = Math.round(pa*100), f = faixaOf(pc), b = Math.floor(pc/100); const l = [];
+  for (const bb of [b-1,b,b+1]) for (let c = 0; c < 100; c++) { const p = Math.floor(c/10), u = c % 10; if (u !== ud) continue;
+    const o = f === 'A' ? true : f === 'B' ? (p >= 1 && p <= 9) : (p >= 3 && p <= 9) && (u === 0 ? [5,9].includes(p) : true); if (o && bb*100+c > 0) l.push(bb*100+c); }
+  if (!l.length) return vf; let pr = l.includes(pc) ? pc : null; if (pr === null) { let bd = Infinity; for (const v of l) { const d = Math.abs(v-pc); if (d < bd) { bd = d; pr = v; } } }
+  return pr >= vc ? vf : pr/100; }
+
+
+  /* ---------- estado salvo (sessão) e visão do usuário (perfil) ---------- */
+  const PISO = {}; D.ufs.forEach((_, u) => PISO[u] = { cesta: -15, sem: 0 });
+  const OV = new Map(), OVA = new Map(), ACE = new Map();
+  try { const s = JSON.parse(sessionStorage.getItem('mesa:' + CHAVE) || 'null');
+    if (s) { Object.assign(PISO, s.PISO || {}); (s.ov || []).forEach(([i,v]) => OV.set(i,v)); (s.ova || []).forEach(([i,v]) => OVA.set(i,v)); (s.ace || []).forEach(([i,v]) => ACE.set(i,v)); } } catch (e) {}
+  const VIS0 = A.visao || {};
+  if (VIS0.rnd && REGRA_RND[VIS0.rnd]) { RND = VIS0.rnd; VC = tabelaVC(REGRA_RND[RND]); }
+  const salvar = () => { try { sessionStorage.setItem('mesa:' + CHAVE, JSON.stringify({ PISO, ov: [...OV], ova: [...OVA], ace: [...ACE] })); } catch (e) {} };
+
+  const REGRAS = [['Mercado − R$ 0,01', 'merc', 'var(--primary)'], null, ['Trava máxima (teto)', 'teto', 'var(--down)'],
+    ['Trava mínima (piso)', 'piso', 'var(--up)'], ['Trava objetiva (sem pesquisa)', 'obj', 'var(--amber)'], ['Ajuste manual', 'mao', '#B794FF']];
+  const ORDEM_R = [0, 2, 3, 4, 5];
+  const CORTES = [['Variação acima de ±1,5%', 'tdUp'], ['Encarte, app ou mídia vigente', 'tagi'], ['Promoção comercial abaixo do mercado', 'alerta']];
+  const NV = new Float64Array(N), NA = new Float64Array(N), RG = new Uint8Array(N), MN = new Float64Array(N), MX = new Float64Array(N), OB = new Float64Array(N);
+  const UMIN = new Float64Array(N), UMAX = new Float64Array(N), UOBJ = new Float64Array(N), CT = new Uint8Array(N), MUD = new Uint8Array(N);
+  const DF0 = Date.UTC(2020, 0, 1), hj = new Date(), HOJE = Math.floor((Date.UTC(hj.getFullYear(), hj.getMonth(), hj.getDate()) - DF0) / 864e5) + 1;
+  const dfTxt = d => { const t = new Date(DF0 + (d - 1) * 864e5); return String(t.getUTCDate()).padStart(2, '0') + '/' + String(t.getUTCMonth() + 1).padStart(2, '0') + '/' + t.getUTCFullYear(); };
+  const semPesq = i => D.orig[i] === 1 || !(D.vmk[i] > 0);
+
+  function calc(i){
+    const c = D.cu[i], vmk = D.vmk[i], amk = D.amk[i] || 0, merch = D.merch[i] || 0;
+    const mobj = D.pobj[i] ?? MOBJ, mmax = (D.pmax[i] > 0 ? D.pmax[i] : MMAX), ps = PISO[D.ui[i]] || { cesta: -15, sem: 0 };
+    const umin = D.cesta[i] ? ps.cesta : (D.pmin[i] ?? ps.sem);
+    const mn = c / (1 - umin / 100), mx = c / (1 - mmax / 100), obj = c / (1 - mobj / 100), red = 1 - merch / 100;
+    let sug, rg, teto = false;
+    if (semPesq(i)) { sug = obj; rg = 4; } else if (vmk > mx) { sug = mx; rg = 2; teto = true; } else { sug = vmk - CENT; rg = 0; }
+    const pf = Math.max(Math.min(sug, mx), mn); if (rg !== 4 && sug < mn) rg = 3;
+    let nv = roundVarejo(pf); if (OV.has(i)) { nv = OV.get(i); rg = 5; }
+    let sa; if (rg === 4 || (OV.has(i) && semPesq(i))) sa = obj * red; else if (teto) sa = mx * red; else sa = amk > 0 ? amk - CENT : nv * red;
+    const pa = Math.max(Math.min(sa, mx * red), mn);
+    let na = roundAtacado(pa, nv); if (OVA.has(i)) { na = OVA.get(i); rg = 5; }
+    NV[i] = nv; NA[i] = na; RG[i] = rg; MN[i] = mn; MX[i] = mx; OB[i] = obj; UMIN[i] = umin; UMAX[i] = mmax; UOBJ[i] = mobj;
+    const fimHoje = D.dfim[i] > 0 && D.dfim[i] === HOJE, tp = (D.tipos[D.ti[i]] || '').toUpperCase(), ip = vmk > 0 ? D.vm[i] / vmk : NaN;
+    let ct = 0;
+    if (!fimHoje) { if (Math.abs(nv / D.vm[i] - 1) > CORTE / 100) ct |= 1; if (/ENCARTE|APP|MIDIA/.test(tp)) ct |= 2; if (/PROMOCAO COMERCIAL/.test(tp) && ip < 1) ct |= 4; }
+    CT[i] = ct;
+    MUD[i] = (Math.abs(nv - D.vm[i]) >= 0.005 || (D.am[i] > 0 && Math.abs(na - D.am[i]) >= 0.005) || (!(D.am[i] > 0) && na > 0)) ? 1 : 0;
+  }
+  const aceito = i => MUD[i] ? (ACE.has(i) ? ACE.get(i) : CT[i] === 0) : false;
+  const calcTudo = () => { for (let i = 0; i < N; i++) calc(i); };
+
+  /* ---------- formatação ---------- */
+  const nf2 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const nf1 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const nf0 = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 });
+  const brl = v => v == null || !isFinite(v) || v <= 0 ? '–' : 'R$ ' + nf2.format(v);
+  const pct = v => v == null || !isFinite(v) ? '–' : nf1.format(v * 100) + '%';
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+  const curto = s => String(s ?? '').replace(/^\d+\s*-\s*/, '').replace(/^-\s*/, '');
+  const titulo_ = s => String(s || '').toLowerCase().replace(/(^|\s)\S/g, x => x.toUpperCase());
+  function toast(t){ const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('on'), 2600); }
+  const rotRegra = i => RG[i] === 2 ? `Trava máxima ${nf1.format(UMAX[i])}%` : RG[i] === 3 ? (D.cesta[i] ? `Trava mínima cesta ${nf1.format(UMIN[i])}%` : `Trava mínima ${nf1.format(UMIN[i])}%`)
+    : RG[i] === 4 ? `Trava objetiva ${nf1.format(UOBJ[i])}%` : REGRAS[RG[i]][0];
+  const tagRegra = i => { const [, n, c] = REGRAS[RG[i]]; return `<span class="tag" style="color:${c}">${ic(n, c)}${rotRegra(i)}</span>`; };
+  const tagCorte = i => { if (!MUD[i]) return '<span class="tag" style="color:var(--faint)">Sem alteração</span>';
+    if (!CT[i]) return `<span class="tag" style="color:var(--up)">${ic('check')}Dentro da regra</span>`;
+    const l = CORTES.filter((_, k) => CT[i] & (1 << k)); return `<span class="tag" style="color:var(--down)" title="${l.map(x => x[0]).join(' / ')}">${ic(l[0][1])}${l[0][0]}${l.length > 1 ? ' +' + (l.length - 1) : ''}</span>`; };
+  const vneg = (v, txt) => `<span class="${v < -1e-9 ? 'neg' : ''}">${txt}</span>`;
+  const num_ = v => v == null || !isFinite(v) ? '–' : nf2.format(v);
+  const ipFmt = v => isFinite(v) && v > 0 ? `<span class="${v > 1.005 ? 'neg' : ''}">${nf1.format(v * 100)}</span>` : '–';
+
+  /* ---------- catálogo de colunas ---------- */
+  const imp = i => (NV[i] - D.vm[i]) * D.un[i];
+  const C = {};
+  const col = (id, t, g, w, rend, ord, cls, txt) => C[id] = { id, t, g, w, rend, ord, cls: cls || '', txt };
+  col('ok', 'Aceite', 'Identificação', 62, i => `<span class="ok-box${MUD[i] ? (aceito(i) ? ' on' : '') : ' na'}" data-ok="${i}">${ic('check')}</span>`, i => (MUD[i] ? (aceito(i) ? 2 : 1) : 0));
+  col('fil', 'Filial', 'Identificação', 140, i => esc(curto(D.filiais[D.fi[i]])), i => D.filiais[D.fi[i]], '', () => D.filiais.map(curto));
+  col('prod', 'Produto', 'Identificação', 280, i => esc(D.produtos[D.pi[i]]), i => D.produtos[D.pi[i]], '', () => D.produtos);
+  col('cv', 'Curva', 'Identificação', 58, i => `<span class="cv cv${'ABC'[D.curva[i]]}">${'ABC'[D.curva[i]]}</span>`, i => D.curva[i]);
+  col('uf', 'Estado', 'Identificação', 110, i => esc(D.ufs[D.ui[i]]), i => D.ufs[D.ui[i]], '', () => D.ufs);
+  col('comp', 'Comprador', 'Identificação', 160, i => esc(D.compradores[D.bi[i]]), i => D.compradores[D.bi[i]], '', () => D.compradores);
+  col('dep', 'Departamento', 'Identificação', 150, i => esc(D.deps[D.di[i]]), i => D.deps[D.di[i]], '', () => D.deps);
+  col('cat', 'Categoria', 'Identificação', 160, i => esc(D.cats[D.gi[i]]), i => D.cats[D.gi[i]], '', () => D.cats);
+  col('cesta', 'Cesta', 'Identificação', 70, i => D.cesta[i] ? 'Cesta' : '–', i => D.cesta[i]);
+  col('cu', 'Custo', 'Preço atual', 74, i => nf2.format(D.cu[i]), i => D.cu[i], 'r num');
+  col('vm', 'Varejo atual', 'Preço atual', 84, i => nf2.format(D.vm[i]), i => D.vm[i], 'r num');
+  col('am', 'Atacado atual', 'Preço atual', 86, i => num_(D.am[i] > 0 ? D.am[i] : null), i => D.am[i] || 0, 'r num');
+  col('m0', 'Margem atual', 'Preço atual', 84, i => { const v = (D.vm[i] - D.cu[i]) / D.vm[i]; return vneg(v, pct(v)); }, i => (D.vm[i] - D.cu[i]) / D.vm[i], 'r num');
+  col('ma0', 'Margem atacado atual', 'Preço atual', 92, i => D.am[i] > 0 ? (v => vneg(v, pct(v)))((D.am[i] - D.cu[i]) / D.am[i]) : '–', i => D.am[i] > 0 ? (D.am[i] - D.cu[i]) / D.am[i] : -9, 'r num');
+  col('tp', 'Tipo de preço PDV', 'Preço atual', 170, i => esc(D.tipos[D.ti[i]] || '–'), i => D.tipos[D.ti[i]] || '', '', () => D.tipos);
+  col('df', 'Data fim PDV', 'Preço atual', 92, i => D.dfim[i] > 0 ? dfTxt(D.dfim[i]) : '–', i => D.dfim[i]);
+  col('vmk', 'Varejo mercado', 'Mercado', 90, i => D.vmk[i] > 0 ? `${nf2.format(D.vmk[i])}${D.orig[i] ? '*' : ''}` : '–', i => D.vmk[i] || 0, 'r num');
+  col('amk', 'Atacado mercado', 'Mercado', 90, i => num_(D.amk[i] > 0 ? D.amk[i] : null), i => D.amk[i] || 0, 'r num');
+  col('mo', 'Moda varejo', 'Mercado', 84, i => num_(D.mo[i] > 0 ? D.mo[i] : null), i => D.mo[i] || 0, 'r num');
+  col('mav', 'Moda atacado', 'Mercado', 86, i => num_(D.ma[i] > 0 ? D.ma[i] : null), i => D.ma[i] || 0, 'r num');
+  col('dm', 'Menor ÷ moda', 'Mercado', 84, i => D.mo[i] > 0 && D.vmk[i] > 0 && !D.orig[i] ? (v => vneg(v, (v > 0 ? '+' : '') + pct(v)))(D.vmk[i] / D.mo[i] - 1) : '–', i => D.mo[i] > 0 ? D.vmk[i] / D.mo[i] : 0, 'r num');
+  col('conc', 'Concorrente', 'Mercado', 220, i => D.orig[i] ? '<span style="color:var(--faint)">moda</span>' : esc(curto(D.concs[D.ki[i]])), i => D.concs[D.ki[i]], '', () => D.concs.map(curto));
+  col('dt', 'Data pesquisa', 'Mercado', 84, i => D.orig[i] ? '<span style="color:var(--faint)">moda</span>' : esc(D.datas[D.dti[i]] || '–'), i => D.datas[D.dti[i]] || '');
+  col('ip', 'IP atual', 'Mercado', 70, i => ipFmt(D.vm[i] / D.vmk[i]), i => D.vmk[i] > 0 ? D.vm[i] / D.vmk[i] : 0, 'r num');
+  col('nv', 'Novo varejo', 'Novo preço', 98, i => `<input type="text" data-e="v" data-i="${i}" class="${OV.has(i) ? 'man' : ''}" value="${nf2.format(NV[i])}">`, i => NV[i], 'r edc');
+  col('na', 'Novo atacado', 'Novo preço', 98, i => `<input type="text" data-e="a" data-i="${i}" class="${OVA.has(i) ? 'man' : ''}" value="${NA[i] > 0 ? nf2.format(NA[i]) : ''}">`, i => NA[i], 'r edc');
+  col('nm', 'Margem nova', 'Novo preço', 86, i => { const v = (NV[i] - D.cu[i]) / NV[i]; return `<input type="text" data-e="m" data-i="${i}" class="${v < 0 ? 'neg' : ''}" value="${nf1.format(v * 100)}">`; }, i => (NV[i] - D.cu[i]) / NV[i], 'r ed');
+  col('nma', 'Margem atacado nova', 'Novo preço', 92, i => NA[i] > 0 ? (v => vneg(v, pct(v)))((NA[i] - D.cu[i]) / NA[i]) : '–', i => NA[i] > 0 ? (NA[i] - D.cu[i]) / NA[i] : -9, 'r num');
+  col('ipn', 'IP novo', 'Novo preço', 70, i => ipFmt(NV[i] / D.vmk[i]), i => D.vmk[i] > 0 ? NV[i] / D.vmk[i] : 0, 'r num');
+  col('var', 'Variação varejo', 'Novo preço', 84, i => { const v = NV[i] / D.vm[i] - 1; return `<span class="${v > 1e-4 ? 'pos' : v < -1e-4 ? 'neg' : ''}">${v > 0 ? '+' : ''}${pct(v)}</span>`; }, i => NV[i] / D.vm[i] - 1, 'r num');
+  col('ve', 'Venda mês', 'Venda e estoque', 104, i => 'R$ ' + nf0.format(D.venda[i]), i => D.venda[i], 'r num');
+  col('un', 'Volume mês', 'Venda e estoque', 90, i => nf0.format(D.un[i]) + ' un', i => D.un[i], 'r num');
+  col('imp', 'Impacto mês', 'Venda e estoque', 104, i => { const v = imp(i); return `<span class="${v > 0.5 ? 'pos' : v < -0.5 ? 'neg' : ''}">${v >= 0 ? '+' : '−'}R$ ${nf0.format(Math.abs(v))}</span>`; }, i => imp(i), 'r num');
+  col('est', 'Estoque R$', 'Venda e estoque', 100, i => D.estoque[i] != null ? 'R$ ' + nf0.format(D.estoque[i]) : '–', i => D.estoque[i] ?? -1, 'r num');
+  col('dde', 'DDE', 'Venda e estoque', 66, i => D.dde[i] != null ? (v => `<span class="${D.mcob[i] && v > D.mcob[i] ? 'neg' : ''}">${nf0.format(v)}</span>`)(D.dde[i]) : '–', i => D.dde[i] ?? -1, 'r num');
+  col('idade', 'Idade estoque', 'Venda e estoque', 80, i => D.idade[i] != null ? nf0.format(D.idade[i]) : '–', i => D.idade[i] ?? -1, 'r num');
+  col('mcob', 'Meta cobertura', 'Venda e estoque', 86, i => D.mcob[i] != null ? nf0.format(D.mcob[i]) : '–', i => D.mcob[i] ?? -1, 'r num');
+  col('pobj', 'Margem objetiva', 'Regras', 84, i => nf1.format(UOBJ[i]) + '%', i => UOBJ[i], 'r num');
+  col('pmin', 'Margem mínima', 'Regras', 84, i => vneg(UMIN[i], nf1.format(UMIN[i]) + '%'), i => UMIN[i], 'r num');
+  col('pmax', 'Margem máxima', 'Regras', 84, i => nf1.format(UMAX[i]) + '%', i => UMAX[i], 'r num');
+  col('red', 'Base redução atacado', 'Regras', 92, i => nf1.format(D.merch[i] || 0) + '%', i => D.merch[i] || 0, 'r num');
+  col('rg', 'Regra de negócio', 'Regras', 190, i => tagRegra(i), i => RG[i], '', () => ['Trava mínima cesta −15,0%']);
+  col('ct', 'Regra de alteração', 'Regras', 220, i => tagCorte(i), i => CT[i] * 2 + MUD[i], '', () => ['Promoção comercial abaixo do mercado +1']);
+  const PADRAO_COLS = ['ok', 'fil', 'prod', 'cu', 'cv', 'vm', 'am', 'm0', 'vmk', 'amk', 'dt', 'ip', 'nv', 'na', 'nm', 'ipn', 've', 'imp', 'dde', 'est', 'rg', 'ct'];
+  let ORDEM = (VIS0.cols || PADRAO_COLS).filter(id => C[id]); if (ORDEM[0] !== 'ok') ORDEM = ['ok', ...ORDEM.filter(x => x !== 'ok')];
+  const LARG = Object.assign({}, VIS0.larg || {});
+  /* largura automática para nada ficar cortado */
+  const cvs = document.createElement('canvas').getContext('2d');
+  const medir = c => { if (LARG[c.id]) return LARG[c.id]; if (!c.txt) return c.w; cvs.font = '500 12.5px Geist, sans-serif'; let m = 0;
+    for (const t of c.txt()) m = Math.max(m, cvs.measureText(String(t)).width); return Math.max(c.w, Math.min(560, m + (c.id === 'rg' || c.id === 'ct' ? 46 : 22))); };
+  let COLS = [], W = [];
+  const FIXAS = 4;
+  function aplicaColunas(){ COLS = ORDEM.map(id => C[id]); W = COLS.map(medir); document.documentElement.style.setProperty('--cols', W.map(w => w + 'px').join(' ')); cabecalho(); }
+  const esq = k => W.slice(0, k).reduce((a, b) => a + b, 0);
+  const cls = (c, k) => c.cls + (k < FIXAS ? ' fx' : '') + (k === FIXAS - 1 ? ' fxl' : '');
+  const sty = k => k < FIXAS ? ` style="left:${esq(k)}px"` : '';
+  let ORD = { k: 'imp', d: -1 };
+  function cabecalho(){ $('hdr').innerHTML = COLS.map((c, k) => `<div class="${cls(c, k)}"${sty(k)} data-s="${c.id}">${c.t}${ORD.k === c.id ? `<span class="ord">${ORD.d > 0 ? '▲' : '▼'}</span>` : ''}<span class="rz" data-rz="${k}"></span></div>`).join(''); }
+  let arr = null;
+  on($('hdr'), 'mousedown', e => { const r = e.target.closest('[data-rz]'); if (!r) return; e.preventDefault(); e.stopPropagation(); r.classList.add('on'); arr = { k: +r.dataset.rz, x: e.clientX, w: W[+r.dataset.rz] }; });
+  on(window, 'mousemove', e => { if (!arr) return; W[arr.k] = Math.max(48, arr.w + e.clientX - arr.x); LARG[COLS[arr.k].id] = W[arr.k];
+    document.documentElement.style.setProperty('--cols', W.map(w => w + 'px').join(' ')); if (arr.k < FIXAS) render(); });
+  on(window, 'mouseup', () => { if (!arr) return; arr = null; cabecalho(); render(); });
+  on($('hdr'), 'click', e => { if (e.target.closest('[data-rz]')) return; const d = e.target.closest('[data-s]'); if (!d) return; const k = d.dataset.s;
+    ORD = { k, d: ORD.k === k ? -ORD.d : -1 }; cabecalho(); filtrar(); render(); });
+
+  /* ---------- filtros e grade ---------- */
+  const F = { q: '', travas: new Set(), regra: -1, corte: -1 };
+  let VIS = [], SEL = -1;
+  const busca = new Array(N); for (let i = 0; i < N; i++) busca[i] = (D.produtos[D.pi[i]] + ' ' + D.filiais[D.fi[i]] + ' ' + D.concs[D.ki[i]]).toLowerCase();
+  function filtrar(){
+    const q = F.q.trim().toLowerCase(), out = [];
+    for (let i = 0; i < N; i++) {
+      if (F.travas.size && !F.travas.has(RG[i])) continue;
+      if (F.regra >= 0 && RG[i] !== F.regra) continue;
+      if (F.corte === 9 && !(MUD[i] && !aceito(i))) continue;
+      if (F.corte >= 0 && F.corte < 9 && !(MUD[i] && (CT[i] & (1 << F.corte)))) continue;
+      if (q && !busca[i].includes(q)) continue;
+      out.push(i);
+    }
+    const g = C[ORD.k] ? C[ORD.k].ord : C.imp.ord, ch = new Map(out.map(i => [i, g(i)]));
+    out.sort((a, b) => { const x = ch.get(a), y = ch.get(b); return (x > y ? 1 : x < y ? -1 : 0) * ORD.d; });
+    VIS = out; $('cnt').textContent = nf0.format(out.length) + ' de ' + nf0.format(N) + ' itens';
+    const nf = (F.regra >= 0) + (F.corte >= 0); $('bRegras').querySelector('.badge')?.remove(); if (nf) $('bRegras').insertAdjacentHTML('beforeend', `<span class="badge">${nf}</span>`);
+  }
+  const H = 34, sc = $('scroll'), body = $('body');
+  function render(){
+    body.style.height = (VIS.length * H) + 'px';
+    const ini = Math.max(0, Math.floor(sc.scrollTop / H) - 6), fim = Math.min(VIS.length, ini + Math.ceil(sc.clientHeight / H) + 14);
+    let h = '';
+    for (let k = ini; k < fim; k++) { const i = VIS[k];
+      h += `<div class="row${i === SEL ? ' sel' : ''}" data-i="${i}" style="top:${k * H}px">` + COLS.map((c, j) => `<div class="${cls(c, j)}"${sty(j)}>${c.rend(i)}</div>`).join('') + '</div>'; }
+    body.innerHTML = h;
+  }
+  let raf = 0; on(sc, 'scroll', () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; render(); }); });
+  const num = s => parseFloat(String(s).replace(/\s|R\$|%/g, '').replace(/\./g, '').replace(',', '.'));
+  on(body, 'change', e => {
+    const t = e.target; if (!t.dataset.e) return; const i = +t.dataset.i, v = num(t.value);
+    if (t.dataset.e === 'v') { if (v > 0) { const f = roundVarejo(v); OV.set(i, f); if (Math.abs(f - v) > 0.001) toast(`Arredondado pela regra: ${brl(v)} → ${brl(f)}`); } else OV.delete(i); }
+    if (t.dataset.e === 'm') { const m = v / 100; if (isFinite(m) && m < 0.95 && m > -1) { const f = roundVarejo(D.cu[i] / (1 - m)); OV.set(i, f); toast(`Margem ${nf1.format(v)}% → varejo ${brl(f)} (margem real ${pct((f - D.cu[i]) / f)})`); } }
+    if (t.dataset.e === 'a') { if (v > 0) OVA.set(i, roundAtacado(v, NV[i])); else OVA.delete(i); }
+    calc(i); salvar(); atualizar(false); if (SEL === i) { resumo(i); historico(i); }
+  });
+  on(body, 'keydown', e => { if (e.key === 'Enter' && e.target.dataset.e) e.target.blur(); });
+  on(body, 'click', e => { const ok = e.target.closest('[data-ok]'); if (ok) { alternarAceite(+ok.dataset.ok); return; }
+    if (e.target.tagName === 'INPUT') return; const r = e.target.closest('.row'); if (!r) return; selecionar(+r.dataset.i); sc.focus({ preventScroll: true }); });
+  function alternarAceite(i){ if (!MUD[i]) return; ACE.set(i, !aceito(i)); salvar(); atualizar(false); if (SEL === i) resumo(i); }
+  function selecionar(i){ SEL = i; render(); resumo(i); historico(i); }
+  on(document, 'keydown', e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || !VIS.length) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); let k = VIS.indexOf(SEL); k = k < 0 ? 0 : Math.max(0, Math.min(VIS.length - 1, k + (e.key === 'ArrowDown' ? 1 : -1)));
+      const y = k * H; if (y < sc.scrollTop + H) sc.scrollTop = Math.max(0, y - H); else if (y > sc.scrollTop + sc.clientHeight - 2 * H) sc.scrollTop = y - sc.clientHeight + 2 * H; selecionar(VIS[k]); }
+    else if (e.key === ' ' && SEL >= 0) { e.preventDefault(); alternarAceite(SEL); }
+  });
+
+  /* ---------- indicadores e painel de regras ---------- */
+  function kpis(){
+    let sobe = 0, baixa = 0, aceitos = 0, sem = 0, a = 0, b = 0, c_ = 0, m0n = 0, m0d = 0, m1n = 0, m1d = 0, ganho = 0, inv = 0;
+    const rc = new Array(REGRAS.length).fill(0), cc = new Array(CORTES.length).fill(0);
+    for (let i = 0; i < N; i++) { const un = D.un[i], w = un > 0 ? un : 1, nv = NV[i], vm = D.vm[i], cu = D.cu[i];
+      if (nv > vm + 0.004) sobe++; else if (nv < vm - 0.004) baixa++;
+      if (MUD[i]) { if (aceito(i)) aceitos++; else sem++; for (let k = 0; k < CORTES.length; k++) if (CT[i] & (1 << k)) cc[k]++; }
+      if (D.vmk[i] > 0) { a += vm * w; b += D.vmk[i] * w; c_ += nv * w; }
+      if (un > 0) { m0n += (vm - cu) * un; m0d += vm * un; m1n += (nv - cu) * un; m1d += nv * un; }
+      const d = (nv - vm) * un; if (d > 0) ganho += d; else inv -= d; rc[RG[i]]++; }
+    const ip0 = b ? a / b : NaN, ip1 = b ? c_ / b : NaN, mg0 = m0n / m0d, mg1 = m1n / m1d, saldo = ganho - inv;
+    const K = [['Aceitos', nf0.format(aceitos), `<i>${nf0.format(sem)} sem aceite</i>`, 'var(--up)', 'check'],
+      ['Sobem', nf0.format(sobe), `<i>${pct(sobe / N)} dos itens</i>`, 'var(--up)', 'tdUp'],
+      ['Baixam', nf0.format(baixa), `<i>${pct(baixa / N)} dos itens</i>`, 'var(--down)', 'tdDn'],
+      ['IP novo', isFinite(ip1) ? nf1.format(ip1 * 100) : '–', `<i class="${ip1 < ip0 ? 'pos' : ip1 > ip0 ? 'neg' : ''}">hoje ${isFinite(ip0) ? nf1.format(ip0 * 100) : '–'}</i>`, 'var(--primary)', 'merc'],
+      ['Margem nova', vneg(mg1, pct(mg1)), `<i class="${mg1 >= mg0 ? 'pos' : 'neg'}">hoje ${pct(mg0)}</i>`, 'var(--amber)', 'pct'],
+      ['Lucro adicional/mês', 'R$ ' + nf0.format(ganho), `<i>investimento R$ ${nf0.format(inv)}</i>`, 'var(--up)', 'cash'],
+      ['Saldo/mês', vneg(saldo, `${saldo >= 0 ? '+' : '−'}R$ ${nf0.format(Math.abs(saldo))}`), `<i>${nf0.format(N)} itens</i>`, saldo >= 0 ? 'var(--up)' : 'var(--down)', 'cash']];
+    $('kpis').innerHTML = K.map(([t, v, s, c, n]) => `<div class="k" style="--t:${c}"><span>${ic(n)}${t}</span><b>${v}</b>${s}</div>`).join('');
+    const rm = Math.max(...rc, 1), cm = Math.max(...cc, sem, 1);
+    $('pRegras').innerHTML = `<div class="regp"><h4>Regra de negócio</h4><p>Motivo da formação do novo preço. Clique para filtrar a grade.</p><div class="lista">`
+      + ORDEM_R.map(k => { const [t, n, c] = REGRAS[k]; return `<div class="rg${F.regra === k ? ' on' : ''}" data-rgf="${k}">${ic(n, c)}<span>${t}</span><div class="bar"><i style="width:${100 * rc[k] / rm}%;background:${c}"></i></div><b>${nf0.format(rc[k])}</b></div>`; }).join('')
+      + `</div><h4>Regra de alteração</h4><p>Por que o preço ficou sem aceite automático.</p><div class="lista">`
+      + `<div class="rg${F.corte === 9 ? ' on' : ''}" data-ct="9">${ic('x', 'var(--down)')}<span>Todos sem aceite</span><div class="bar"><i style="width:${100 * sem / cm}%;background:var(--down)"></i></div><b>${nf0.format(sem)}</b></div>`
+      + CORTES.map(([t, n], k) => `<div class="rg${F.corte === k ? ' on' : ''}" data-ct="${k}">${ic(n, 'var(--down)')}<span>${t}</span><div class="bar"><i style="width:${100 * cc[k] / cm}%;background:var(--down)"></i></div><b>${nf0.format(cc[k])}</b></div>`).join('')
+      + `<div class="rg" style="cursor:default">${ic('cal', 'var(--faint)')}<span style="color:var(--muted)">Preço com data fim hoje não sofre corte</span><span></span><span></span></div></div>`
+      + `<button class="tx" id="limpaRegras">${ic('x')}Limpar filtros de regra</button></div>`;
+  }
+  on($('pRegras'), 'click', e => { if (e.target.closest('#limpaRegras')) { F.regra = -1; F.corte = -1; atualizar(); return; }
+    const r = e.target.closest('[data-rgf]'); if (r) { const k = +r.dataset.rgf; F.regra = F.regra === k ? -1 : k; atualizar(); return; }
+    const c = e.target.closest('[data-ct]'); if (c) { const k = +c.dataset.ct; F.corte = F.corte === k ? -1 : k; atualizar(); } });
+
+  /* ---------- histórico de preço do mercado ---------- */
+  const TPN = ['Regular', 'Promoção', 'Encarte', 'Mídia', 'Ponto extra'];
+  const HD = new Map(), HO = new Map();
+  for (let j = 0; j < D.dp.length; j++) { const k = D.dp[j] * 64 + D.du[j]; let a = HD.get(k); if (!a) HD.set(k, a = []); a.push(j); }
+  for (let j = 0; j < D.op.length; j++) { const k = D.op[j] * 64 + D.ou[j]; let a = HO.get(k); if (!a) HO.set(k, a = []); a.push(j); }
+  let HSEL = 'fil', HMODO = 'v', HDADOS = null;
+  const empresa = k => D.hE[k] ? titulo_(D.hE[k]) : curto(D.hK[k]);
+  function historico(i){
+    const box = $('hist'), chips = $('hChips');
+    if (i < 0) { $('histSub').textContent = ''; chips.innerHTML = ''; box.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:40px 0">Selecione um item.</div>'; return; }
+    const p = D.pi[i], u = D.ui[i], T = D.hT.length, rows = HD.get(p * 64 + u) || [], fil = new Set(D.fk[D.fi[i]] || []);
+    $('histSub').textContent = `${curto(D.produtos[D.pi[i]])}, ${curto(D.filiais[D.fi[i]])} (${D.ufs[u] || ''})`;
+    const cont = new Map(), daFil = new Set();
+    for (const j of rows) { const e = empresa(D.dk[j]); cont.set(e, (cont.get(e) || 0) + 1); if (fil.has(D.dk[j])) daFil.add(e); }
+    const nFil = rows.filter(j => fil.has(D.dk[j])).length;
+    if (HSEL === 'fil' && !nFil) HSEL = 'uf';
+    if (HSEL.startsWith('e:') && !cont.has(HSEL.slice(2))) HSEL = nFil ? 'fil' : 'uf';
+    const sig = e => e.split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+    chips.innerHTML = (nFil ? `<button class="hchip${HSEL === 'fil' ? ' on' : ''}" data-hs="fil">Concorrentes da filial<small>${nf0.format(nFil)} coletas</small></button>` : '')
+      + `<button class="hchip${HSEL === 'uf' ? ' on' : ''}" data-hs="uf">Todo o estado<small>${nf0.format(rows.length)} coletas</small></button>`
+      + [...cont.entries()].sort((a, b) => b[1] - a[1]).map(([e, n]) => `<button class="hchip${HSEL === 'e:' + e ? ' on' : ''}" data-hs="e:${esc(e)}"><b style="font-size:9.5px;opacity:.7">${sig(e)}</b> ${esc(e)}${daFil.has(e) ? ' ●' : ''}<small>${nf0.format(n)} coletas</small></button>`).join('');
+    const ok = HSEL === 'fil' ? (k => fil.has(k)) : HSEL === 'uf' ? (() => true) : (k => 'e:' + empresa(k) === HSEL);
+    const mn = new Array(T).fill(Infinity), quem = new Array(T).fill(-1), dia = [...Array(T)].map(() => new Map()), nos = new Array(T).fill(0), nn = new Array(T).fill(0), og = [...Array(T)].map(() => new Map());
+    for (const j of rows) { if (!ok(D.dk[j])) continue; const t = D.dt[j], v = (HMODO === 'a' ? Math.min(D.da[j] || D.dv[j], D.dv[j]) : D.dv[j]) / 100; if (!(v > 0)) continue;
+      if (v < mn[t]) { mn[t] = v; quem[t] = D.dk[j]; } const e = empresa(D.dk[j]), cur = dia[t].get(e); if (!cur || v < cur.v) dia[t].set(e, { v, tp: D.dtp[j] }); }
+    for (const j of HO.get(p * 64 + u) || []) { const t = D.ot[j], v = (HMODO === 'a' ? D.oa[j] : D.ov[j]) / 100; if (v > 0 && t < T) { nos[t] += v; nn[t]++; const o = D.hOG[D.oo[j]] || ''; og[t].set(o, (og[t].get(o) || 0) + 1); } }
+    const dias = [...Array(T).keys()].filter(t => isFinite(mn[t]) || nn[t]);
+    if (!dias.length) { box.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:40px 0">Sem histórico de pesquisa para este item no estado.</div>'; HDADOS = null; return; }
+    const our = dias.map(t => nn[t] ? nos[t] / nn[t] : null), mer = dias.map(t => isFinite(mn[t]) ? mn[t] : null), moda = HMODO === 'a' ? D.ma[i] : D.mo[i];
+    const vals = our.concat(mer).filter(v => v > 0).concat(moda > 0 ? [moda] : []);
+    const lo = Math.min(...vals) * 0.985, hi = Math.max(...vals) * 1.015, Wd = Math.max(500, box.clientWidth || 900), Ht = 280, pl = 58, pr = 66, pt = 22, pb = 26;
+    const X = n => pl + (Wd - pl - pr) * (dias.length > 1 ? n / (dias.length - 1) : 0.5), Y = v => pt + (Ht - pt - pb) * (1 - (v - lo) / (hi - lo || 1));
+    const suave = arr => { const pts = arr.map((v, n) => v == null ? null : [X(n), Y(v)]); let d = '', prev = null;
+      pts.forEach(q => { if (!q) { prev = null; return; } if (!prev) d += `M${q[0].toFixed(1)},${q[1].toFixed(1)}`; else { const cx = (prev[0] + q[0]) / 2; d += `C${cx.toFixed(1)},${prev[1].toFixed(1)} ${cx.toFixed(1)},${q[1].toFixed(1)} ${q[0].toFixed(1)},${q[1].toFixed(1)}`; } prev = q; }); return d; };
+    const area = arr => { const pts = arr.map((v, n) => v == null ? null : [X(n), Y(v)]).filter(Boolean); if (pts.length < 2) return '';
+      let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`; for (let k = 1; k < pts.length; k++) { const a = pts[k - 1], b = pts[k], cx = (a[0] + b[0]) / 2; d += `C${cx.toFixed(1)},${a[1].toFixed(1)} ${cx.toFixed(1)},${b[1].toFixed(1)} ${b[0].toFixed(1)},${b[1].toFixed(1)}`; }
+      return d + `L${pts[pts.length - 1][0]},${Ht - pb}L${pts[0][0]},${Ht - pb}Z`; };
+    let g = `<svg viewBox="0 0 ${Wd} ${Ht}"><defs><linearGradient id="gM" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--down)" stop-opacity=".18"/><stop offset="1" stop-color="var(--down)" stop-opacity="0"/></linearGradient>
+      <linearGradient id="gN" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--primary)" stop-opacity=".16"/><stop offset="1" stop-color="var(--primary)" stop-opacity="0"/></linearGradient></defs>`;
+    for (let q = 0; q <= 4; q++) { const v = lo + (hi - lo) * q / 4, y = Y(v); g += `<line x1="${pl}" x2="${Wd - pr}" y1="${y}" y2="${y}" stroke="var(--line)" stroke-dasharray="2 3"/><text x="${pl - 8}" y="${y + 3}" text-anchor="end" font-size="10" fill="var(--faint)" font-family="Geist Mono">R$ ${nf2.format(v)}</text>`; }
+    dias.forEach((t, n) => { g += `<text x="${X(n)}" y="${Ht - 7}" text-anchor="middle" font-size="10" fill="var(--faint)" font-family="Geist Mono">${D.hT[t]}</text>`; });
+    g += `<path d="${area(our)}" fill="url(#gN)"/><path d="${area(mer)}" fill="url(#gM)"/>`;
+    if (moda > 0) g += `<line x1="${pl}" x2="${Wd - pr}" y1="${Y(moda)}" y2="${Y(moda)}" stroke="#B794FF" stroke-dasharray="6 4" stroke-width="1.3"/>`;
+    g += `<path d="${suave(our)}" fill="none" stroke="var(--primary)" stroke-width="2.4"/><path d="${suave(mer)}" fill="none" stroke="var(--down)" stroke-width="2.4"/>`;
+    const esp = (Wd - pl - pr) / Math.max(1, dias.length - 1), cada = esp >= 34 ? 1 : esp >= 18 ? 2 : 3, rot = n => n % cada === 0 || n === dias.length - 1;
+    dias.forEach((t, n) => {
+      if (our[n] != null) { g += `<circle cx="${X(n)}" cy="${Y(our[n])}" r="3" fill="var(--surface-solid)" stroke="var(--primary)" stroke-width="1.8"/>`; if (rot(n)) g += `<text x="${X(n)}" y="${Y(our[n]) - 8}" text-anchor="middle" font-size="9.5" fill="var(--primary)" font-family="Geist Mono" font-weight="600">${nf2.format(our[n])}</text>`; }
+      if (mer[n] != null) { g += `<circle cx="${X(n)}" cy="${Y(mer[n])}" r="3" fill="var(--surface-solid)" stroke="var(--down)" stroke-width="1.8"/>`; if (rot(n)) g += `<text x="${X(n)}" y="${Y(mer[n]) + 15}" text-anchor="middle" font-size="9.5" fill="var(--down)" font-family="Geist Mono" font-weight="600">${nf2.format(mer[n])}</text>`; }
+    });
+    const ultimo = arr => { for (let n = arr.length - 1; n >= 0; n--) if (arr[n] != null) return arr[n]; return null; };
+    const badge = (v, cor) => v == null ? '' : `<rect x="${Wd - pr + 6}" y="${Y(v) - 9}" width="${pr - 8}" height="18" rx="5" fill="${cor}"/><text x="${Wd - pr / 2 + 2}" y="${Y(v) + 4}" text-anchor="middle" font-size="10" fill="#fff" font-family="Geist Mono" font-weight="600">${nf2.format(v)}</text>`;
+    g += badge(ultimo(our), 'var(--primary)') + badge(ultimo(mer), 'var(--down)') + `<line id="hGuia" x1="0" x2="0" y1="${pt}" y2="${Ht - pb}" stroke="var(--faint)" stroke-dasharray="3 3" style="display:none"/></svg>`;
+    box.innerHTML = `<div class="hbox">${g}<div class="htip" id="hTip"></div></div><div class="leg"><span><i style="background:var(--down)"></i>Mercado: menor preço</span><span><i style="background:var(--primary)"></i>Nosso preço (média do estado)</span>`
+      + (moda > 0 ? `<span><i style="background:#B794FF"></i>Moda R$ ${nf2.format(moda)}</span>` : '') + `<span style="color:var(--faint)">● concorrente da filial</span></div>`;
+    HDADOS = { dias, our, mer, quem, dia, og, X, Wd, pl, pr };
+  }
+  on($('hist'), 'mousemove', e => { if (!HDADOS) return; const svg = $('hist').querySelector('svg'); if (!svg) return; const r = svg.getBoundingClientRect();
+    const x = (e.clientX - r.left) * HDADOS.Wd / r.width; let n = 0, bd = Infinity; HDADOS.dias.forEach((_, k) => { const d = Math.abs(HDADOS.X(k) - x); if (d < bd) { bd = d; n = k; } });
+    const t = HDADOS.dias[n], gl = $('hGuia'), tp = $('hTip'); gl.setAttribute('x1', HDADOS.X(n)); gl.setAttribute('x2', HDADOS.X(n)); gl.style.display = '';
+    const l = [...HDADOS.dia[t]].sort((a, b) => a[1].v - b[1].v), ogm = [...HDADOS.og[t]].sort((a, b) => b[1] - a[1])[0];
+    tp.innerHTML = `<div class="t">${D.hT[t]}</div>` + (HDADOS.mer[n] != null ? `<div class="r"><i style="background:var(--down)"></i>Mercado: menor preço <b>R$ ${nf2.format(HDADOS.mer[n])}</b></div>` : '')
+      + (HDADOS.our[n] != null ? `<div class="r"><i style="background:var(--primary)"></i>Nosso preço <b>R$ ${nf2.format(HDADOS.our[n])}</b>${ogm ? `<em style="font-style:normal;color:var(--faint);margin-left:4px">${esc(titulo_(ogm[0]))}</em>` : ''}</div>` : '')
+      + (l.length ? '<div class="l">' + l.slice(0, 10).map(([e, x]) => `<span>${esc(e)}</span><em>${TPN[x.tp] || ''}</em><b>R$ ${nf2.format(x.v)}</b>`).join('') + '</div>' : '');
+    tp.style.display = 'block'; const px = HDADOS.X(n) * r.width / HDADOS.Wd; tp.style.left = (px > r.width * 0.6 ? px - tp.offsetWidth - 14 : px + 14) + 'px'; tp.style.top = '10px'; });
+  on($('hist'), 'mouseleave', () => { const tp = $('hTip'), gl = $('hGuia'); if (tp) tp.style.display = 'none'; if (gl) gl.style.display = 'none'; });
+  on($('hChips'), 'click', e => { const b = e.target.closest('[data-hs]'); if (!b || SEL < 0) return; HSEL = b.dataset.hs; historico(SEL); });
+  on($('hSeg'), 'click', e => { const b = e.target.closest('[data-hm]'); if (!b) return; HMODO = b.dataset.hm; $('hSeg').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); if (SEL >= 0) historico(SEL); });
+
+  /* ---------- resumo do item (ao lado do histórico) ---------- */
+  const EXPL = [i => 'Segue o menor preço do mercado, R$ 0,01 abaixo, dentro da trava mínima e da trava máxima de margem.', null,
+    i => `O mercado está acima do preço máximo (margem máxima de ${nf1.format(UMAX[i])}%): o varejo fica no teto e o atacado sai do teto com a base de redução de ${nf1.format(D.merch[i] || 0)}%.`,
+    i => D.cesta[i] ? `Item da cesta: seguir o mercado deixaria a margem abaixo de ${nf1.format(UMIN[i])}%, então o preço fica na trava mínima da cesta.` : `Seguir o mercado deixaria a margem abaixo da mínima (${nf1.format(UMIN[i])}%): o preço fica na trava mínima.`,
+    i => `Sem pesquisa direta: o varejo vai para a margem objetiva de ${nf1.format(UOBJ[i])}% e o atacado sai do objetivo com a base de redução de ${nf1.format(D.merch[i] || 0)}%.`,
+    i => 'Preço definido manualmente na mesa.'];
+  function resumo(i){
+    if (i < 0) { $('resumo').innerHTML = `<div class="vazio">${ic('tagi', 'var(--primary)')} Clique em um item. Use <span class="kbd">↑</span> <span class="kbd">↓</span> para navegar e <span class="kbd">espaço</span> para aceitar.</div>`; return; }
+    const c = D.cu[i], pts = [['Custo', c, 'var(--faint)'], ['Mínimo', MN[i], 'var(--up)'], ['Objetivo', OB[i], 'var(--amber)'], ['Mercado', D.vmk[i] || null, 'var(--primary)'],
+      ['Moda', D.mo[i] || null, '#B794FF'], ['Máximo', MX[i], 'var(--down)'], ['Atual', D.vm[i], 'var(--ink)'], ['Novo', NV[i], 'var(--primary)']].filter(p => p[1] > 0).sort((a, b) => a[1] - b[1]);
+    const vs = pts.map(p => p[1]), lo = Math.min(...vs) * 0.97, hi = Math.max(...vs) * 1.03, X = v => 14 + (v - lo) / (hi - lo) * 272;
+    let svg = `<svg class="lad" viewBox="0 0 300 150"><line x1="14" y1="75" x2="286" y2="75" stroke="var(--line)" stroke-width="6" stroke-linecap="round"/><line x1="${X(MN[i])}" y1="75" x2="${X(MX[i])}" y2="75" stroke="var(--up)" stroke-opacity=".35" stroke-width="6" stroke-linecap="round"/>`;
+    pts.forEach(([t, v, cor], k) => { const lv = k % 4, up = lv % 2 === 0, longe = lv < 2, x = Math.min(270, Math.max(30, X(v))), xr = X(v), novo = t === 'Novo';
+      const yt = up ? (longe ? 11 : 36) : (longe ? 131 : 106), yl = up ? (longe ? 26 : 50) : (longe ? 120 : 96);
+      svg += `<line x1="${xr}" y1="75" x2="${x}" y2="${yl}" stroke="${cor}" stroke-width="${novo ? 2 : 1}" stroke-opacity=".7"/><circle cx="${xr}" cy="75" r="${novo ? 6 : 4}" fill="${cor}" stroke="var(--surface-solid)" stroke-width="2"/><text x="${x}" y="${yt}" text-anchor="middle" font-size="9.5" fill="var(--muted)" font-family="Geist">${t}</text><text x="${x}" y="${yt + 12}" text-anchor="middle" font-size="10.5" fill="${cor}" font-family="Geist Mono" font-weight="${novo ? 600 : 500}">${nf2.format(v)}</text>`; });
+    svg += '</svg>';
+    const dm = D.mo[i] && D.vmk[i] > 0 && !D.orig[i] ? D.vmk[i] / D.mo[i] - 1 : null, m1 = (NV[i] - c) / NV[i];
+    const mc = (t, v, n, k) => `<div class="mc"><span>${ic(n)}${t}</span><b class="${k || ''}">${v}</b></div>`;
+    $('resumo').innerHTML = `<h2>${esc(D.produtos[D.pi[i]])}</h2><div class="sub">${ic('loja')}${esc(D.filiais[D.fi[i]])}, curva ${'ABC'[D.curva[i]]}${D.cesta[i] ? ', cesta' : ''}</div>
+      <div class="st">${tagRegra(i)}${tagCorte(i)}</div>${svg}
+      <div class="cards">${mc('Moda varejo', brl(D.mo[i]), 'moda')}${mc('Moda atacado', brl(D.ma[i]), 'moda')}${mc('Menor varejo', brl(D.vmk[i]), 'merc')}${mc('Menor atacado', brl(D.amk[i]), 'merc')}
+        ${mc('Menor ÷ moda', dm == null ? '–' : (dm > 0 ? '+' : '') + pct(dm), 'pct', dm < 0 ? 'neg' : '')}${mc('Margem nova', pct(m1), 'pct', m1 < 0 ? 'neg' : 'pos')}</div>
+      <div class="facts"><span>${ic('conc')}Concorrente</span><b>${esc(D.orig[i] ? 'moda (sem pesquisa direta)' : curto(D.concs[D.ki[i]]) || '–')}</b>
+        <span>${ic('cal')}Data pesquisa</span><b>${D.orig[i] ? 'moda' : esc(D.datas[D.dti[i]] || '–')}</b>
+        <span>${ic('tagi')}Tipo de preço PDV</span><b>${esc(D.tipos[D.ti[i]] || '–')}</b>
+        <span>${ic('cal')}Data fim do preço</span><b>${D.dfim[i] > 0 ? dfTxt(D.dfim[i]) : 'sem data fim'}</b>
+        <span>${ic('obj')}Margens obj. / mín. / máx.</span><b>${nf1.format(UOBJ[i])}% / ${nf1.format(UMIN[i])}% / ${nf1.format(UMAX[i])}%</b>
+        <span>${ic('pct')}Base redução atacado</span><b>${nf1.format(D.merch[i] || 0)}%</b>
+        <span>${ic('cash')}Estoque / DDE</span><b>${D.estoque[i] != null ? 'R$ ' + nf0.format(D.estoque[i]) : '–'} / ${D.dde[i] != null ? nf0.format(D.dde[i]) + ' dias' : '–'}</b>
+        <span>${ic('cash')}Venda mês</span><b>R$ ${nf0.format(D.venda[i])}</b></div>
+      <div class="why"><b style="color:${REGRAS[RG[i]][2]}">${rotRegra(i)}.</b> ${EXPL[RG[i]](i)}</div>
+      <div class="alts"><button class="tx" data-alt="m">${ic('merc')}Mercado − 0,01</button><button class="tx" data-alt="o">${ic('moda')}Moda − 0,01</button>
+        <button class="tx" data-alt="b">${ic('obj')}Objetivo</button><button class="tx" data-alt="r">${ic('undo')}Sugestão</button>
+        <button class="tx ${aceito(i) ? 'ok' : ''}" data-alt="ok" style="grid-column:1/-1" ${MUD[i] ? '' : 'disabled'}>${ic('check')}${aceito(i) ? 'Aceito' : 'Aceitar este preço'}</button></div>`;
+  }
+  on($('resumo'), 'click', e => { const b = e.target.closest('[data-alt]'); if (!b || SEL < 0) return; const i = SEL, k = b.dataset.alt;
+    if (k === 'ok') { alternarAceite(i); return; } if (k === 'r') { OV.delete(i); OVA.delete(i); }
+    else { const v = k === 'm' ? (D.vmk[i] > 0 ? D.vmk[i] - CENT : null) : k === 'o' ? (D.mo[i] ? D.mo[i] - CENT : null) : OB[i]; if (!v) { toast('Sem esse preço para o item'); return; } OV.set(i, Math.max(roundVarejo(v), 0.01)); OVA.delete(i); }
+    calc(i); salvar(); atualizar(false); resumo(i); historico(i); });
+
+  /* ---------- gestor de colunas (visão do usuário) ---------- */
+  let BUSCA_COL = '';
+  function montaColunas(){
+    const grupos = {}; Object.values(C).forEach(c => (grupos[c.g] = grupos[c.g] || []).push(c));
+    const q = BUSCA_COL.toLowerCase();
+    $('pCols').innerHTML = `<h4>Colunas da mesa</h4><p>Arraste ou use as setas: a ordem da lista é a ordem da tabela. As quatro primeiras ficam travadas ao rolar para o lado.</p>
+      <div class="cm"><div><h5>Colunas na tabela</h5><small>${ORDEM.length} colunas</small><div class="lst" id="cmLista">${ORDEM.map((id, k) => `<div class="it" draggable="${id !== 'ok'}" data-id="${id}">${ic('grip', 'var(--faint)')}<span>${C[id].t} <em>${C[id].g}</em></span>
+        <button data-mv="-1" ${k <= 1 ? 'disabled' : ''}>${ic('seta_c')}</button><button data-mv="1" ${k === 0 || k === ORDEM.length - 1 ? 'disabled' : ''}>${ic('seta_b')}</button><button data-rm="1" ${id === 'ok' ? 'disabled' : ''}>${ic('x')}</button></div>`).join('')}</div></div>
+      <div><h5>Colunas disponíveis</h5><small>Marque para incluir</small><input type="search" id="cmBusca" placeholder="Buscar coluna" value="${esc(BUSCA_COL)}"><div class="lst">${Object.entries(grupos).map(([g, l]) => {
+        const it = l.filter(c => !q || c.t.toLowerCase().includes(q)); if (!it.length) return '';
+        return `<div class="grp">${g}</div>` + it.map(c => `<label><input type="checkbox" data-ck="${c.id}" ${ORDEM.includes(c.id) ? 'checked' : ''} ${c.id === 'ok' ? 'disabled' : ''}>${c.t}</label>`).join(''); }).join('')}</div></div></div>
+      <div class="cm-acts"><button class="tx" id="cmPadrao">${ic('undo')}Visão padrão</button><button class="tx pri" id="cmSalvar">${ic('save')}Salvar minha visão</button></div>`;
+  }
+  const mudouColunas = () => { aplicaColunas(); render(); montaColunas(); };
+  on($('pCols'), 'click', e => {
+    const it = e.target.closest('.it'), b = e.target.closest('button');
+    if (b && it && b.dataset.mv) { const k = ORDEM.indexOf(it.dataset.id), n = k + +b.dataset.mv; if (n < 1 || n >= ORDEM.length) return; [ORDEM[k], ORDEM[n]] = [ORDEM[n], ORDEM[k]]; mudouColunas(); return; }
+    if (b && it && b.dataset.rm) { ORDEM = ORDEM.filter(x => x !== it.dataset.id); mudouColunas(); return; }
+    if (e.target.closest('#cmPadrao')) { ORDEM = [...PADRAO_COLS]; Object.keys(LARG).forEach(k => delete LARG[k]); mudouColunas(); return; }
+    if (e.target.closest('#cmSalvar')) { ST.valor({ acao: 'salvar_visao', visao: { cols: ORDEM, larg: LARG, rnd: RND }, ts: Date.now() }); toast('Salvando sua visão no perfil…'); }
+  });
+  on($('pCols'), 'change', e => { const id = e.target.dataset.ck; if (!id) return; if (e.target.checked) { if (!ORDEM.includes(id)) ORDEM.push(id); } else ORDEM = ORDEM.filter(x => x !== id); mudouColunas(); });
+  on($('pCols'), 'input', e => { if (e.target.id !== 'cmBusca') return; BUSCA_COL = e.target.value; const pos = e.target.selectionStart; montaColunas(); const s = $('cmBusca'); s.focus(); s.setSelectionRange(pos, pos); });
+  let ARR = null;
+  on($('pCols'), 'dragstart', e => { const it = e.target.closest('.it'); if (!it) return; ARR = it.dataset.id; it.classList.add('drag'); });
+  on($('pCols'), 'dragover', e => { const it = e.target.closest('.it'); if (!it || !ARR) return; e.preventDefault(); $('pCols').querySelectorAll('.sobre').forEach(x => x.classList.remove('sobre')); it.classList.add('sobre'); });
+  on($('pCols'), 'drop', e => { const it = e.target.closest('.it'); if (!it || !ARR) return; e.preventDefault(); const alvo = it.dataset.id; if (alvo === ARR || alvo === 'ok') { ARR = null; montaColunas(); return; }
+    ORDEM = ORDEM.filter(x => x !== ARR); ORDEM.splice(ORDEM.indexOf(alvo), 0, ARR); ARR = null; mudouColunas(); });
+  on($('pCols'), 'dragend', () => { ARR = null; $('pCols').querySelectorAll('.drag,.sobre').forEach(x => x.classList.remove('drag', 'sobre')); });
+
+  /* ---------- painéis: arredondamento, piso e importação ---------- */
+  const pops = ['pRegras', 'pCols', 'pRnd', 'pPiso', 'pExp'];
+  function abrir(id){ pops.forEach(p => $(p).classList.toggle('on', p === id && !$(p).classList.contains('on'))); }
+  on(document, 'click', e => { if (!e.target.closest('.pop') && !e.target.closest('#bRegras,#bCols,#bRnd,#bPiso,#bExp')) pops.forEach(p => $(p).classList.remove('on')); });
+  const faixas = [['A', 'Até R$ 10,99'], ['B', 'R$ 11,00 a R$ 19,99'], ['C', 'R$ 20,00 a R$ 40,00'], ['D', 'Acima de R$ 40,00']];
+  const fimTxt = (reg, f) => f === 'A' ? `centavos terminando em ${reg[f].join(', ')}` : f === 'B' ? `dezena 1 a 9, final ${reg[f].join(', ')}` : `dezena 3 a 9, final ${reg[f].filter(x => x).join(', ')}${reg[f].includes(0) ? ' (ou ,50 e ,90)' : ''}`;
+  function montaRnd(){ $('pRnd').innerHTML = `<h4>Regra de arredondamento</h4><p>O novo varejo vai para o centavo permitido mais próximo. O atacado sempre termina no mesmo dígito do varejo e nunca passa dele.</p>
+      <div class="opt">${Object.entries(REGRA_RND).map(([k, r]) => `<label class="${RND === k ? 'on' : ''}"><input type="radio" name="rnd" value="${k}" ${RND === k ? 'checked' : ''}><b>${r.nome}</b></label>`).join('')}</div>
+      <table><tr><th>Faixa</th><th>Preço</th><th>Centavos permitidos</th></tr>${faixas.map(([f, t]) => `<tr><td>${f}</td><td>${t}</td><td>${fimTxt(REGRA_RND[RND], f)}</td></tr>`).join('')}</table>`; }
+  on($('pRnd'), 'change', e => { if (e.target.name !== 'rnd') return; RND = e.target.value; VC = tabelaVC(REGRA_RND[RND]); montaRnd(); calcTudo(); atualizar(); if (SEL >= 0) { resumo(SEL); historico(SEL); } toast('Regra: ' + REGRA_RND[RND].nome); });
+  function montaPiso(){ $('pPiso').innerHTML = `<h4>Piso de margem por estado</h4><p>Itens da cesta usam a margem mínima do estado (padrão −15%). Os demais usam a margem mínima do Profimetrics; sem regra, o piso do estado (padrão 0%, o custo).</p>
+      <table><tr><th>Estado</th><th>Cesta (%)</th><th>Sem Profimetrics (%)</th></tr>${D.ufs.map((u, k) => `<tr><td>${esc(u)}</td><td><input type="number" step="0.5" data-uf="${k}" data-c="cesta" value="${PISO[k].cesta}"></td><td><input type="number" step="0.5" data-uf="${k}" data-c="sem" value="${PISO[k].sem}"></td></tr>`).join('')}</table>
+      <button class="tx" id="pisoPad">${ic('undo')}Voltar ao padrão</button>`; }
+  on($('pPiso'), 'change', e => { const t = e.target; if (!t.dataset.uf) return; const v = parseFloat(String(t.value).replace(',', '.')); if (!isFinite(v)) return; PISO[+t.dataset.uf][t.dataset.c] = v; calcTudo(); salvar(); atualizar(); if (SEL >= 0) resumo(SEL); });
+  on($('pPiso'), 'click', e => { if (!e.target.closest('#pisoPad')) return; D.ufs.forEach((_, u) => PISO[u] = { cesta: -15, sem: 0 }); montaPiso(); calcTudo(); salvar(); atualizar(); });
+  const iso = d => d.toISOString().slice(0, 10), br = s => s.split('-').reverse().join('/');
+  function montaExp(){ const h = new Date(), f = new Date(); f.setDate(f.getDate() + 3);
+    $('pExp').innerHTML = `<h4>Importação de preços</h4><p>Layout PRICE do Preço Bot, tipo de oferta 21. Vão só os preços aceitos: varejo (tipo 1) e atacado (tipo 2).</p>
+      <div class="opt"><label class="on"><input type="radio" name="op" value="1" checked><b>Aplicar preço</b></label><label><input type="radio" name="op" value="2"><b>Cancelar preço</b></label></div>
+      <div class="grid2"><div><span>Data início</span><input type="date" id="eIni" value="${iso(h)}"></div><div><span>Data fim</span><input type="date" id="eFim" value="${iso(f)}"></div>
+        <div><span>Aplicar similar</span><select id="eSim"><option>NAO</option><option>SIM</option></select></div><div><span>Tipo de oferta</span><input type="number" id="eTipo" value="21"></div></div>
+      <div style="display:flex;gap:8px"><button class="tx pri" id="eXls">${ic('up')}Baixar Excel</button><button class="tx" id="eCopy">${ic('copy')}Copiar</button></div>`; }
+  on($('pExp'), 'change', e => { if (e.target.name === 'op') $('pExp').querySelectorAll('.opt label').forEach(l => l.classList.toggle('on', l.querySelector('input').checked)); });
+  function linhasImportacao(){ const op = $('pExp').querySelector('input[name=op]:checked').value, ini = br($('eIni').value), fimd = br($('eFim').value), sim = $('eSim').value, tipo = String($('eTipo').value || '21');
+    const f2 = v => v > 0 ? nf2.format(v).replace(/\./g, '') : '', l = [];
+    for (let i = 0; i < N; i++) { if (!aceito(i)) continue; const fil = D.filial_cod[D.fi[i]], prod = D.produto_cod[D.pi[i]];
+      l.push([fil, '1', tipo, prod, f2(NV[i]), ini, fimd, sim, op]); if (NA[i] > 0 || op === '2') l.push([fil, '2', tipo, prod, f2(NA[i]), ini, fimd, sim, op]); }
+    return l; }
+  const CAB = ['Código da Filial', 'Tipo de Preço', 'ID Classificação', 'Código do Produto', 'Preço', 'Data Início', 'Data Fim', 'Similar', 'Tipo Operação'];
+  on($('pExp'), 'click', async e => { const b = e.target.closest('button'); if (!b) return; const l = linhasImportacao(); if (!l.length) { toast('Nenhum preço aceito para importar'); return; }
+    if (b.id === 'eXls') { if (!window.XLSX) { toast('Biblioteca de Excel indisponível'); return; } const ws = XLSX.utils.aoa_to_sheet([CAB, ...l]), wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Importacao');
+      XLSX.writeFile(wb, `PriceSense_Regular_PRICE_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`); toast(nf0.format(l.length) + ' linhas no Excel'); }
+    if (b.id === 'eCopy') { try { await navigator.clipboard.writeText(l.map(r => r.join('\t')).join('\n')); b.classList.add('ok'); setTimeout(() => b.classList.remove('ok'), 1800); toast(nf0.format(l.length) + ' linhas copiadas'); } catch (err) { toast('Não foi possível copiar; use o Excel'); } } });
+  $('bRegras').onclick = () => abrir('pRegras');
+  $('bCols').onclick = () => { montaColunas(); abrir('pCols'); };
+  $('bRnd').onclick = () => { montaRnd(); abrir('pRnd'); };
+  $('bPiso').onclick = () => { montaPiso(); abrir('pPiso'); };
+  $('bExp').onclick = () => { if (!$('pExp').innerHTML) montaExp(); abrir('pExp'); };
+
+  /* ---------- ações ---------- */
+  function atualizar(refiltrar = true){ kpis(); if (refiltrar) filtrar(); render(); }
+  on($('q'), 'input', e => { F.q = e.target.value; clearTimeout(e.target._t); e.target._t = setTimeout(() => { filtrar(); sc.scrollTop = 0; render(); }, 150); });
+  document.querySelectorAll('.chip').forEach(b => on(b, 'click', () => { const v = +b.dataset.rg; F.travas.has(v) ? F.travas.delete(v) : F.travas.add(v); b.classList.toggle('on'); filtrar(); sc.scrollTop = 0; render(); }));
+  $('bAll').onclick = () => { let n = 0; for (const i of VIS) if (MUD[i] && !aceito(i)) { ACE.set(i, true); n++; } salvar(); atualizar(false); if (SEL >= 0) resumo(SEL); toast(n ? `${nf0.format(n)} preços aceitos` : 'Itens filtrados já estão aceitos'); };
+  $('bNone').onclick = () => { let n = 0; for (const i of VIS) if (MUD[i] && aceito(i)) { ACE.set(i, false); n++; } salvar(); atualizar(false); if (SEL >= 0) resumo(SEL); toast(`${nf0.format(n)} aceites retirados`); };
+  $('bReset').onclick = () => { if (!OV.size && !OVA.size && !ACE.size) { toast('Não há ajustes manuais'); return; } OV.clear(); OVA.clear(); ACE.clear(); calcTudo(); salvar(); atualizar(); if (SEL >= 0) resumo(SEL); toast('Preços e aceites voltaram à sugestão do motor'); };
+  $('bFoco').onclick = () => { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => { document.body.classList.toggle('foco'); render(); }); };
+  on(document, 'fullscreenchange', () => { const fs = !!document.fullscreenElement; document.body.classList.toggle('fs', fs); document.body.classList.toggle('foco', fs); $('bFoco').classList.toggle('on', fs);
+    $('root').style.height = fs ? '100vh' : ALT + 'px'; render(); });
+  on(window, 'resize', () => { render(); if (SEL >= 0) historico(SEL); });
+  if (A.aviso) setTimeout(() => toast(A.aviso), 300);
+
+  const comPesq = D.orig.some(o => o === 0), nRegra = D.pobj.filter(v => v != null).length;
+  $('escopo').textContent = `${nf0.format(N)} itens ${comPesq ? 'com pesquisa' : 'sem pesquisa'}, ${D.filiais.length} filiais, ${nf0.format(D.produtos.length)} produtos. ${nRegra ? nf0.format(nRegra) + ' com regra do Profimetrics.' : 'Sem regras do Profimetrics: margem objetiva 10% e máxima 30%.'}`;
+  aplicaColunas(); calcTudo(); filtrar(); kpis();
+  if (VIS.length) selecionar(VIS[0]); else { render(); resumo(-1); historico(-1); }
+}
+
+</script></body></html>
