@@ -73,6 +73,8 @@ def ler_relatorio(html: bytes) -> tuple[pd.DataFrame, dict]:
     for k in _CENTAVOS:
         if k in col:
             df[k] = (col[k].astype(np.float64) / 100).astype(np.float32)
+    df["_p"] = col["P"].astype(np.int32)       # códigos originais, para cruzar com o histórico
+    df["_f"] = col["F"].astype(np.int16)
     df["venda"] = col["ve"].astype(np.float32) if "ve" in col else np.float32(0)
     df["qtd"] = (col["qt"].astype(np.float32) / 100) if "qt" in col else np.float32(0)
     df["erro_pesquisa"] = col["E"].astype(bool) if "E" in col else False
@@ -119,8 +121,23 @@ def ler_relatorio(html: bytes) -> tuple[pd.DataFrame, dict]:
     df["em_acao"] = (motivo_bloq | pdv_bloq).to_numpy()
 
     meta = {"atualizado": cab.get("upd"), "periodo": cab.get("hist"), "linhas": n,
-            "filiais": len(dic.get("F", [])), "produtos": len(dic.get("P", []))}
+            "filiais": len(dic.get("F", [])), "produtos": len(dic.get("P", [])), "hist": _historico(html)}
     return df, meta
+
+
+def _historico(html: bytes) -> dict | None:
+    """Histórico de preços da concorrência por produto x filial x concorrente x dia (bloco data4)."""
+    try:
+        cab, corpo = _bloco(html, "data4")
+    except Exception:
+        return None
+    col = {nome: np.frombuffer(corpo, dtype=_DTYPE[t], count=q, offset=o) for nome, t, o, q in cab["layout"] if t in _DTYPE}
+    if not {"mP", "mF", "mK", "mD", "mV"}.issubset(col):
+        return None
+    return {"p": col["mP"].astype(np.int32), "f": col["mF"].astype(np.int16), "k": col["mK"].astype(np.int32),
+            "d": col["mD"].astype(np.int16), "v": col["mV"].astype(np.int32),
+            "a": col["mA"].astype(np.int32) if "mA" in col else np.zeros(len(col["mP"]), np.int32),
+            "K": cab.get("K", []), "T": cab.get("T", [])}
 
 
 def ler_de_gzip_ou_html(conteudo: bytes) -> tuple[pd.DataFrame, dict]:
