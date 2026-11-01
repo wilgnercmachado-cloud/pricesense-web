@@ -180,3 +180,19 @@ def aprovar_cluster(solicitacao: dict) -> None:
 
 def recusar_cluster(solicitacao: dict) -> None:
     sb().table("solicitacoes_cluster").update({"status": "Recusado"}).eq("id", solicitacao["id"]).execute()
+
+
+# ---------------------------------------------------------------- visões salvas por usuário
+def carregar_visao(usuario: str, tela: str) -> dict | None:
+    try:
+        dados = sb().table("visoes_usuario").select("visao").eq("usuario", usuario).eq("tela", tela).execute().data
+        return dados[0]["visao"] if dados else None
+    except Exception:
+        return None
+
+
+def salvar_visao(usuario: str, tela: str, visao: dict) -> None:
+    from datetime import datetime, timezone
+    sb().table("visoes_usuario").upsert({"usuario": usuario, "tela": tela, "visao": visao,
+                                         "atualizado_em": datetime.now(timezone.utc).isoformat()},
+                                        on_conflict="usuario,tela").execute()

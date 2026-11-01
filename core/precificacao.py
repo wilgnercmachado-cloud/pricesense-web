@@ -48,21 +48,39 @@ def _codigo(s: pd.Series) -> pd.Series:
     return s.astype(str).str.split(" - ").str[0].str.strip()
 
 
-def _historico(b: pd.DataFrame, hist: dict | None) -> dict:
-    """Linhas do histórico (concorrente x dia) só dos pares filial x produto da mesa."""
+def _historico(b: pd.DataFrame, hist: dict | None, filiais: list, produtos: list, ufs: list) -> dict:
+    """Histórico do estado (concorrentes e nosso preço por dia) dos produtos da mesa + concorrentes de cada filial."""
+    vazio = {"hT": [], "hK": [], "hE": [], "dp": [], "du": [], "dk": [], "dt": [], "dv": [], "da": [], "dtp": [],
+             "op": [], "ou": [], "ot": [], "ov": [], "oa": [], "oo": [], "hOG": [], "fk": [[] for _ in filiais]}
     if not hist or not len(b):
-        return {"hi": [], "hk": [], "hd": [], "hv": [], "ha": [], "hK": [], "hT": []}
-    chave_b = b["_p"].to_numpy(np.int64) * 1000 + b["_f"].to_numpy(np.int64)
-    pos = pd.Series(np.arange(len(b)), index=chave_b)
-    pos = pos[~pos.index.duplicated()]
-    chave_h = hist["p"].astype(np.int64) * 1000 + hist["f"].astype(np.int64)
-    m = np.isin(chave_h, pos.index.to_numpy())
-    idx = pos.reindex(chave_h[m]).to_numpy()
-    k = hist["k"][m]
-    ks, kinv = np.unique(k, return_inverse=True)
-    nomes = [str(hist["K"][x]) if x < len(hist["K"]) else "" for x in ks]
-    return {"hi": idx.astype(int).tolist(), "hk": kinv.astype(int).tolist(), "hd": hist["d"][m].astype(int).tolist(),
-            "hv": hist["v"][m].astype(int).tolist(), "ha": hist["a"][m].astype(int).tolist(), "hK": nomes, "hT": list(hist["T"])}
+        return vazio
+    # códigos originais -> índices da mesa
+    p_map = pd.Series(pd.Categorical(b["Produto"].astype(str), categories=produtos).codes, index=b["_p"].to_numpy()).groupby(level=0).first()
+    f_map = pd.Series(pd.Categorical(b["Filial"].astype(str), categories=filiais).codes, index=b["_f"].to_numpy()).groupby(level=0).first()
+    u_map = {k: ufs.index(u) for k, u in enumerate(hist["U"]) if u in ufs}
+    if not u_map:
+        return vazio
+    dP, dU = hist["dP"], hist["dU"]
+    m = np.isin(dP, p_map.index.to_numpy()) & np.isin(dU, np.array(list(u_map), dtype=dU.dtype))
+    oP, oU = hist["oP"], hist["oU"]
+    mo = np.isin(oP, p_map.index.to_numpy()) & np.isin(oU, np.array(list(u_map), dtype=oU.dtype)) & (hist["oT"] != 255)
+    k_usados, k_comp = np.unique(hist["dK"][m], return_inverse=True)
+    k_pos = {int(k): n for n, k in enumerate(k_usados)}
+    um = np.vectorize(lambda x: u_map.get(int(x), 0), otypes=[np.int32])
+    fk = [[] for _ in filiais]
+    ff, kk = hist["fil_conc_f"], hist["fil_conc_k"]
+    for f_cod, k in zip(ff[np.isin(ff, f_map.index.to_numpy())], kk[np.isin(ff, f_map.index.to_numpy())]):
+        if int(k) in k_pos:
+            fk[int(f_map[f_cod])].append(k_pos[int(k)])
+    nomes = lambda lista, idx: [str(lista[x]) if x < len(lista) else "" for x in idx]
+    return {"hT": list(hist["T"]), "hK": nomes(hist["K"], k_usados), "hE": nomes(hist["KE"], k_usados),
+            "dp": p_map.reindex(dP[m]).astype(int).tolist(), "du": um(dU[m]).tolist() if m.any() else [],
+            "dk": k_comp.astype(int).tolist(), "dt": hist["dT"][m].astype(int).tolist(),
+            "dv": hist["dV"][m].astype(int).tolist(), "da": hist["dA"][m].astype(int).tolist(),
+            "dtp": hist["dTp"][m].astype(int).tolist(), "oo": hist["oO"][mo].astype(int).tolist(), "hOG": list(hist.get("OG", [])),
+            "op": p_map.reindex(oP[mo]).astype(int).tolist(), "ou": um(oU[mo]).tolist() if mo.any() else [],
+            "ot": hist["oT"][mo].astype(int).tolist(), "ov": hist["oV"][mo].astype(int).tolist(), "oa": hist["oA"][mo].astype(int).tolist(),
+            "fk": fk}
 
 
 def payload(b: pd.DataFrame, hist: dict | None = None) -> str:
@@ -74,6 +92,9 @@ def payload(b: pd.DataFrame, hist: dict | None = None) -> str:
     produtos, pi = dic("Produto")
     concs, ki = dic("Concorrente menor") if "Concorrente menor" in b else ([""], [0] * len(b))
     ufs, ui_ = dic("Estado") if "Estado" in b else ([""], [0] * len(b))
+    compradores, bi = dic("Comprador") if "Comprador" in b else ([""], [0] * len(b))
+    deps, di = dic("Departamento") if "Departamento" in b else ([""], [0] * len(b))
+    cats, gi = dic("Categoria") if "Categoria" in b else ([""], [0] * len(b))
     tipos, ti = dic("Tipo de preço PDV") if "Tipo de preço PDV" in b else ([""], [0] * len(b))
     datas, dti = dic("Data pesquisa") if "Data pesquisa" in b else ([""], [0] * len(b))
     col = lambda nome: b[nome] if nome in b else pd.Series(np.nan, index=b.index)
@@ -85,6 +106,8 @@ def payload(b: pd.DataFrame, hist: dict | None = None) -> str:
         "filiais": filiais, "filial_cod": _codigo(pd.Series(filiais)).tolist(), "produtos": produtos,
         "produto_cod": _codigo(pd.Series(produtos)).tolist(), "concs": concs, "ufs": ufs, "tipos": tipos, "datas": datas,
         "fi": fi, "pi": pi, "ki": ki, "ui": ui_, "ti": ti, "dti": dti,
+        "compradores": compradores, "bi": bi, "deps": deps, "di": di, "cats": cats, "gi": gi,
+        "estoque": r2(col("estoque")), "dde": r2(col("dde")), "idade": r2(col("idade")), "mcob": r2(col("meta_cobertura")),
         "curva": ["ABC".index(c) for c in b["Curva"]], "orig": b["origem"].astype(int).tolist(),
         "cu": r2(b["cu"]), "vm": r2(b["vm"]), "am": r2(b["am"]), "vmk": r2(b["vmk"]), "amk": r2(b["amk_ref"]),
         "mo": r2(b["mo"]), "ma": r2(b["ma"]),
@@ -93,7 +116,7 @@ def payload(b: pd.DataFrame, hist: dict | None = None) -> str:
         "cesta": [1 if str(x) == "CESTA" else 0 for x in col("Cesta")],
         "dfim": [int(x) for x in col("data_fim").fillna(0)],
         "un": [round(float(x), 1) for x in un], "venda": [round(float(x)) for x in venda],
-        **_historico(b, hist),
+        **_historico(b, hist, filiais, produtos, ufs),
     }
     bruto = json.dumps(dados, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     return base64.b64encode(gzip.compress(bruto, 6)).decode("ascii")

@@ -25,7 +25,7 @@ _DADOS_DE_TRABALHO = (
     "df_promo_processado", "promo_arquivos", "linhas_alteradas", "clusters_desconhecidos",
     "campanhas_vencidas", "pending_promo_edit", "promo_edit_data",
     "df_pesq_master", "arquivo_pesquisa_nome", "pesq_enriquecimento", "pesq_extracao",
-    "pb_resultado", "pending_report", "_pages",
+    "pb_resultado", "pending_report", "_pages", "reg_visao", "_reg_ts",
 )
 
 
