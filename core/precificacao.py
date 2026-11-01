@@ -85,7 +85,21 @@ def _historico(b: pd.DataFrame, hist: dict | None, filiais: list, produtos: list
             "fk": fk}
 
 
-def payload(b: pd.DataFrame, hist: dict | None = None) -> str:
+def _tipo_coleta(s: pd.Series) -> list[int]:
+    """1 = regular, 2 = promoção, 3 = ponto extra, 0 = sem informação (o código vem na frente: '1-PRECO REGULAR')."""
+    mapa = {"1": 1, "5": 2, "6": 3}
+    return [mapa.get(str(x).strip()[:1], 0) for x in s]
+
+
+def _proporcionais(b: pd.DataFrame, props: pd.DataFrame | None) -> list:
+    if props is None or props.empty:
+        return []
+    pais = set(pd.to_numeric(_codigo(b["Produto"]), errors="coerce").dropna().astype("int64"))
+    p = props[props["id_pai"].isin(pais)]
+    return [[int(r.id_pai), int(r.id_produto), float(r.proporcao)] for r in p.itertuples()]
+
+
+def payload(b: pd.DataFrame, hist: dict | None = None, props: pd.DataFrame | None = None) -> str:
     """Base compacta (colunas + dicionários) em JSON, compactada com gzip e em base64."""
     def dic(col):
         cat = pd.Categorical(b[col].astype(str))
@@ -118,6 +132,8 @@ def payload(b: pd.DataFrame, hist: dict | None = None) -> str:
         "cesta": [1 if str(x) == "CESTA" else 0 for x in col("Cesta")],
         "dfim": [int(x) for x in col("data_fim").fillna(0)],
         "un": [round(float(x), 1) for x in un], "venda": [round(float(x)) for x in venda],
+        "tcol": _tipo_coleta(col("Tipo de preço").astype(str)),
+        "props": _proporcionais(b, props),
         **_historico(b, hist, filiais, produtos, ufs),
     }
     bruto = json.dumps(dados, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
