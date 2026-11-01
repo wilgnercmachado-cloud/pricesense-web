@@ -13,6 +13,7 @@ from core import db
 from core import gmat_reader as gr
 from core import precificacao as pr
 from core import profimetrics as pf
+from core import proporcoes as pp
 from core import reports
 from ui import components as ui
 from ui import theme
@@ -110,6 +111,23 @@ def _profimetrics() -> pd.DataFrame:
                 st.error(str(exc), icon=":material/error:")
             except Exception as exc:
                 st.error(f"Não foi possível salvar no Supabase: {exc}", icon=":material/error:")
+        st.divider()
+        props = pp.carregar()
+        st.markdown("**Proporcionais (base PROP%)**")
+        st.caption((f"{ui.numero(len(props))} produtos filhos com proporção na dim_produto. " if len(props) else "Nenhuma proporção cadastrada. ")
+                   + "Envie a base com ID_PRODUTO, ID_PAI e Proporcao: só as diferentes de 100 são gravadas, e cada envio substitui a proporção do mesmo produto.")
+        arq_p = st.file_uploader("Base PROP% (XLSX)", type=["xlsx", "xls"], key="reg_prop", label_visibility="collapsed")
+        if st.button("Salvar proporções", width="stretch", icon=":material/cloud_upload:", disabled=arq_p is None, key="reg_prop_salvar"):
+            try:
+                with st.spinner("Lendo a base e gravando na dim_produto"):
+                    r = pp.salvar(pp.ler_planilha(arq_p))
+                st.toast(f"{ui.numero(r['salvas'])} proporções gravadas"
+                         + (f"; {ui.numero(r['fora_da_dim'])} produtos não existem na dim_produto." if r["fora_da_dim"] else "."), icon=":material/check_circle:")
+                st.rerun()
+            except pp.ErroProporcao as exc:
+                st.error(str(exc), icon=":material/error:")
+            except Exception as exc:
+                st.error(f"Não foi possível gravar: {exc}. Confira se as colunas id_pai e proporcao existem na dim_produto.", icon=":material/error:")
     return regras
 
 
@@ -152,13 +170,14 @@ def render() -> None:
         st.warning(f"A seleção tem {ui.numero(len(b))} itens. Abra os filtros e escolha estado, diretor ou filiais "
                    f"para ficar abaixo de {ui.numero(LIMITE)} e a mesa responder na hora.", icon=":material/filter_alt:")
         return
-    dados = pr.payload(b, meta.get("hist"))
+    dados = pr.payload(b, meta.get("hist"), pp.carregar())
     usuario = st.session_state.get("usuario_login", "")
     if "reg_visao" not in st.session_state:
         st.session_state.reg_visao = db.carregar_visao(usuario, TELA)
-    chave = hashlib.md5((dados[:4000] + dados[-4000:] + str(len(dados)) + theme.modo()).encode()).hexdigest()[:12]
+    chave = hashlib.md5((dados[:4000] + dados[-4000:] + str(len(dados))).encode()).hexdigest()[:12]   # o tema não reinicia a mesa
     retorno = _MESA(dados=dados, chave=chave, tokens=_tokens_css(), fonte=theme.FONTE_URL, visao=st.session_state.reg_visao,
-                    altura=900, info=info, key="mesa_regular", default=None)
+                    altura=900, info=info, usuario=usuario, base=f"{rel.get('id')}:{rel.get('atualizado_em')}",
+                    key="mesa_regular", default=None)
     if isinstance(retorno, dict) and retorno.get("acao") == "salvar_visao" and retorno.get("ts") != st.session_state.get("_reg_ts"):
         st.session_state._reg_ts = retorno.get("ts")
         try:
