@@ -24,6 +24,9 @@ _DICIONARIOS = {"F": "Filial", "C": "Classificação", "B": "Comprador", "D": "D
 _BLOQUEIO = re.compile(r"VENCIMENTO|ENCARTE|MIDIA")
 
 
+VERSAO = "2026-11-02"   # muda quando o formato lido muda: invalida a base guardada em cache no servidor
+
+
 class ErroLeitura(ValueError):
     pass
 

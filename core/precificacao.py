@@ -52,7 +52,8 @@ def _historico(b: pd.DataFrame, hist: dict | None, filiais: list, produtos: list
     """Histórico do estado (concorrentes e nosso preço por dia) dos produtos da mesa + concorrentes de cada filial."""
     vazio = {"hT": [], "hK": [], "hE": [], "dp": [], "du": [], "dk": [], "dt": [], "dv": [], "da": [], "dtp": [],
              "op": [], "ou": [], "ot": [], "ov": [], "oa": [], "oo": [], "hOG": [], "fk": [[] for _ in filiais]}
-    if not hist or not len(b):
+    necessarios = {"dP", "dU", "dK", "dT", "dV", "dA", "oP", "oU", "oT", "oV", "oA", "fil_conc_f", "fil_conc_k", "K", "T", "U"}
+    if not hist or not len(b) or not necessarios.issubset(hist):
         return vazio
     # códigos originais -> índices da mesa
     p_map = pd.Series(pd.Categorical(b["Produto"].astype(str), categories=produtos).codes, index=b["_p"].to_numpy()).groupby(level=0).first()
@@ -73,11 +74,12 @@ def _historico(b: pd.DataFrame, hist: dict | None, filiais: list, produtos: list
         if int(k) in k_pos:
             fk[int(f_map[f_cod])].append(k_pos[int(k)])
     nomes = lambda lista, idx: [str(lista[x]) if x < len(lista) else "" for x in idx]
-    return {"hT": list(hist["T"]), "hK": nomes(hist["K"], k_usados), "hE": nomes(hist["KE"], k_usados),
+    return {"hT": list(hist["T"]), "hK": nomes(hist["K"], k_usados), "hE": nomes(hist.get("KE", []), k_usados),
             "dp": p_map.reindex(dP[m]).astype(int).tolist(), "du": um(dU[m]).tolist() if m.any() else [],
             "dk": k_comp.astype(int).tolist(), "dt": hist["dT"][m].astype(int).tolist(),
             "dv": hist["dV"][m].astype(int).tolist(), "da": hist["dA"][m].astype(int).tolist(),
-            "dtp": hist["dTp"][m].astype(int).tolist(), "oo": hist["oO"][mo].astype(int).tolist(), "hOG": list(hist.get("OG", [])),
+            "dtp": hist["dTp"][m].astype(int).tolist() if "dTp" in hist else [0] * int(m.sum()),
+            "oo": hist["oO"][mo].astype(int).tolist() if "oO" in hist else [0] * int(mo.sum()), "hOG": list(hist.get("OG", [])),
             "op": p_map.reindex(oP[mo]).astype(int).tolist(), "ou": um(oU[mo]).tolist() if mo.any() else [],
             "ot": hist["oT"][mo].astype(int).tolist(), "ov": hist["oV"][mo].astype(int).tolist(), "oa": hist["oA"][mo].astype(int).tolist(),
             "fk": fk}
