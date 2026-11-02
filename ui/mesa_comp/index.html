@@ -189,24 +189,24 @@ body.foco .kpis,body.foco .linha2{display:none}
 .kc b{font:550 14px 'Geist Mono',monospace;letter-spacing:-.02em}
 .kc i{font-style:normal;font-size:10.5px;color:var(--faint);font-family:'Geist Mono',monospace}
 .linha2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(330px,1fr);gap:8px}
-.histc{padding:8px 12px 4px;min-width:0;height:212px}
+.histc{padding:8px 12px 4px;min-width:0;height:236px}
 .hhead{display:flex;align-items:center;gap:10px;margin-bottom:2px}
 .htit{font-size:12px;font-weight:600;white-space:nowrap}
 .htit small{color:var(--faint);font-weight:400;margin-left:4px}
 .hchips{flex:1;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding:0;margin:0}
 .hchip{flex:none;height:24px;padding:0 9px;border-radius:999px;font-size:11px;display:inline-flex;align-items:center;gap:5px}
 .hchip .pt{width:5px;height:5px;border-radius:50%;background:var(--up);display:inline-block}
-#hist svg{width:100%;height:166px;display:block}
+#hist svg{width:100%;height:188px;display:block}
 .hvazio{color:var(--muted);font-size:12px;padding:30px 0;line-height:1.6}
-.resumo{padding:9px 12px;height:212px;overflow:auto}
+.resumo{padding:9px 12px;height:236px;overflow:hidden;display:flex;flex-direction:column}
 .rtop{display:flex;align-items:center;gap:8px;justify-content:space-between}
 .rnome{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rsub{font-size:11px;color:var(--muted);margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.resumo .lad{width:100%;height:70px;display:block;margin:2px 0}
-.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 10px}
+.resumo .lad{width:100%;height:66px;display:block;margin:0;flex:none}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px 10px}
 .ms span{display:block;font-size:10px;color:var(--faint)}
 .ms b{font:550 12.5px 'Geist Mono',monospace}
-.ralts{display:flex;align-items:center;gap:5px;margin-top:6px}
+.ralts{display:flex;align-items:center;gap:5px;margin-top:auto;padding-top:4px}
 .ib2{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer;display:grid;place-items:center;padding:0}
 .ib2:hover{border-color:var(--primary);color:var(--primary)}
 .ib2 svg{width:14px;height:14px}
@@ -373,7 +373,7 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
   const ORDEM_R = [0, 2, 3, 4, 6, 5];
   const CORTES = [['Variação acima de ±1,5%', 'tdUp'], ['Encarte, app ou mídia vigente', 'tagi'], ['Promoção comercial abaixo do mercado', 'alerta']];
   const NV = new Float64Array(N), NA = new Float64Array(N), RG = new Uint8Array(N), MN = new Float64Array(N), MX = new Float64Array(N), OB = new Float64Array(N);
-  const UMIN = new Float64Array(N), UMAX = new Float64Array(N), UOBJ = new Float64Array(N), CT = new Uint8Array(N), MUD = new Uint8Array(N);
+  const UMIN = new Float64Array(N), UMAX = new Float64Array(N), UOBJ = new Float64Array(N), CT = new Uint8Array(N), MUD = new Uint8Array(N), REAP = new Uint8Array(N);
   const DF0 = Date.UTC(2020, 0, 1), hj = new Date(), HOJE = Math.floor((Date.UTC(hj.getFullYear(), hj.getMonth(), hj.getDate()) - DF0) / 864e5) + 1;
   const dfTxt = d => { const t = new Date(DF0 + (d - 1) * 864e5); return String(t.getUTCDate()).padStart(2, '0') + '/' + String(t.getUTCMonth() + 1).padStart(2, '0') + '/' + t.getUTCFullYear(); };
   const semPesq = i => D.orig[i] === 1 || !(D.vmk[i] > 0);
@@ -409,12 +409,15 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
     let ct = 0;
     if (!fimHoje) { if (Math.abs(nv / D.vm[i] - 1) > CORTE / 100) ct |= 1; if (/ENCARTE|APP|MIDIA/.test(tp)) ct |= 2; if (/PROMOCAO COMERCIAL/.test(tp) && ip < 1) ct |= 4; }
     CT[i] = ct;
+    { const d = D.dfim[i] - HOJE, dia = D.dfim[i] > 0 ? new Date(DF0 + (D.dfim[i] - 1) * 864e5).getUTCDay() : -1;
+      REAP[i] = D.dfim[i] > 0 && (d === 0 || (d > 0 && d <= 6 && (dia === 6 || dia === 0))) ? 1 : 0; }
     MUD[i] = (Math.abs(nv - D.vm[i]) >= 0.005 || (D.am[i] > 0 && Math.abs(na - D.am[i]) >= 0.005) || (!(D.am[i] > 0) && na > 0)) ? 1 : 0;
   }
   /* atacado com desconto acima de 15% sobe até o primeiro preço válido dentro do limite */
   function piso15(na, nv){ const lim = nv * (1 - DESC_MAX); if (!(na > 0) || na >= lim - 1e-9) return na;
     for (let c = Math.ceil(lim * 100); c <= Math.round(nv * 100); c++) { const r = roundAtacado(c / 100, nv); if (r >= lim - 1e-9 && r <= nv) return r; } return nv; }
-  const aceito = i => MUD[i] ? (ACE.has(i) ? ACE.get(i) : CT[i] === 0) : false;
+  const podeAceitar = i => MUD[i] || REAP[i];
+  const aceito = i => MUD[i] ? (ACE.has(i) ? ACE.get(i) : CT[i] === 0) : REAP[i] ? ACE.get(i) === true : false;
   const calcTudo = () => { for (let i = 0; i < N; i++) calc(i); };
 
   /* ---------- formatação ---------- */
@@ -431,7 +434,9 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
   const rotRegra = i => RG[i] === 6 ? 'Optimus: ' + (optInfo(i).m || 'ajustado') : RG[i] === 2 ? `Aplicado máxima ${nf1.format(UMAX[i])}%` : RG[i] === 3 ? (D.cesta[i] ? `Aplicado mínima cesta ${nf1.format(UMIN[i])}%` : `Aplicado mínima ${nf1.format(UMIN[i])}%`)
     : RG[i] === 4 ? `Aplicado objetiva ${nf1.format(UOBJ[i])}%` : REGRAS[RG[i]][0];
   const tagRegra = i => { const [, n, c] = REGRAS[RG[i]]; return `<span class="tag" style="color:${c}" data-tip="${esc(explicaRegra(i))}">${ic(n, c)}${rotRegra(i)}</span>`; };
-  const tagCorte = i => { const t = esc(explicaCorte(i)); if (!MUD[i]) return `<span class="tag" style="color:var(--faint)" data-tip="${t}">Sem alteração</span>`;
+  const tagCorte = i => { const t = esc(explicaCorte(i));
+    if (!MUD[i] && REAP[i]) return `<span class="tag" style="color:var(--amber)" data-tip="${t}">${ic('cal')}Reaplicar: vigência termina ${D.dfim[i] === HOJE ? 'hoje' : dfTxt(D.dfim[i]).slice(0, 5)}</span>`;
+    if (!MUD[i]) return `<span class="tag" style="color:var(--faint)" data-tip="${t}">Sem alteração</span>`;
     if (!CT[i]) return `<span class="tag" style="color:var(--up)" data-tip="${t}">${ic('check')}Dentro da regra</span>`;
     const l = CORTES.filter((_, k) => CT[i] & (1 << k)); return `<span class="tag" style="color:var(--down)" data-tip="${t}">${ic(l[0][1])}${l[0][0]}${l.length > 1 ? ' +' + (l.length - 1) : ''}</span>`; };
   /* ---------- explicações detalhadas (caixa ao passar o mouse) ---------- */
@@ -450,7 +455,7 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
     if (RG[i] === 5) L.push('AJUSTE MANUAL', `Preço definido na mesa. A sugestão do motor seria seguir o mercado de ${R$(D.vmk[i])}.`, faixa(i));
     if (RG[i] === 6) { const o = optInfo(i);
       L.push(`OPTIMUS: ${(o.t === 'erro' ? 'POSSÍVEL ERRO DE PESQUISA' : o.t === 'custo' ? 'PESQUISA ABAIXO DO CUSTO, CONSISTENTE' : 'PESQUISA CONSISTENTE')}`);
-      if (o.v != null) L.push(`1. Preço vencedor: ${o.n} a ${R$(o.v)}${o.tp ? ' (' + o.tp.toLowerCase() + ')' : ''}${o.dia ? ' em ' + o.dia : ''}: o menor entre as coletas mais recentes ${o.fil ? 'dos concorrentes da filial' : 'do estado'} (regular, promoção ou ponto extra).`);
+      if (o.v != null) L.push(`1. Preço vencedor da linha: ${o.n} a ${R$(o.v)}${o.tp ? ' (' + o.tp.toLowerCase() + ')' : ''}${o.dia ? ' em ' + o.dia : ''}, o mesmo menor preço do mercado usado na mesa.`);
       if (o.mo != null) L.push(`2. Comparado com a ${o.f}: ${R$(o.mo)}. Diferença de ${(o.d > 0 ? '+' : '') + P1(o.d)}; o limite é ±${nf0.format((o.lim || 0) * 100)}% porque o vencedor está ${o.ac ? 'abaixo' : 'acima'} do custo (${R$(D.cu[i])}).`);
       else L.push('2. Sem moda confiável para comparar.');
       if (o.dec) L.push(`3. Decisão: ${o.dec}${o.al != null ? ' = ' + R$(o.al) : ''}.`);
@@ -463,7 +468,9 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
   }
   function explicaCorte(i){
     const v = NV[i] / D.vm[i] - 1, tp = D.tipos[D.ti[i]] || '', fim = D.dfim[i] > 0 ? dfTxt(D.dfim[i]) : 'sem data fim', L = [];
-    if (!MUD[i]) return `SEM ALTERAÇÃO\nO novo preço é igual ao atual (${R$(D.vm[i])}): nada a importar.`;
+    if (!MUD[i] && REAP[i]) { const dia = ['domingo', '', '', '', '', '', 'sábado'][new Date(DF0 + (D.dfim[i] - 1) * 864e5).getUTCDay()];
+      return `MESMO PREÇO, VIGÊNCIA TERMINANDO\nO novo preço é igual ao atual (${R$(D.vm[i])}), mas a vigência atual termina ${D.dfim[i] === HOJE ? 'hoje' : 'no ' + dia + ', ' + fim}.\nPor isso o aceite fica liberado: marque para reaplicar o preço e ele seguir valendo depois do fim da vigência.`; }
+    if (!MUD[i]) return `SEM ALTERAÇÃO\nO novo preço é igual ao atual (${R$(D.vm[i])}) e a vigência atual ${D.dfim[i] > 0 ? 'vai até ' + fim : 'não tem data fim'}: nada a importar.\nO aceite só é liberado quando a vigência termina hoje ou no sábado/domingo.`;
     if (!CT[i]) { L.push('DENTRO DA REGRA: ACEITE AUTOMÁTICO');
       L.push(D.dfim[i] === HOJE ? `O preço atual termina hoje (${fim}), então não há corte.` : `Variação de ${(v > 0 ? '+' : '') + P1(v)}, dentro do limite de ±${nf1.format(CORTE)}%, e o preço atual não está em ação que trave a alteração.`);
       return L.join('\n'); }
@@ -483,7 +490,7 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
   const imp = i => (NV[i] - D.vm[i]) * D.un[i];
   const C = {};
   const col = (id, t, g, w, rend, ord, cls, txt) => C[id] = { id, t, g, w, rend, ord, cls: cls || '', txt };
-  col('ok', 'Aceite', 'Identificação', 62, i => `<span class="ok-box${MUD[i] ? (aceito(i) ? ' on' : '') : ' na'}" data-ok="${i}">${ic('check')}</span>`, i => (MUD[i] ? (aceito(i) ? 2 : 1) : 0));
+  col('ok', 'Aceite', 'Identificação', 62, i => `<span class="ok-box${podeAceitar(i) ? (aceito(i) ? ' on' : '') : ' na'}" data-ok="${i}">${ic('check')}</span>`, i => (MUD[i] ? (aceito(i) ? 2 : 1) : 0));
   col('fil', 'Filial', 'Identificação', 140, i => esc(curto(D.filiais[D.fi[i]])), i => D.filiais[D.fi[i]], '', () => D.filiais.map(curto));
   col('prod', 'Produto', 'Identificação', 280, i => esc(D.produtos[D.pi[i]]), i => D.produtos[D.pi[i]], '', () => D.produtos);
   col('cv', 'Curva', 'Identificação', 58, i => `<span class="cv cv${'ABC'[D.curva[i]]}">${'ABC'[D.curva[i]]}</span>`, i => D.curva[i]);
@@ -620,7 +627,7 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
   on(body, 'contextmenu', e => { const r = e.target.closest('.row'); if (!r) return; e.preventDefault(); const i = +r.dataset.i; selecionar(i);
     const it = (acao, icone, txt, des) => `<button data-ctx="${acao}" ${des ? 'disabled' : ''}>${ic(icone)}${txt}</button>`;
     cm.innerHTML = `<div class="ctx-t">${esc(curto(D.produtos[D.pi[i]]))}<small>${esc(curto(D.filiais[D.fi[i]]))}</small></div>`
-      + it('aceitar', 'check', 'Aceitar preço', !MUD[i] || aceito(i)) + it('anular', 'x', 'Anular aceite', !aceito(i))
+      + it('aceitar', 'check', 'Aceitar preço', !podeAceitar(i) || aceito(i)) + it('anular', 'x', 'Anular aceite', !aceito(i))
       + '<span class="ctx-s"></span>' + it('objetiva', 'obj', `Aplicar objetiva (R$ ${nf2.format(roundVarejo(OB[i]))})`) + it('optimus', 'robo', 'Aplicar Optimus', semPesq(i))
       + '<span class="ctx-s"></span>' + it('motor', 'undo', 'Sugestão do motor', !OV.has(i) && !OVA.has(i) && !ACE.has(i));
     cm.classList.add('on'); const w = cm.offsetWidth, h = cm.offsetHeight;
@@ -643,7 +650,7 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
     for (let d = 1; d <= VIS.length; d++) { const k = (Math.max(k0, -1) + d) % VIS.length, i = VIS[k]; if (MUD[i] && !aceito(i)) {
       const y = k * H; sc.scrollTop = Math.max(0, y - sc.clientHeight / 3); selecionar(i); return; } }
     toast('Nenhum preço pendente de aceite neste filtro'); }
-  function alternarAceite(i){ if (!MUD[i]) return; ACE.set(i, !aceito(i)); salvar(); atualizar(false); if (SEL === i) resumo(i); }
+  function alternarAceite(i){ if (!podeAceitar(i)) return; ACE.set(i, !aceito(i)); salvar(); atualizar(false); if (SEL === i) resumo(i); }
   function selecionar(i){ SEL = i; render(); resumo(i); historico(i); }
   on(document, 'keydown', e => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || !VIS.length) return;
@@ -717,7 +724,7 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
     const our = dias.map(t => nn[t] ? nos[t] / nn[t] : null), mer = dias.map(t => isFinite(mn[t]) ? mn[t] : null), moda = HMODO === 'a' ? D.ma[i] : D.mo[i];
     const vals = mer.filter(v => v > 0).concat(moda > 0 ? [moda] : []);
     if (!vals.length) { box.innerHTML = '<div class="hvazio">Sem coletas da concorrência para este filtro.</div>'; HDADOS = null; return; }
-    const lo = Math.min(...vals) * 0.97, hi = Math.max(...vals) * 1.03, Wd = Math.max(420, box.clientWidth || 800), Ht = 156, pl = 8, pr = 54, pt = 16, pb = 16;
+    const lo = Math.min(...vals) * 0.97, hi = Math.max(...vals) * 1.03, Wd = Math.max(420, box.clientWidth || 800), Ht = 178, pl = 8, pr = 54, pt = 16, pb = 16;
     const X = n => pl + (Wd - pl - pr) * (dias.length > 1 ? n / (dias.length - 1) : 0.5), Y = v => pt + (Ht - pt - pb) * (1 - (v - lo) / (hi - lo || 1));
     const pts = mer.map((v, n) => v == null ? null : [X(n), Y(v), v, n]).filter(Boolean);
     let linha = '', area = '';
@@ -778,7 +785,7 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
       <div class="ralts"><button class="ib2" data-alt="m" data-tip="Usar mercado − 0,01">${ic('merc')}</button><button class="ib2" data-alt="o" data-tip="Usar moda − 0,01">${ic('moda')}</button>
         <button class="ib2" data-alt="b" data-tip="Usar objetivo">${ic('obj')}</button><button class="ib2" data-alt="r" data-tip="Voltar à sugestão do motor">${ic('undo')}</button>
         <span class="rwhy" data-tip="${esc(explicaRegra(i))}">${ic('regra')}por quê?</span>
-        <button class="tx sm ${aceito(i) ? 'ok' : ''}" data-alt="ok" ${MUD[i] ? '' : 'disabled'}>${ic('check')}${aceito(i) ? 'Aceito' : 'Aceitar'}</button></div>`;
+        <button class="tx sm ${aceito(i) ? 'ok' : ''}" data-alt="ok" ${podeAceitar(i) ? '' : 'disabled'}>${ic('check')}${aceito(i) ? 'Aceito' : 'Aceitar'}</button></div>`;
   }
   on($('resumo'), 'click', e => { const b = e.target.closest('[data-alt]'); if (!b || SEL < 0) return; const i = SEL, k = b.dataset.alt;
     if (k === 'ok') { alternarAceite(i); return; } if (k === 'r') { OV.delete(i); OVA.delete(i); OPT.delete(i); ACE.delete(i); }
@@ -863,33 +870,32 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
   const modaDe = vals => { const f = new Map(); vals.forEach(v => { const k = Math.round(v * 100); f.set(k, (f.get(k) || 0) + 1); });
     let best = null, bn = 0; for (const [k, n] of f) if (n > bn || (n === bn && k < best)) { best = k; bn = n; } return best == null ? null : best / 100; };
   function roundAbaixo(p){ const pc = Math.round(p * 100), l = ciaCands(pc).filter(v => v <= pc); return l.length ? Math.max(...l) / 100 : roundVarejo(p); }
+  const KPOS = new Map(D.hK.map((n, k) => [n, k]));
+  /* O Optimus parte sempre do MESMO preço vencedor da linha (menor preço do mercado da mesa, com o mesmo
+     concorrente, data e tipo). O histórico serve só para medir as modas e checar a consistência. */
   function analisar(i){
     if (semPesq(i)) return null;
-    const c = D.cu[i], rows = HD.get(D.pi[i] * 64 + D.ui[i]) || [], fil = new Set(D.fk[D.fi[i]] || []);
-    const daFilial = rows.some(j => fil.has(D.dk[j]) && TIPO_OK.has(D.dtp[j]));
+    const c = D.cu[i], venc = D.vmk[i], nomeRow = D.concs[D.ki[i]], wk = KPOS.has(nomeRow) ? KPOS.get(nomeRow) : null;
+    const rows = HD.get(D.pi[i] * 64 + D.ui[i]) || [], fil = new Set(D.fk[D.fi[i]] || []);
     const porK = new Map();
-    for (const j of rows) { const k = D.dk[j]; if ((daFilial && !fil.has(k)) || !TIPO_OK.has(D.dtp[j])) continue; const v = D.dv[j] / 100; if (!(v > 0)) continue;
-      let o = porK.get(k); if (!o) porK.set(k, o = { ult: -1, vu: Infinity, vals: [] }); o.vals.push(v);
-      if (D.dt[j] > o.ult) { o.ult = D.dt[j]; o.vu = v; } else if (D.dt[j] === o.ult && v < o.vu) o.vu = v; }
-    let venc = null, wk = null;
-    if (porK.size) { const ultMax = Math.max(...[...porK.values()].map(o => o.ult));
-      for (const [k, o] of porK) if (o.ult >= ultMax - 7 && (venc == null || o.vu < venc)) { venc = o.vu; wk = k; } }   // menor entre os mais recentes (última semana de coleta)
-    if (venc == null) { venc = D.vmk[i]; wk = null; }
-    const modas = [...porK.entries()].filter(([, o]) => o.vals.length >= 3).map(([k, o]) => [k, modaDe(o.vals)]);
-    const menorModa = modas.length ? Math.min(...modas.map(m => m[1])) : (D.mo[i] > 0 ? D.mo[i] : null);
-    const propria = wk != null && porK.get(wk).vals.length >= 3 ? modaDe(porK.get(wk).vals) : null;
+    for (const j of rows) { if (!TIPO_OK.has(D.dtp[j])) continue; const v = D.dv[j] / 100; if (!(v > 0)) continue;
+      const k = D.dk[j]; let l = porK.get(k); if (!l) porK.set(k, l = []); l.push(v); }
+    const propriaVals = wk != null ? porK.get(wk) : null;
+    const propria = propriaVals && propriaVals.length >= 3 ? modaDe(propriaVals) : null;
+    const usaFil = [...porK.keys()].some(k => fil.has(k));
+    const modasFil = [...porK.entries()].filter(([k, l]) => (!usaFil || fil.has(k)) && l.length >= 3).map(([, l]) => modaDe(l));
+    const menorModa = modasFil.length ? Math.min(...modasFil) : (D.mo[i] > 0 ? D.mo[i] : null);
     const moda = propria ?? menorModa;
-    const nomeV = wk != null ? empresa(wk) : 'pesquisa do relatório';
-    const tpV = wk != null ? (TPN[[...rows].filter(j => D.dk[j] === wk && TIPO_OK.has(D.dtp[j])).sort((a, b) => D.dt[b] - D.dt[a])[0] != null ? D.dtp[[...rows].filter(j => D.dk[j] === wk && TIPO_OK.has(D.dtp[j])).sort((a, b) => D.dt[b] - D.dt[a])[0]] : 0] || '') : '';
-    const diaV = wk != null ? D.hT[porK.get(wk).ult] : (D.datas[D.dti[i]] || '');
-    const fonte = propria != null ? `moda do próprio ${nomeV}` : modas.length ? 'menor moda entre os concorrentes da filial' : 'moda do relatório';
-    const comum = { venc, nomeV, tpV, diaV, fonte, menorModa, filial: daFilial };
-    if (!(moda > 0)) return { ...comum, alvo: venc - CENT, motivo: 'sem moda para comparar', moda: null, delta: null, lim: null, tipo: 'ok', decisao: 'segue o menor preço − 0,01' };
+    const nomeV = titulo_(curto(nomeRow).split(' - ')[0]) || 'concorrente';
+    const tpV = ['', 'Regular', 'Promoção', 'Ponto extra'][D.tcol[i]] || '', diaV = D.datas[D.dti[i]] || '';
+    const fonte = propria != null ? `moda do próprio ${nomeV}` : modasFil.length ? `menor moda entre os concorrentes ${usaFil ? 'da filial' : 'do estado'}` : 'moda do relatório';
+    const comum = { venc, nomeV, tpV, diaV, fonte, menorModa, filial: usaFil };
+    if (!(moda > 0)) return { ...comum, alvo: venc - CENT, motivo: 'sem moda para comparar', moda: null, delta: null, lim: null, tipo: 'ok', decisao: 'segue o preço vencedor − 0,01' };
     const delta = venc / moda - 1, abaixoCusto = venc < c, lim = abaixoCusto ? 0.15 : 0.25;
-    if (Math.abs(delta) <= lim) return { ...comum, alvo: venc - CENT, motivo: abaixoCusto ? 'abaixo do custo, consistente' : 'pesquisa consistente', moda, delta, lim, abaixoCusto, tipo: abaixoCusto ? 'custo' : 'ok', decisao: 'dentro do limite: segue o menor preço − 0,01' };
-    const base = menorModa != null ? Math.min(moda, menorModa) : moda;      // fora do limite: a menor moda confiável (própria ou de outro concorrente da filial)
+    if (Math.abs(delta) <= lim) return { ...comum, alvo: venc - CENT, motivo: abaixoCusto ? 'abaixo do custo, consistente' : 'pesquisa consistente', moda, delta, lim, abaixoCusto, tipo: abaixoCusto ? 'custo' : 'ok', decisao: 'dentro do limite: segue o preço vencedor − 0,01' };
+    const base = menorModa != null ? Math.min(moda, menorModa) : moda;
     return { ...comum, alvo: base - CENT, motivo: 'possível erro de pesquisa', moda, delta, lim, abaixoCusto, base, tipo: 'erro',
-      decisao: base < moda - 0.004 ? `fora do limite: usa a menor moda entre os concorrentes da filial (R$ ${nf2.format(base)}, abaixo da moda do vencedor) − 0,01` : `fora do limite: usa a moda (R$ ${nf2.format(base)}) − 0,01` };
+      decisao: base < moda - 0.004 ? `fora do limite: usa a menor moda entre os concorrentes (R$ ${nf2.format(base)}, abaixo da moda do vencedor) − 0,01` : `fora do limite: usa a moda (R$ ${nf2.format(base)}) − 0,01` };
   }
   function precoOptimus(i, a){
     const dde = D.dde[i] != null && D.dde[i] > DDE_META;
@@ -925,7 +931,7 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
       let imp0 = 0, imp1 = 0; mud.forEach(x => { imp0 += (NV[x.i] - D.vm[x.i]) * D.un[x.i]; imp1 += (x.nv - D.vm[x.i]) * D.un[x.i]; });
       PREVIA = itens; b.classList.remove('rodando');
       $('pOpt').innerHTML = `<h4>${ic('robo', '#7A3FD1')} Optimus</h4>
-        <div class="regras-opt">Para cada item, o Optimus pega o menor preço entre as coletas mais recentes dos concorrentes da filial (regular, promoção e ponto extra) e compara com a moda do próprio concorrente, ou com a menor moda da filial quando faltam dados. Acima do custo, tolera ±25%; abaixo do custo, ±15%. Dentro da faixa, segue o menor preço − R$ 0,01; fora, usa a menor moda confiável (do vencedor ou de outro concorrente da filial) − R$ 0,01. O arredondamento nunca passa do preço de referência: quando o centavo abaixo não é válido, fica igual ao mercado. Respeita mínima, máxima, piso da cesta, arredondamento e o limite de 15% no atacado. Com DDE acima de ${DDE_META} dias, mantém o IP no máximo em 100%. Itens ajustados à mão não são alterados.</div>
+        <div class="regras-opt">Para cada item, o Optimus parte do mesmo preço vencedor da linha (o menor preço do mercado da mesa) e compara com a moda do próprio concorrente vencedor (coletas regulares, de promoção e de ponto extra), ou com a menor moda dos concorrentes da filial quando faltam dados. Acima do custo, tolera ±25%; abaixo do custo, ±15%. Dentro da faixa, segue o menor preço − R$ 0,01; fora, usa a menor moda confiável (do vencedor ou de outro concorrente da filial) − R$ 0,01. O arredondamento nunca passa do preço de referência: quando o centavo abaixo não é válido, fica igual ao mercado. Respeita mínima, máxima, piso da cesta, arredondamento e o limite de 15% no atacado. Com DDE acima de ${DDE_META} dias, mantém o IP no máximo em 100%. Itens ajustados à mão não são alterados.</div>
         <div class="oresumo"><div><span>Analisados</span><b>${nf0.format(itens.length)}</b></div><div><span>Mudam de preço</span><b>${nf0.format(mud.length)}</b></div>
           <div><span>Possíveis erros de pesquisa</span><b class="neg">${nf0.format(erros)}</b></div><div><span>DDE acima de ${DDE_META}</span><b>${nf0.format(ddeN)}</b></div>
           <div><span>Abaixo do custo (consistente)</span><b>${nf0.format(custo)}</b></div><div><span>Ajustados à mão (mantidos)</span><b>${nf0.format(manuais)}</b></div>
