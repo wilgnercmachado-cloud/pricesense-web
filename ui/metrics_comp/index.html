@@ -1,0 +1,1703 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- Um só arquivo para os dois painéis (PriceMetrics e PromoMetrics): o Python diz qual abrir em args.app. -->
+<style id="estilo-tema"></style>
+<style id="css-price" media="not all">
+@import url('__FONTE__');
+:root{__TOKENS__}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:transparent;color:var(--ink);font:13px 'Geist',-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+body.fs{background:var(--canvas)}
+svg.i{width:15px;height:15px;flex:none;vertical-align:-2px}
+#app{display:flex;flex-direction:column;gap:10px;height:100%;padding:2px}
+body.fs #app{padding:12px}
+.glass{background:var(--surface);border:1px solid var(--line);border-radius:16px;backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);box-shadow:var(--shadow)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;flex-wrap:wrap;position:relative;z-index:30}
+.top h1{margin:0;font-size:16px;font-weight:600;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.top small{color:var(--muted);font-size:11.5px;display:block;margin-top:2px}
+
+.acts .sep{width:1px;height:22px;background:var(--line);margin:0 4px}
+.ib{width:36px;height:36px;border-radius:11px;border:1px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer;display:grid;place-items:center;
+  transition:transform .15s,border-color .2s,color .2s,box-shadow .2s,background .2s}
+.ib svg{width:17px;height:17px}
+.ib:hover{transform:translateY(-1px);border-color:var(--primary);color:var(--primary);box-shadow:0 8px 20px -12px var(--primary)}
+.ib.pri{background:linear-gradient(180deg,var(--primary-hover),var(--primary));color:#fff;border-color:transparent}
+.ib.gr{background:var(--up-soft);color:var(--up);border-color:color-mix(in srgb,var(--up) 40%,transparent)}
+.ib.on{background:var(--primary-soft);color:var(--primary);border-color:color-mix(in srgb,var(--primary) 50%,transparent)}
+button.tx{font:550 12.5px 'Geist',sans-serif;height:32px;padding:0 12px;border-radius:9px;border:1px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+button.tx:hover{border-color:var(--primary);color:var(--primary)}
+button.tx.pri{background:linear-gradient(180deg,var(--primary-hover),var(--primary));color:#fff;border-color:transparent}
+button.tx.ok{background:var(--up);border-color:var(--up);color:#fff}
+#tip{white-space:pre-line!important;max-width:420px;line-height:1.5;text-align:left;position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:var(--canvas);font-size:11.5px;padding:5px 9px;border-radius:7px;opacity:0;transform:translateY(4px);transition:opacity .12s,transform .12s;white-space:nowrap}
+#tip.on{opacity:1;transform:none}
+.pop{position:absolute;top:44px;right:0;z-index:20;width:420px;padding:14px;display:none;background:var(--surface-solid)!important;box-shadow:0 24px 48px -20px rgba(15,23,42,.45)}
+.pop.on{display:block;animation:pin .18s cubic-bezier(.2,.8,.2,1)}
+@keyframes pin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.pop h4{margin:0 0 4px;font-size:13px;font-weight:600}
+.pop p{margin:0 0 10px;font-size:11.5px;color:var(--muted);line-height:1.45}
+.pop table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px}
+.pop th{text-align:left;color:var(--faint);font-weight:500;padding:5px 6px;border-bottom:1px solid var(--line)}
+.pop td{padding:6px;border-bottom:1px solid var(--line)}
+.pop input[type=number],.pop input[type=date],.pop select{width:100%;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--ink);padding:0 8px;font:12.5px 'Geist Mono',monospace}
+.opt{display:flex;gap:6px;margin-bottom:10px}
+.opt label{flex:1;border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer;font-size:12px}
+.opt label.on{border-color:var(--primary);background:var(--primary-soft);color:var(--primary)}
+.opt input{display:none}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.grid2 span{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
+.kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+.k{padding:10px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--line);backdrop-filter:blur(16px);position:relative;overflow:hidden}
+.k::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent,var(--t,var(--faint)),transparent)}
+.k span{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);font-weight:500}
+.k span svg{color:var(--t)}
+.k b{display:block;font:500 19px 'Geist Mono',monospace;letter-spacing:-.03em;margin-top:3px;white-space:nowrap}
+.k i{font-style:normal;font-size:11px;color:var(--faint);font-family:'Geist Mono',monospace}
+.pos{color:var(--up)}.neg{color:var(--down)!important}
+
+
+h3{margin:0 0 8px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden}
+h3 small{color:var(--faint);font-weight:400;overflow:hidden;text-overflow:ellipsis}
+
+.hseg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex:none}
+.hseg button{border:0;background:transparent;color:var(--muted);font:550 11px 'Geist',sans-serif;padding:3px 10px;cursor:pointer}
+.hseg button.on{background:var(--primary);color:#fff}
+.hchips{display:flex;gap:5px;overflow-x:auto;padding-bottom:4px;margin-bottom:2px;scrollbar-width:thin}
+.hchip{flex:none;border:1px solid var(--line);background:var(--field);border-radius:9px;padding:3px 9px;font-size:11px;cursor:pointer;color:var(--ink);text-align:left;line-height:1.2}
+.hchip small{display:block;color:var(--faint);font-size:10px}
+.hchip.on{border-color:var(--primary);background:var(--primary-soft);color:var(--primary)}
+.leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:var(--muted);margin-top:4px}
+.leg i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:5px;vertical-align:2px}
+.lista{display:flex;flex-direction:column;gap:3px}
+.rg{display:grid;grid-template-columns:18px minmax(0,1fr) 70px 54px;gap:8px;align-items:center;font-size:12px;cursor:pointer;padding:4px 5px;border-radius:7px}
+.rg:hover,.rg.on{background:var(--primary-soft)}
+.rg span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rg .bar{height:6px;border-radius:5px;background:var(--raised);overflow:hidden}
+.rg .bar i{display:block;height:100%;border-radius:5px;transition:width .3s}
+.rg b{font-family:'Geist Mono',monospace;font-weight:500;text-align:right}
+
+.gridbox{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.tools{display:flex;gap:7px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tools input[type=search]{height:32px;border-radius:9px;border:1px solid var(--line);background:var(--field);color:var(--ink);padding:0 10px;font:12.5px 'Geist',sans-serif;width:260px}
+.chip{height:30px;padding:0 11px;border-radius:999px;font:550 12px 'Geist',sans-serif;border:1px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.chip:hover{border-color:var(--primary);color:var(--primary)}
+.chip.on{background:var(--primary-soft);color:var(--primary);border-color:color-mix(in srgb,var(--primary) 50%,transparent)}
+.tools .cnt{margin-left:auto;color:var(--muted);font-size:12px}
+#scroll{flex:1;overflow:auto;position:relative;outline:none}
+.row,.hdr{display:grid;grid-template-columns:var(--cols);width:max-content;min-width:100%}
+.hdr{position:sticky;top:0;z-index:4;background:var(--surface-solid);border-bottom:1px solid var(--line);min-height:44px}
+.hdr>div{position:relative;padding:6px 12px 6px 8px;font-size:11.5px;line-height:1.25;color:var(--muted);font-weight:600;cursor:pointer;user-select:none;
+  display:flex;align-items:center;gap:4px;white-space:normal;background:var(--surface-solid)}
+.hdr>div.r{justify-content:flex-end;text-align:right}
+.hdr>div:hover{color:var(--primary)}
+.hdr>div.edc{background:color-mix(in srgb,var(--primary) 10%,var(--surface-solid));color:var(--primary)}
+.hdr .rz{position:absolute;right:0;top:8px;bottom:8px;width:6px;cursor:col-resize;border-right:2px solid transparent}
+.hdr .rz:hover,.hdr .rz.on{border-right-color:var(--primary)}
+.hdr .ord{font-size:9px;color:var(--primary)}
+.fx{position:sticky;z-index:2}
+.hdr>div.fx{position:sticky;z-index:5}
+.fxl{box-shadow:6px 0 8px -6px rgba(15,23,42,.18)}
+#body{position:relative}
+.row{position:absolute;left:0;height:34px;font-size:12.5px;cursor:pointer;align-items:stretch}
+.row>div{padding:0 8px;white-space:nowrap;display:flex;align-items:center;border-bottom:1px solid var(--line);background:var(--surface-solid)}
+.row:hover>div{background:color-mix(in srgb,var(--primary) 4%,var(--surface-solid))}
+.row.sel>div{background:color-mix(in srgb,var(--primary) 12%,var(--surface-solid))}
+.row>div.r{justify-content:flex-end}
+.row>div.edc{background:color-mix(in srgb,var(--primary) 7%,var(--surface-solid));padding:0 4px}
+.row>div.ed{padding:0 4px}
+.row input[type=text]{width:100%;height:26px;border-radius:7px;border:1px solid color-mix(in srgb,var(--primary) 30%,var(--line));background:var(--field);color:var(--ink);text-align:right;padding:0 6px;font:600 12.5px 'Geist Mono',monospace}
+.edc input[type=text]{color:var(--primary)}
+.row input[type=text]:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+.row input.man{border-color:var(--amber)!important;background:var(--amber-soft)!important}
+.num{font-family:'Geist Mono',monospace;font-variant-numeric:tabular-nums}
+.ok-box{width:18px;height:18px;border-radius:6px;border:1.5px solid var(--line-strong);display:grid;place-items:center;cursor:pointer;transition:all .15s;color:transparent}
+.ok-box.on{background:var(--up);border-color:var(--up);color:#fff}
+.ok-box.na{opacity:.25;cursor:default}
+.cv{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;font:600 11px 'Geist Mono',monospace;color:#fff}
+.cvA{background:var(--up)}.cvB{background:var(--primary)}.cvC{background:var(--faint)}
+.tag{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:11px;background:var(--raised);white-space:nowrap}
+.side{padding:14px;overflow:auto}
+.side .vazio{color:var(--muted);font-size:12.5px;line-height:1.5}
+.side h2{margin:0;font-size:14px;font-weight:600;line-height:1.3}
+.side .sub{color:var(--muted);font-size:12px;margin:4px 0 10px;display:flex;align-items:center;gap:5px}
+.st{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.lad{width:100%;height:180px;display:block}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}
+.mc{background:var(--raised);border-radius:10px;padding:8px 10px}
+.mc span{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.mc b{display:block;font:500 15px 'Geist Mono',monospace;margin-top:2px}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:5px 10px;font-size:12px;margin:8px 0}
+.facts span{color:var(--muted);display:flex;align-items:center;gap:5px}
+.facts b{font-family:'Geist Mono',monospace;font-weight:500;text-align:right;word-break:break-word}
+.why{font-size:12px;line-height:1.5;color:var(--muted);background:var(--raised);border-radius:10px;padding:10px;margin:8px 0 10px}
+.alts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.alts button{justify-content:center}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--surface-solid);border:1px solid var(--line);border-radius:10px;padding:9px 14px;font-size:12.5px;transition:all .25s;pointer-events:none;box-shadow:0 18px 40px -20px rgba(0,0,0,.5);z-index:60}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.kbd{font:11px 'Geist Mono',monospace;border:1px solid var(--line);border-radius:5px;padding:0 4px;color:var(--faint)}
+
+@media (max-width:1100px){.kpis{grid-template-columns:repeat(4,1fr)}.main{grid-template-columns:1fr}.side{display:none}.viz{grid-template-columns:1fr}}
+/* ---- layout v3 ---- */
+.linha2{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(320px,1fr);gap:10px}
+.histc{padding:12px 14px;min-width:0;position:relative}
+.resumo{padding:12px 14px;height:430px;overflow:auto}
+#hist svg{width:100%;height:280px;display:block}
+.hbox{position:relative}
+.htip{position:absolute;z-index:8;pointer-events:none;background:var(--surface-solid);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:11.5px;min-width:230px;box-shadow:0 18px 40px -18px rgba(15,23,42,.45);display:none}
+.htip b{font-family:'Geist Mono',monospace;font-weight:600}
+.htip .l{display:grid;grid-template-columns:1fr auto auto;gap:3px 10px;margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}
+.htip .l em{font-style:normal;color:var(--faint);font-size:10.5px}
+.htip .t{font-weight:600;margin-bottom:4px}
+.htip .r{display:flex;align-items:center;gap:6px}
+.htip .r i{width:10px;height:3px;border-radius:2px;display:inline-block}
+.resumo h2{margin:0;font-size:14px;font-weight:600;line-height:1.3}
+.resumo .sub{color:var(--muted);font-size:12px;margin:3px 0 8px;display:flex;align-items:center;gap:5px}
+.resumo .lad{height:150px}
+.badge{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;border-radius:8px;background:var(--down);color:#fff;font:600 10px 'Geist Mono',monospace;display:grid;place-items:center;padding:0 3px}
+.ib{position:relative}
+.pop.larga{width:760px}
+.cm{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.cm h5{margin:0 0 2px;font-size:12.5px;font-weight:600}
+.cm small{color:var(--muted);font-size:11px;display:block;margin-bottom:6px}
+.cm .lst{max-height:380px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px}
+.cm .it{display:grid;grid-template-columns:16px 1fr auto auto auto;gap:6px;align-items:center;padding:5px 6px;border-radius:8px;background:var(--raised);margin-bottom:4px;font-size:12px;cursor:grab}
+.cm .it.drag{opacity:.4}
+.cm .it.sobre{outline:2px dashed var(--primary)}
+.cm .it em{font-style:normal;color:var(--faint);font-size:10.5px}
+.cm .it button{width:24px;height:24px;border-radius:6px;border:1px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer;display:grid;place-items:center;padding:0}
+.cm .it button:disabled{opacity:.3;cursor:default}
+.cm .it button svg{width:13px;height:13px}
+.cm .grp{font-size:11px;font-weight:600;color:var(--muted);margin:8px 2px 3px}
+.cm label{display:flex;align-items:center;gap:7px;font-size:12px;padding:3px 4px;border-radius:6px;cursor:pointer}
+.cm label:hover{background:var(--raised)}
+.cm input[type=search]{width:100%;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--ink);padding:0 8px;font:12.5px 'Geist',sans-serif;margin-bottom:6px}
+.cm-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.regp .lista{margin-bottom:10px}
+body.foco .kpis,body.foco .linha2{display:none}
+@media (max-width:1100px){.linha2{grid-template-columns:1fr}}
+/* ---- PriceMetrics: v4 minimalista ---- */
+#app{gap:8px;padding:2px 58px 2px 2px}
+.topo{display:flex;align-items:center;gap:14px;min-height:44px}
+.marca{display:flex;align-items:baseline;gap:10px;flex:none}
+.marca h1{margin:0;font-size:17px;font-weight:650;letter-spacing:-.03em;display:flex;align-items:center;gap:8px}
+.marca h1 span{color:var(--primary)}
+.marca h1 .logo{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;background:linear-gradient(135deg,var(--primary),var(--up));box-shadow:0 6px 16px -8px var(--primary)}
+.marca h1 .logo svg{width:14px;height:14px}
+.marca small{color:var(--muted);font-size:11.5px;cursor:help}
+.kstrip{display:flex;gap:6px;flex:1;overflow-x:auto;scrollbar-width:none;justify-content:safe flex-end}
+.kc span{font-size:11px;color:var(--muted)}
+.kc{flex:none;display:flex;align-items:center;gap:7px;padding:6px 11px;border-radius:11px;background:var(--surface);border:1px solid var(--line);backdrop-filter:blur(14px);white-space:nowrap}
+.kc svg{width:14px;height:14px}
+.kc b{font:550 14px 'Geist Mono',monospace;letter-spacing:-.02em}
+.kc i{font-style:normal;font-size:10.5px;color:var(--faint);font-family:'Geist Mono',monospace}
+.linha2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(330px,1fr);gap:8px}
+.histc{padding:8px 12px 4px;min-width:0;height:236px}
+.hhead{display:flex;align-items:center;gap:10px;margin-bottom:2px}
+.htit{font-size:12px;font-weight:600;white-space:nowrap}
+.htit small{color:var(--faint);font-weight:400;margin-left:4px}
+.hchips{flex:1;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding:0;margin:0}
+.hchip{flex:none;height:24px;padding:0 9px;border-radius:999px;font-size:11px;display:inline-flex;align-items:center;gap:5px}
+.hchip .pt{width:5px;height:5px;border-radius:50%;background:var(--up);display:inline-block}
+#hist svg{width:100%;height:188px;display:block}
+.hvazio{color:var(--muted);font-size:12px;padding:30px 0;line-height:1.6}
+.resumo{padding:9px 12px;height:236px;overflow:hidden;display:flex;flex-direction:column}
+.rtop{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.rnome{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rsub{font-size:11px;color:var(--muted);margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.resumo .lad{width:100%;height:66px;display:block;margin:0;flex:none}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px 10px}
+.ms span{display:block;font-size:10px;color:var(--faint)}
+.ms b{font:550 12.5px 'Geist Mono',monospace}
+.ralts{display:flex;align-items:center;gap:5px;margin-top:auto;padding-top:4px}
+.ib2{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer;display:grid;place-items:center;padding:0}
+.ib2:hover{border-color:var(--primary);color:var(--primary)}
+.ib2 svg{width:14px;height:14px}
+.rwhy{font-size:11px;color:var(--muted);display:inline-flex;align-items:center;gap:4px;cursor:help;margin-left:2px}
+.ralts .tx{margin-left:auto}
+button.tx.sm{height:28px;padding:0 10px;font-size:12px}
+.gridbox{flex:1;min-height:0}
+.dock{position:fixed;right:6px;top:50%;transform:translateY(-50%);z-index:40;display:flex;flex-direction:column;gap:6px;padding:8px 6px;border-radius:16px}
+.dock .sep{height:1px;width:24px;background:var(--line);margin:2px auto}
+.dock .ib{width:36px;height:36px}
+.pop{position:fixed!important;right:60px!important;top:80px;left:auto!important}
+.kstrip .kc:hover{border-color:var(--line-strong)}
+body.fs #app{padding:10px 60px 10px 10px}
+body.foco .kpis,body.foco .linha2{display:grid}
+
+
+.csep{width:1px;height:20px;background:var(--line);margin:0 2px}
+.tpi{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:7px;background:color-mix(in srgb,currentColor 12%,transparent)}
+.tpi svg{width:13px;height:13px}
+.ib.robo{background:linear-gradient(135deg,#7A3FD1,var(--primary));color:#fff;border-color:transparent;box-shadow:0 8px 18px -10px #7A3FD1}
+.ib.robo:hover{color:#fff;filter:brightness(1.08)}
+.ib.robo.rodando svg{animation:robo 1s ease-in-out infinite}
+@keyframes robo{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px) rotate(-6deg)}}
+.modal{position:fixed;inset:0;z-index:80;display:none;place-items:center;background:rgba(15,23,42,.35);backdrop-filter:blur(3px)}
+.modal.on{display:grid}
+.mcard{width:min(440px,92vw);padding:18px;background:var(--surface-solid)!important}
+.mcard h4{margin:0 0 6px;font-size:14px;display:flex;gap:8px;align-items:center}
+.mcard p{margin:0 0 14px;font-size:12.5px;color:var(--muted);line-height:1.5}
+.macts{display:flex;justify-content:flex-end;gap:8px}
+.oresumo{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}
+.oresumo div{background:var(--raised);border-radius:10px;padding:8px 10px}
+.oresumo span{display:block;font-size:10.5px;color:var(--muted)}
+.oresumo b{font:600 16px 'Geist Mono',monospace}
+.olist{max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.olist table{margin:0}
+.olist td,.olist th{font-size:11.5px;white-space:nowrap}
+.regras-opt{font-size:11.5px;color:var(--muted);line-height:1.55;background:var(--raised);border-radius:10px;padding:9px 11px;margin-bottom:8px}
+
+.ctx{position:fixed;z-index:90;display:none;min-width:240px;padding:6px;background:var(--surface-solid)!important;border-radius:12px;box-shadow:0 18px 40px -16px rgba(15,23,42,.45)}
+.ctx.on{display:flex;flex-direction:column}
+.ctx-t{font-size:12px;font-weight:600;padding:6px 8px 4px;max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctx-t small{display:block;font-weight:400;color:var(--muted);font-size:11px}
+.ctx button{display:flex;align-items:center;gap:8px;border:0;background:transparent;color:var(--ink);font:500 12.5px 'Geist',sans-serif;padding:7px 8px;border-radius:8px;cursor:pointer;text-align:left}
+.ctx button:hover{background:var(--primary-soft);color:var(--primary)}
+.ctx button:disabled{opacity:.35;cursor:default;background:transparent;color:var(--ink)}
+.ctx button svg{width:14px;height:14px}
+.ctx-s{height:1px;background:var(--line);margin:3px 4px}
+#root{display:block} #app{height:100%}
+</style>
+<style id="css-promo" media="not all">
+@import url('__FONTE__');
+:root{__TOKENS__}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:transparent;color:var(--ink);font:13px 'Geist',-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+body.fs{background:var(--canvas)}
+svg.i{width:15px;height:15px;flex:none;vertical-align:-2px}
+#app{display:flex;flex-direction:column;gap:10px;height:100%;padding:2px}
+body.fs #app{padding:12px}
+.glass{background:var(--surface);border:1px solid var(--line);border-radius:16px;backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);box-shadow:var(--shadow)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;flex-wrap:wrap;position:relative;z-index:30}
+.top h1{margin:0;font-size:16px;font-weight:600;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.top small{color:var(--muted);font-size:11.5px;display:block;margin-top:2px}
+
+.acts .sep{width:1px;height:22px;background:var(--line);margin:0 4px}
+.ib{width:36px;height:36px;border-radius:11px;border:1px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer;display:grid;place-items:center;
+  transition:transform .15s,border-color .2s,color .2s,box-shadow .2s,background .2s}
+.ib svg{width:17px;height:17px}
+.ib:hover{transform:translateY(-1px);border-color:var(--primary);color:var(--primary);box-shadow:0 8px 20px -12px var(--primary)}
+.ib.pri{background:linear-gradient(180deg,var(--primary-hover),var(--primary));color:#fff;border-color:transparent}
+.ib.gr{background:var(--up-soft);color:var(--up);border-color:color-mix(in srgb,var(--up) 40%,transparent)}
+.ib.on{background:var(--primary-soft);color:var(--primary);border-color:color-mix(in srgb,var(--primary) 50%,transparent)}
+button.tx{font:550 12.5px 'Geist',sans-serif;height:32px;padding:0 12px;border-radius:9px;border:1px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+button.tx:hover{border-color:var(--primary);color:var(--primary)}
+button.tx.pri{background:linear-gradient(180deg,var(--primary-hover),var(--primary));color:#fff;border-color:transparent}
+button.tx.ok{background:var(--up);border-color:var(--up);color:#fff}
+#tip{white-space:pre-line!important;max-width:420px;line-height:1.5;text-align:left;position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:var(--canvas);font-size:11.5px;padding:5px 9px;border-radius:7px;opacity:0;transform:translateY(4px);transition:opacity .12s,transform .12s;white-space:nowrap}
+#tip.on{opacity:1;transform:none}
+.pop{position:absolute;top:44px;right:0;z-index:20;width:420px;padding:14px;display:none;background:var(--surface-solid)!important;box-shadow:0 24px 48px -20px rgba(15,23,42,.45)}
+.pop.on{display:block;animation:pin .18s cubic-bezier(.2,.8,.2,1)}
+@keyframes pin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.pop h4{margin:0 0 4px;font-size:13px;font-weight:600}
+.pop p{margin:0 0 10px;font-size:11.5px;color:var(--muted);line-height:1.45}
+.pop table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px}
+.pop th{text-align:left;color:var(--faint);font-weight:500;padding:5px 6px;border-bottom:1px solid var(--line)}
+.pop td{padding:6px;border-bottom:1px solid var(--line)}
+.pop input[type=number],.pop input[type=date],.pop select{width:100%;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--ink);padding:0 8px;font:12.5px 'Geist Mono',monospace}
+.opt{display:flex;gap:6px;margin-bottom:10px}
+.opt label{flex:1;border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer;font-size:12px}
+.opt label.on{border-color:var(--primary);background:var(--primary-soft);color:var(--primary)}
+.opt input{display:none}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.grid2 span{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
+.kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+.k{padding:10px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--line);backdrop-filter:blur(16px);position:relative;overflow:hidden}
+.k::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent,var(--t,var(--faint)),transparent)}
+.k span{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);font-weight:500}
+.k span svg{color:var(--t)}
+.k b{display:block;font:500 19px 'Geist Mono',monospace;letter-spacing:-.03em;margin-top:3px;white-space:nowrap}
+.k i{font-style:normal;font-size:11px;color:var(--faint);font-family:'Geist Mono',monospace}
+.pos{color:var(--up)}.neg{color:var(--down)!important}
+
+
+h3{margin:0 0 8px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden}
+h3 small{color:var(--faint);font-weight:400;overflow:hidden;text-overflow:ellipsis}
+
+.hseg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex:none}
+.hseg button{border:0;background:transparent;color:var(--muted);font:550 11px 'Geist',sans-serif;padding:3px 10px;cursor:pointer}
+.hseg button.on{background:var(--primary);color:#fff}
+.hchips{display:flex;gap:5px;overflow-x:auto;padding-bottom:4px;margin-bottom:2px;scrollbar-width:thin}
+.hchip{flex:none;border:1px solid var(--line);background:var(--field);border-radius:9px;padding:3px 9px;font-size:11px;cursor:pointer;color:var(--ink);text-align:left;line-height:1.2}
+.hchip small{display:block;color:var(--faint);font-size:10px}
+.hchip.on{border-color:var(--primary);background:var(--primary-soft);color:var(--primary)}
+.leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:var(--muted);margin-top:4px}
+.leg i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:5px;vertical-align:2px}
+.lista{display:flex;flex-direction:column;gap:3px}
+.rg{display:grid;grid-template-columns:18px minmax(0,1fr) 70px 54px;gap:8px;align-items:center;font-size:12px;cursor:pointer;padding:4px 5px;border-radius:7px}
+.rg:hover,.rg.on{background:var(--primary-soft)}
+.rg span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rg .bar{height:6px;border-radius:5px;background:var(--raised);overflow:hidden}
+.rg .bar i{display:block;height:100%;border-radius:5px;transition:width .3s}
+.rg b{font-family:'Geist Mono',monospace;font-weight:500;text-align:right}
+
+.gridbox{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.tools{display:flex;gap:7px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tools input[type=search]{height:32px;border-radius:9px;border:1px solid var(--line);background:var(--field);color:var(--ink);padding:0 10px;font:12.5px 'Geist',sans-serif;width:260px}
+.chip{height:30px;padding:0 11px;border-radius:999px;font:550 12px 'Geist',sans-serif;border:1px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.chip:hover{border-color:var(--primary);color:var(--primary)}
+.chip.on{background:var(--primary-soft);color:var(--primary);border-color:color-mix(in srgb,var(--primary) 50%,transparent)}
+.tools .cnt{margin-left:auto;color:var(--muted);font-size:12px}
+#scroll{flex:1;overflow:auto;position:relative;outline:none}
+.row,.hdr{display:grid;grid-template-columns:var(--cols);width:max-content;min-width:100%}
+.hdr{position:sticky;top:0;z-index:4;background:var(--surface-solid);border-bottom:1px solid var(--line);min-height:44px}
+.hdr>div{position:relative;padding:6px 12px 6px 8px;font-size:11.5px;line-height:1.25;color:var(--muted);font-weight:600;cursor:pointer;user-select:none;
+  display:flex;align-items:center;gap:4px;white-space:normal;background:var(--surface-solid)}
+.hdr>div.r{justify-content:flex-end;text-align:right}
+.hdr>div:hover{color:var(--primary)}
+.hdr>div.edc{background:color-mix(in srgb,var(--primary) 10%,var(--surface-solid));color:var(--primary)}
+.hdr .rz{position:absolute;right:0;top:8px;bottom:8px;width:6px;cursor:col-resize;border-right:2px solid transparent}
+.hdr .rz:hover,.hdr .rz.on{border-right-color:var(--primary)}
+.hdr .ord{font-size:9px;color:var(--primary)}
+.fx{position:sticky;z-index:2}
+.hdr>div.fx{position:sticky;z-index:5}
+.fxl{box-shadow:6px 0 8px -6px rgba(15,23,42,.18)}
+#body{position:relative}
+.row{position:absolute;left:0;height:34px;font-size:12.5px;cursor:pointer;align-items:stretch}
+.row>div{padding:0 8px;white-space:nowrap;display:flex;align-items:center;border-bottom:1px solid var(--line);background:var(--surface-solid)}
+.row:hover>div{background:color-mix(in srgb,var(--primary) 4%,var(--surface-solid))}
+.row.sel>div{background:color-mix(in srgb,var(--primary) 12%,var(--surface-solid))}
+.row>div.r{justify-content:flex-end}
+.row>div.edc{background:color-mix(in srgb,var(--primary) 7%,var(--surface-solid));padding:0 4px}
+.row>div.ed{padding:0 4px}
+.row input[type=text]{width:100%;height:26px;border-radius:7px;border:1px solid color-mix(in srgb,var(--primary) 30%,var(--line));background:var(--field);color:var(--ink);text-align:right;padding:0 6px;font:600 12.5px 'Geist Mono',monospace}
+.edc input[type=text]{color:var(--primary)}
+.row input[type=text]:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+.row input.man{border-color:var(--amber)!important;background:var(--amber-soft)!important}
+.num{font-family:'Geist Mono',monospace;font-variant-numeric:tabular-nums}
+.ok-box{width:18px;height:18px;border-radius:6px;border:1.5px solid var(--line-strong);display:grid;place-items:center;cursor:pointer;transition:all .15s;color:transparent}
+.ok-box.on{background:var(--up);border-color:var(--up);color:#fff}
+.ok-box.na{opacity:.25;cursor:default}
+.cv{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;font:600 11px 'Geist Mono',monospace;color:#fff}
+.cvA{background:var(--up)}.cvB{background:var(--primary)}.cvC{background:var(--faint)}
+.tag{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:11px;background:var(--raised);white-space:nowrap}
+.side{padding:14px;overflow:auto}
+.side .vazio{color:var(--muted);font-size:12.5px;line-height:1.5}
+.side h2{margin:0;font-size:14px;font-weight:600;line-height:1.3}
+.side .sub{color:var(--muted);font-size:12px;margin:4px 0 10px;display:flex;align-items:center;gap:5px}
+.st{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.lad{width:100%;height:180px;display:block}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}
+.mc{background:var(--raised);border-radius:10px;padding:8px 10px}
+.mc span{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.mc b{display:block;font:500 15px 'Geist Mono',monospace;margin-top:2px}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:5px 10px;font-size:12px;margin:8px 0}
+.facts span{color:var(--muted);display:flex;align-items:center;gap:5px}
+.facts b{font-family:'Geist Mono',monospace;font-weight:500;text-align:right;word-break:break-word}
+.why{font-size:12px;line-height:1.5;color:var(--muted);background:var(--raised);border-radius:10px;padding:10px;margin:8px 0 10px}
+.alts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.alts button{justify-content:center}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--surface-solid);border:1px solid var(--line);border-radius:10px;padding:9px 14px;font-size:12.5px;transition:all .25s;pointer-events:none;box-shadow:0 18px 40px -20px rgba(0,0,0,.5);z-index:60}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.kbd{font:11px 'Geist Mono',monospace;border:1px solid var(--line);border-radius:5px;padding:0 4px;color:var(--faint)}
+
+@media (max-width:1100px){.kpis{grid-template-columns:repeat(4,1fr)}.main{grid-template-columns:1fr}.side{display:none}.viz{grid-template-columns:1fr}}
+/* ---- layout v3 ---- */
+.linha2{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(320px,1fr);gap:10px}
+.histc{padding:12px 14px;min-width:0;position:relative}
+.resumo{padding:12px 14px;height:430px;overflow:auto}
+#hist svg{width:100%;height:280px;display:block}
+.hbox{position:relative}
+.htip{position:absolute;z-index:8;pointer-events:none;background:var(--surface-solid);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:11.5px;min-width:230px;box-shadow:0 18px 40px -18px rgba(15,23,42,.45);display:none}
+.htip b{font-family:'Geist Mono',monospace;font-weight:600}
+.htip .l{display:grid;grid-template-columns:1fr auto auto;gap:3px 10px;margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}
+.htip .l em{font-style:normal;color:var(--faint);font-size:10.5px}
+.htip .t{font-weight:600;margin-bottom:4px}
+.htip .r{display:flex;align-items:center;gap:6px}
+.htip .r i{width:10px;height:3px;border-radius:2px;display:inline-block}
+.resumo h2{margin:0;font-size:14px;font-weight:600;line-height:1.3}
+.resumo .sub{color:var(--muted);font-size:12px;margin:3px 0 8px;display:flex;align-items:center;gap:5px}
+.resumo .lad{height:150px}
+.badge{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;border-radius:8px;background:var(--down);color:#fff;font:600 10px 'Geist Mono',monospace;display:grid;place-items:center;padding:0 3px}
+.ib{position:relative}
+.pop.larga{width:760px}
+.cm{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.cm h5{margin:0 0 2px;font-size:12.5px;font-weight:600}
+.cm small{color:var(--muted);font-size:11px;display:block;margin-bottom:6px}
+.cm .lst{max-height:380px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px}
+.cm .it{display:grid;grid-template-columns:16px 1fr auto auto auto;gap:6px;align-items:center;padding:5px 6px;border-radius:8px;background:var(--raised);margin-bottom:4px;font-size:12px;cursor:grab}
+.cm .it.drag{opacity:.4}
+.cm .it.sobre{outline:2px dashed var(--primary)}
+.cm .it em{font-style:normal;color:var(--faint);font-size:10.5px}
+.cm .it button{width:24px;height:24px;border-radius:6px;border:1px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer;display:grid;place-items:center;padding:0}
+.cm .it button:disabled{opacity:.3;cursor:default}
+.cm .it button svg{width:13px;height:13px}
+.cm .grp{font-size:11px;font-weight:600;color:var(--muted);margin:8px 2px 3px}
+.cm label{display:flex;align-items:center;gap:7px;font-size:12px;padding:3px 4px;border-radius:6px;cursor:pointer}
+.cm label:hover{background:var(--raised)}
+.cm input[type=search]{width:100%;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--ink);padding:0 8px;font:12.5px 'Geist',sans-serif;margin-bottom:6px}
+.cm-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.regp .lista{margin-bottom:10px}
+body.foco .kpis,body.foco .linha2{display:none}
+@media (max-width:1100px){.linha2{grid-template-columns:1fr}}
+/* ---- PriceMetrics: v4 minimalista ---- */
+#app{gap:8px;padding:2px 58px 2px 2px}
+.topo{display:flex;align-items:center;gap:14px;min-height:44px}
+.marca{display:flex;align-items:baseline;gap:10px;flex:none}
+.marca h1{margin:0;font-size:17px;font-weight:650;letter-spacing:-.03em;display:flex;align-items:center;gap:8px}
+.marca h1 span{color:var(--primary)}
+.marca h1 .logo{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;background:linear-gradient(135deg,var(--primary),var(--up));box-shadow:0 6px 16px -8px var(--primary)}
+.marca h1 .logo svg{width:14px;height:14px}
+.marca small{color:var(--muted);font-size:11.5px;cursor:help}
+.kstrip{display:flex;gap:6px;flex:1;overflow-x:auto;scrollbar-width:none;justify-content:safe flex-end}
+.kc span{font-size:11px;color:var(--muted)}
+.kc{flex:none;display:flex;align-items:center;gap:7px;padding:6px 11px;border-radius:11px;background:var(--surface);border:1px solid var(--line);backdrop-filter:blur(14px);white-space:nowrap}
+.kc svg{width:14px;height:14px}
+.kc b{font:550 14px 'Geist Mono',monospace;letter-spacing:-.02em}
+.kc i{font-style:normal;font-size:10.5px;color:var(--faint);font-family:'Geist Mono',monospace}
+.linha2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(330px,1fr);gap:8px}
+.histc{padding:8px 12px 4px;min-width:0;height:236px}
+.hhead{display:flex;align-items:center;gap:10px;margin-bottom:2px}
+.htit{font-size:12px;font-weight:600;white-space:nowrap}
+.htit small{color:var(--faint);font-weight:400;margin-left:4px}
+.hchips{flex:1;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding:0;margin:0}
+.hchip{flex:none;height:24px;padding:0 9px;border-radius:999px;font-size:11px;display:inline-flex;align-items:center;gap:5px}
+.hchip .pt{width:5px;height:5px;border-radius:50%;background:var(--up);display:inline-block}
+#hist svg{width:100%;height:188px;display:block}
+.hvazio{color:var(--muted);font-size:12px;padding:30px 0;line-height:1.6}
+.resumo{padding:9px 12px;height:236px;overflow:hidden;display:flex;flex-direction:column}
+.rtop{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.rnome{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rsub{font-size:11px;color:var(--muted);margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.resumo .lad{width:100%;height:66px;display:block;margin:0;flex:none}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px 10px}
+.ms span{display:block;font-size:10px;color:var(--faint)}
+.ms b{font:550 12.5px 'Geist Mono',monospace}
+.ralts{display:flex;align-items:center;gap:5px;margin-top:auto;padding-top:4px}
+.ib2{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer;display:grid;place-items:center;padding:0}
+.ib2:hover{border-color:var(--primary);color:var(--primary)}
+.ib2 svg{width:14px;height:14px}
+.rwhy{font-size:11px;color:var(--muted);display:inline-flex;align-items:center;gap:4px;cursor:help;margin-left:2px}
+.ralts .tx{margin-left:auto}
+button.tx.sm{height:28px;padding:0 10px;font-size:12px}
+.gridbox{flex:1;min-height:0}
+.dock{position:fixed;right:6px;top:50%;transform:translateY(-50%);z-index:40;display:flex;flex-direction:column;gap:6px;padding:8px 6px;border-radius:16px}
+.dock .sep{height:1px;width:24px;background:var(--line);margin:2px auto}
+.dock .ib{width:36px;height:36px}
+.pop{position:fixed!important;right:60px!important;top:80px;left:auto!important}
+.kstrip .kc:hover{border-color:var(--line-strong)}
+body.fs #app{padding:10px 60px 10px 10px}
+body.foco .kpis,body.foco .linha2{display:grid}
+
+
+.csep{width:1px;height:20px;background:var(--line);margin:0 2px}
+.tpi{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:7px;background:color-mix(in srgb,currentColor 12%,transparent)}
+.tpi svg{width:13px;height:13px}
+.ib.robo{background:linear-gradient(135deg,#7A3FD1,var(--primary));color:#fff;border-color:transparent;box-shadow:0 8px 18px -10px #7A3FD1}
+.ib.robo:hover{color:#fff;filter:brightness(1.08)}
+.ib.robo.rodando svg{animation:robo 1s ease-in-out infinite}
+@keyframes robo{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px) rotate(-6deg)}}
+.modal{position:fixed;inset:0;z-index:80;display:none;place-items:center;background:rgba(15,23,42,.35);backdrop-filter:blur(3px)}
+.modal.on{display:grid}
+.mcard{width:min(440px,92vw);padding:18px;background:var(--surface-solid)!important}
+.mcard h4{margin:0 0 6px;font-size:14px;display:flex;gap:8px;align-items:center}
+.mcard p{margin:0 0 14px;font-size:12.5px;color:var(--muted);line-height:1.5}
+.macts{display:flex;justify-content:flex-end;gap:8px}
+.oresumo{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}
+.oresumo div{background:var(--raised);border-radius:10px;padding:8px 10px}
+.oresumo span{display:block;font-size:10.5px;color:var(--muted)}
+.oresumo b{font:600 16px 'Geist Mono',monospace}
+.olist{max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.olist table{margin:0}
+.olist td,.olist th{font-size:11.5px;white-space:nowrap}
+.regras-opt{font-size:11.5px;color:var(--muted);line-height:1.55;background:var(--raised);border-radius:10px;padding:9px 11px;margin-bottom:8px}
+
+.ctx{position:fixed;z-index:90;display:none;min-width:240px;padding:6px;background:var(--surface-solid)!important;border-radius:12px;box-shadow:0 18px 40px -16px rgba(15,23,42,.45)}
+.ctx.on{display:flex;flex-direction:column}
+.ctx-t{font-size:12px;font-weight:600;padding:6px 8px 4px;max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctx-t small{display:block;font-weight:400;color:var(--muted);font-size:11px}
+.ctx button{display:flex;align-items:center;gap:8px;border:0;background:transparent;color:var(--ink);font:500 12.5px 'Geist',sans-serif;padding:7px 8px;border-radius:8px;cursor:pointer;text-align:left}
+.ctx button:hover{background:var(--primary-soft);color:var(--primary)}
+.ctx button:disabled{opacity:.35;cursor:default;background:transparent;color:var(--ink)}
+.ctx button svg{width:14px;height:14px}
+.ctx-s{height:1px;background:var(--line);margin:3px 4px}
+#root{display:block} #app{height:100%}
+
+
+.gantt{height:184px;overflow:auto;padding-right:4px}
+.gax{display:flex;justify-content:space-between;font:10px 'Geist Mono',monospace;color:var(--faint);margin:2px 0 4px 160px}
+.grow{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;height:26px;cursor:pointer;border-radius:7px;padding:0 4px}
+.grow:hover,.grow.on{background:var(--primary-soft)}
+.gnome{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.glane{position:relative;height:18px;background:var(--raised);border-radius:6px}
+.ghoje{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--primary);border-radius:2px;z-index:2}
+.gbar{position:absolute;top:2px;bottom:2px;border-radius:5px;background:color-mix(in srgb,var(--up) 75%,transparent);color:#fff;font:600 9.5px 'Geist Mono',monospace;display:flex;align-items:center;gap:4px;padding:0 6px;white-space:nowrap;overflow:hidden}
+.gbar.crit{background:color-mix(in srgb,var(--down) 80%,transparent)}
+.gbar.venc{background:var(--faint)}
+.gbar i{font-style:normal;opacity:.9}
+.chips{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;flex:1}
+.chips .chip{white-space:nowrap;flex:none}
+.chip em{font-style:normal;font-family:'Geist Mono',monospace;font-size:11px;color:var(--faint);margin-left:2px}
+.ald{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px}
+.row.exc>div{opacity:.45}
+.row input[type=date]{width:100%;height:26px;border-radius:7px;border:1px solid color-mix(in srgb,var(--primary) 30%,var(--line));background:var(--field);color:var(--ink);padding:0 6px;font:500 12px 'Geist Mono',monospace}
+.mini{margin-top:6px}
+.mtit{font-size:10.5px;color:var(--faint);margin-bottom:3px}
+.mrow{display:grid;grid-template-columns:110px 1fr 54px;gap:8px;align-items:center;font-size:11px;padding:2px 4px;border-radius:6px;cursor:pointer}
+.mrow:hover,.mrow.eu{background:var(--primary-soft)}
+.mrow span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mrow b{font:600 11px 'Geist Mono',monospace;text-align:right}
+.mlane{position:relative;height:8px;background:var(--raised);border-radius:4px}
+.mbar{position:absolute;top:0;bottom:0;border-radius:4px}
+.resumo .lad{height:52px}
+.opt label small{display:block;font-size:10.5px;color:var(--muted);font-weight:400;margin-top:2px}
+.chk{display:flex!important;align-items:center;gap:6px;font-size:12px;height:30px}
+.prev{margin:8px 0 10px}
+#xTipo{width:100%;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--ink);padding:0 8px;font:12.5px 'Geist Mono',monospace}
+.prev table{width:100%;border-collapse:collapse;font:11px 'Geist Mono',monospace;margin-bottom:4px}
+.prev th{color:var(--faint);font-weight:500;text-align:left;padding:3px 4px;border-bottom:1px solid var(--line)}
+.prev td{padding:3px 4px;border-bottom:1px solid var(--line)}
+.prev small{color:var(--muted);font-size:11px}
+.ib.robo{background:linear-gradient(135deg,#7A3FD1,var(--primary));color:#fff;border-color:transparent}
+</style>
+<script src="xlsx.mini.min.js"></script>
+</head><body><div id="root"></div>
+<script>
+const APP_PRICE = (() => {
+const MARCACAO = "<div id=\"app\">\n  <div class=\"topo\">\n    <div class=\"marca\"><h1 id=\"titulo\"></h1><small id=\"escopo\"></small></div>\n    <div class=\"kstrip\" id=\"kpis\"></div>\n  </div>\n  <div class=\"linha2\">\n    <div class=\"glass histc\">\n      <div class=\"hhead\"><span class=\"htit\">Concorr\u00eancia <small id=\"histSub\"></small></span><div class=\"hchips\" id=\"hChips\"></div>\n        <span class=\"hseg\" id=\"hSeg\"><button data-hm=\"v\" class=\"on\">Varejo</button><button data-hm=\"a\">Atacado</button></span></div>\n      <div id=\"hist\"></div>\n    </div>\n    <div class=\"glass resumo\" id=\"resumo\"></div>\n  </div>\n  <div class=\"gridbox glass\">\n    <div class=\"tools\">\n      <input type=\"search\" id=\"q\" placeholder=\"Buscar produto, filial ou concorrente\">\n      <button class=\"chip\" data-rg=\"4\" data-ic=\"obj\" data-tip=\"Itens sem pesquisa que foram para a margem objetiva\">Aplicado objetiva</button>\n      <button class=\"chip\" data-rg=\"3\" data-ic=\"piso\" data-tip=\"Itens que pararam na margem m\u00ednima\">Aplicado m\u00ednima</button>\n      <button class=\"chip\" data-rg=\"2\" data-ic=\"teto\" data-tip=\"Itens que pararam na margem m\u00e1xima\">Aplicado m\u00e1xima</button>\n      <span class=\"csep\"></span>\n      <button class=\"chip\" data-fx=\"neg\" data-ic=\"tdDn\" data-tip=\"Novo varejo abaixo do custo\">Negativos</button>\n      <button class=\"chip\" data-fx=\"pos\" data-ic=\"tdUp\" data-tip=\"Novo varejo acima do custo\">Positivos</button>\n      <button class=\"chip\" data-fx=\"ipf\" data-ic=\"alerta\" data-tip=\"IP novo acima de 100,9%: mais caro que o mercado\">IP fora</button>\n      <span class=\"cnt\" id=\"cnt\"></span>\n    </div>\n    <div id=\"scroll\" tabindex=\"0\"><div class=\"hdr\" id=\"hdr\"></div><div id=\"body\"></div></div>\n  </div>\n</div>\n<nav class=\"dock glass\" id=\"dock\">\n  <button class=\"ib robo\" id=\"bOpt\" data-tip=\"Optimus: an\u00e1lise inteligente dos itens filtrados\" data-ic=\"robo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib gr\" id=\"bAll\" data-tip=\"Aceitar todos os itens filtrados\" data-ic=\"check\"></button>\n  <button class=\"ib\" id=\"bProx\" data-tip=\"Pr\u00f3ximo pre\u00e7o pendente (N)\" data-ic=\"prox\"></button>\n  <button class=\"ib\" id=\"bNone\" data-tip=\"Retirar aceite dos itens filtrados\" data-ic=\"x\"></button>\n  <button class=\"ib\" id=\"bReset\" data-tip=\"Voltar pre\u00e7os e aceites para a sugest\u00e3o do motor\" data-ic=\"undo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib\" id=\"bRegras\" data-tip=\"Regra de neg\u00f3cio e regra de altera\u00e7\u00e3o\" data-ic=\"regra\"></button>\n  <button class=\"ib\" id=\"bCols\" data-tip=\"Colunas e vis\u00e3o salva no seu perfil\" data-ic=\"cols\"></button>\n  <button class=\"ib\" id=\"bRnd\" data-tip=\"Regra de arredondamento\" data-ic=\"rnd\"></button>\n  <button class=\"ib\" id=\"bPiso\" data-tip=\"Piso de margem por estado\" data-ic=\"piso\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib pri\" id=\"bExp\" data-tip=\"Importa\u00e7\u00e3o (layout PRICE do Pre\u00e7o Bot)\" data-ic=\"up\"></button>\n  <button class=\"ib\" id=\"bProp\" data-tip=\"Importa\u00e7\u00e3o de proporcionais (filhos do produto PAI)\" data-ic=\"prop\"></button>\n  <button class=\"ib\" id=\"bFoco\" data-tip=\"Modo foco em tela cheia\" data-ic=\"foco\"></button>\n</nav>\n<div class=\"pop glass\" id=\"pRegras\"></div>\n<div class=\"pop glass larga\" id=\"pCols\"></div>\n<div class=\"pop glass\" id=\"pRnd\"></div>\n<div class=\"pop glass\" id=\"pPiso\"></div>\n<div class=\"pop glass\" id=\"pExp\"></div>\n<div class=\"pop glass\" id=\"pProp\"></div>\n<div class=\"pop glass larga\" id=\"pOpt\"></div>\n<div class=\"modal\" id=\"modal\"></div>\n<div id=\"tip\"></div><div class=\"toast\" id=\"toast\"></div>\n";
+/* ===================== protocolo de componente do Streamlit (sem biblioteca) ===================== */
+const ST = {
+  send(type, extra){ window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type }, extra || {}), '*'); },
+  pronto(){ this.send('streamlit:componentReady', { apiVersion: 1 }); },
+  altura(h){ this.send('streamlit:setFrameHeight', { height: h }); },
+  valor(v){ this.send('streamlit:setComponentValue', { value: v, dataType: 'json' }); },
+};
+let CHAVE_ATUAL = null, CTL = null;
+
+
+async function montar(A){
+  if (CTL) CTL.abort(); CTL = new AbortController(); const SIG = { signal: CTL.signal };
+  const on = (alvo, ev, fn, op) => alvo.addEventListener(ev, fn, Object.assign({}, SIG, op || {}));
+  document.getElementById('estilo-tema').textContent = `@import url('${A.fonte}');:root{${A.tokens}}`;
+  /* a PriceMetrics ocupa a janela inteira abaixo do topo: a grade rola por dentro e o menu lateral fica sempre à vista */
+  let ALT = A.altura || 1200;
+  const medirAltura = () => { try { const fe = window.frameElement, pw = window.parent; const main = pw.document.querySelector('[data-testid="stMain"]');
+      const topo = fe.getBoundingClientRect().top + (main ? main.scrollTop : 0); return Math.max(620, Math.round(pw.innerHeight - topo - 10)); } catch (e) { return A.altura || 1200; } };
+  const ajustarAltura = () => { if (document.fullscreenElement) return; ALT = medirAltura(); document.getElementById('root').style.height = ALT + 'px'; ST.altura(ALT); };
+  ajustarAltura(); try { on(window.parent, 'resize', () => { ajustarAltura(); }); } catch (e) {}
+  document.getElementById('root').innerHTML = MARCACAO;
+  const bin = atob(A.dados), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  const D = JSON.parse(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).text());
+  const N = D.cu.length, $ = id => document.getElementById(id), CHAVE = A.chave;
+
+  const P_ = { check: '<path d="m5 12 5 5 9-10"/>', x: '<path d="M6 6l12 12M18 6 6 18"/>', undo: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+  up: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>', copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+  foco: '<circle cx="12" cy="12" r="3"/><path d="M3 9V5a2 2 0 0 1 2-2h4M15 3h4a2 2 0 0 1 2 2v4M21 15v4a2 2 0 0 1-2 2h-4M9 21H5a2 2 0 0 1-2-2v-4"/>',
+  rnd: '<path d="M4 12h3l3-7 4 14 3-7h3"/>', regra: '<path d="M4 6h16M4 12h10M4 18h6"/>', hist: '<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-6"/>',
+  corte: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/>',
+  merc: '<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-6"/>', teto: '<path d="M5 4h14"/><path d="M12 20V8"/><path d="m7 13 5-5 5 5"/>',
+  piso: '<path d="M5 20h14"/><path d="M12 4v12"/><path d="m7 11 5 5 5-5"/>', obj: '<circle cx="12" cy="12" r="9"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>',
+  mao: '<path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8a8 8 0 0 0 16 0v-3a2 2 0 0 0-4 0"/>',
+  alerta: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>', cal: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  tagi: '<path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3a1.4 1.4 0 0 1 0 2l-6.7 6.7a1.4 1.4 0 0 1-2 0Z"/><circle cx="8" cy="8" r="1.4"/>', loja: '<path d="M3 9 5 4h14l2 5M4 9v11h16V9M9 20v-6h6v6"/>',
+  cash: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>', pct: '<path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',
+  tdUp: '<path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/>', tdDn: '<path d="m3 7 6 6 4-4 8 8"/><path d="M14 17h7v-7"/>', conc: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
+  mesa: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/>', moda: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>' };
+const ic = (n, cor) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="${cor || 'currentColor'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${P_[n]}</svg>`;
+document.querySelectorAll('[data-ic2]').forEach(h => h.insertAdjacentHTML('afterbegin', ic(h.dataset.ic2, 'var(--primary)')));
+
+  Object.assign(P_, { cols: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>', save: '<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h8V3M8 21v-7h8v7"/>',
+    seta_c: '<path d="m6 15 6-6 6 6"/>', prox: '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>',
+    robo: '<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4"/><circle cx="12" cy="3" r="1"/><circle cx="9" cy="13.5" r="1.4"/><circle cx="15" cy="13.5" r="1.4"/><path d="M9.5 17h5M2 13v2M22 13v2"/>',
+    prop: '<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/><path d="M11 7h4a2 2 0 0 1 2 2v4"/>',
+    tpReg: '<circle cx="12" cy="12" r="8"/><path d="m8.5 12 2.5 2.5 4.5-5"/>', tpPro: '<path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3a1.4 1.4 0 0 1 0 2l-6.7 6.7a1.4 1.4 0 0 1-2 0Z"/><path d="M8 8h.01M15 9l-6 6"/>',
+    tpExt: '<path d="M12 3v18M3 12h18"/><rect x="5" y="5" width="14" height="14" rx="3"/>', seta_b: '<path d="m6 9 6 6 6-6"/>', grip: '<circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>' });
+  document.querySelectorAll('[data-ic]').forEach(b => { if (!b.querySelector('svg')) b.insertAdjacentHTML('afterbegin', ic(b.dataset.ic)); });
+  $('titulo').innerHTML = `<span class="logo">${ic('mesa', '#fff')}</span>Price<span>Metrics</span>`;
+  const tip = $('tip');
+  on(document, 'mouseover', e => { const t = e.target.closest('[data-tip]'); if (!t) { tip.classList.remove('on'); return; }
+    tip.textContent = t.dataset.tip; const r = t.getBoundingClientRect(); tip.classList.add('on');
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    if (t.closest('.dock')) { tip.style.left = (r.left - w - 10) + 'px'; tip.style.top = (r.top + r.height / 2 - h / 2) + 'px'; }
+    else { tip.style.left = Math.max(6, Math.min(innerWidth - w - 6, r.left + r.width / 2 - w / 2)) + 'px'; tip.style.top = (r.bottom + h + 14 > innerHeight ? r.top - h - 8 : r.bottom + 8) + 'px'; } });
+
+  const MOBJ = 10, MMAX = 30, CENT = 0.01, CORTE = 1.5, DESC_MAX = 0.15, DDE_META = 60;
+  const REGRA_RND = {
+  '8': { nome: 'Com final 8', A: [5,8,9], B: [5,8,9], C: [0,5,8,9], D: [9] },
+  'sem8': { nome: 'Sem final 8', A: [5,9], B: [5,9], C: [0,5,9], D: [9] },
+};
+const faixaOf = c => c <= 1099 ? 'A' : c <= 1999 ? 'B' : c <= 4000 ? 'C' : 'D';
+function tabelaVC(reg){ const VC = {}; for (const f of ['A','B','C','D']) { VC[f] = []; const fins = reg[f];
+  for (let c = 0; c < 100; c++) { const p = Math.floor(c/10), u = c % 10; let o;
+    if (f === 'A') o = fins.includes(u); else if (f === 'B') o = p >= 1 && p <= 9 && fins.includes(u);
+    else o = p >= 3 && p <= 9 && (u === 0 ? [5,9].includes(p) && fins.includes(0) : fins.includes(u));
+    if (o) VC[f].push(c); } } return VC; }
+let RND = '8', VC = tabelaVC(REGRA_RND[RND]);
+function ciaCands(pc){ const f = faixaOf(pc), b = Math.floor(pc/100), l = []; for (const bb of [b-1,b,b+1]) for (const c of VC[f]) { const v = bb*100+c; if (v > 0) l.push(v); } return l; }
+function roundVarejo(p){ const pc = Math.round(p*100); const l = ciaCands(pc); if (!l.length) return pc/100; if (l.includes(pc)) return pc/100;
+  let best = l[0], bd = Infinity; for (const v of l) { const d = Math.abs(v-pc); if (d < bd) { bd = d; best = v; } } return best/100; }
+function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc = Math.round(pa*100), f = faixaOf(pc), b = Math.floor(pc/100); const l = [];
+  for (const bb of [b-1,b,b+1]) for (let c = 0; c < 100; c++) { const p = Math.floor(c/10), u = c % 10; if (u !== ud) continue;
+    const o = f === 'A' ? true : f === 'B' ? (p >= 1 && p <= 9) : (p >= 3 && p <= 9) && (u === 0 ? [5,9].includes(p) : true); if (o && bb*100+c > 0) l.push(bb*100+c); }
+  if (!l.length) return vf; let pr = l.includes(pc) ? pc : null; if (pr === null) { let bd = Infinity; for (const v of l) { const d = Math.abs(v-pc); if (d < bd) { bd = d; pr = v; } } }
+  return pr >= vc ? vf : pr/100; }
+
+
+  /* ---------- estado salvo (sessão) e visão do usuário (perfil) ---------- */
+  const PISO = {}; D.ufs.forEach((_, u) => PISO[u] = { cesta: -15, sem: 0 });
+  const OV = new Map(), OVA = new Map(), ACE = new Map();
+  const OPT = new Map();                                     // itens ajustados pelo Optimus: motivo
+  const KEY = i => D.filial_cod[D.fi[i]] + '|' + D.produto_cod[D.pi[i]];
+  const IDX = new Map(); for (let i = 0; i < N; i++) IDX.set(KEY(i), i);
+  const ARMAZ = 'pricemetrics:' + (A.usuario || 'anon') + ':' + (A.base || '');
+  let GUARD = { ov: {}, ova: {}, ace: {}, opt: {}, piso: {} };
+  try { GUARD = Object.assign(GUARD, JSON.parse(localStorage.getItem(ARMAZ) || '{}')); } catch (e) {}
+  for (const [k, v] of Object.entries(GUARD.ov)) if (IDX.has(k)) OV.set(IDX.get(k), v);
+  for (const [k, v] of Object.entries(GUARD.ova)) if (IDX.has(k)) OVA.set(IDX.get(k), v);
+  for (const [k, v] of Object.entries(GUARD.ace)) if (IDX.has(k)) ACE.set(IDX.get(k), v);
+  for (const [k, v] of Object.entries(GUARD.opt)) if (IDX.has(k)) OPT.set(IDX.get(k), v);
+  D.ufs.forEach((u, k) => { if (GUARD.piso[u]) PISO[k] = GUARD.piso[u]; });
+  const VIS0 = A.visao || {};
+  if (VIS0.rnd && REGRA_RND[VIS0.rnd]) { RND = VIS0.rnd; VC = tabelaVC(REGRA_RND[RND]); }
+  /* grava só o que mudou neste recorte e preserva ajustes de outras filiais/estados já salvos */
+  const salvar = () => { try {
+      for (let i = 0; i < N; i++) { const k = KEY(i);
+        if (OV.has(i)) GUARD.ov[k] = OV.get(i); else delete GUARD.ov[k];
+        if (OVA.has(i)) GUARD.ova[k] = OVA.get(i); else delete GUARD.ova[k];
+        if (ACE.has(i)) GUARD.ace[k] = ACE.get(i); else delete GUARD.ace[k];
+        if (OPT.has(i)) GUARD.opt[k] = OPT.get(i); else delete GUARD.opt[k]; }
+      D.ufs.forEach((u, k) => GUARD.piso[u] = PISO[k]);
+      localStorage.setItem(ARMAZ, JSON.stringify(GUARD)); } catch (e) {} };
+
+  const REGRAS = [['Mercado − R$ 0,01', 'merc', 'var(--primary)'], null, ['Aplicado máxima (teto)', 'teto', 'var(--down)'],
+    ['Aplicado mínima (piso)', 'piso', 'var(--up)'], ['Aplicado objetiva (sem pesquisa)', 'obj', 'var(--amber)'], ['Ajuste manual', 'mao', '#B794FF'], ['Optimus', 'robo', '#7A3FD1']];
+  const ORDEM_R = [0, 2, 3, 4, 6, 5];
+  const CORTES = [['Variação acima de ±1,5%', 'tdUp'], ['Encarte, app ou mídia vigente', 'tagi'], ['Promoção comercial abaixo do mercado', 'alerta']];
+  const NV = new Float64Array(N), NA = new Float64Array(N), RG = new Uint8Array(N), MN = new Float64Array(N), MX = new Float64Array(N), OB = new Float64Array(N);
+  const UMIN = new Float64Array(N), UMAX = new Float64Array(N), UOBJ = new Float64Array(N), CT = new Uint8Array(N), MUD = new Uint8Array(N), REAP = new Uint8Array(N);
+  const DF0 = Date.UTC(2020, 0, 1), hj = new Date(), HOJE = Math.floor((Date.UTC(hj.getFullYear(), hj.getMonth(), hj.getDate()) - DF0) / 864e5) + 1;
+  const dfTxt = d => { const t = new Date(DF0 + (d - 1) * 864e5); return String(t.getUTCDate()).padStart(2, '0') + '/' + String(t.getUTCMonth() + 1).padStart(2, '0') + '/' + t.getUTCFullYear(); };
+  const semPesq = i => D.orig[i] === 1 || !(D.vmk[i] > 0);
+
+  /* Arredonda o alvo (mercado − 0,01) sem passar do mercado: se o alvo não é um final válido, vale o próprio
+     preço do mercado (IP 100%) quando ele é válido; senão, o maior final válido abaixo do alvo. Nunca fica abaixo do mínimo. */
+  function arredMercado(alvo, ref, mn){
+    const a = Math.round(alvo * 100), r = Math.round(ref * 100), ok = c => ciaCands(c).includes(c);
+    let v;
+    if (ok(a)) v = a; else if (ok(r)) v = r;
+    else { const l = ciaCands(a).filter(x => x <= a); v = l.length ? Math.max(...l) : Math.round(roundVarejo(alvo) * 100); }
+    if (mn && v / 100 < mn - 1e-9) { const m = Math.round(mn * 100), l = ciaCands(m).filter(x => x >= m); v = l.length ? Math.min(...l) : Math.round(roundVarejo(mn) * 100); }
+    return v / 100;
+  }
+  /* Moda exibida: a do concorrente vencedor da linha; sem referência, a menor moda entre os concorrentes da
+     filial; por último, a moda de maior frequência do relatório. */
+  const MOV = new Float64Array(N).fill(NaN), MOA = new Float64Array(N).fill(NaN), MOF = new Uint8Array(N);
+  function modaItem(i){
+    if (!isNaN(MOV[i])) return [MOV[i], MOA[i], MOF[i]];
+    let mv = null, ma = null, f = 3;
+    if (!semPesq(i)) {
+      const rows = HD.get(D.pi[i] * 64 + D.ui[i]) || [], fil = new Set(D.fk[D.fi[i]] || []), wk = KPOS.get(D.concs[D.ki[i]]);
+      const pv = new Map(), pa = new Map();
+      for (const j of rows) { if (!TIPO_OK.has(D.dtp[j])) continue; const k = D.dk[j];
+        if (D.dv[j] > 0) { if (!pv.has(k)) pv.set(k, []); pv.get(k).push(D.dv[j] / 100); }
+        if (D.da[j] > 0) { if (!pa.has(k)) pa.set(k, []); pa.get(k).push(D.da[j] / 100); } }
+      const daFil = [...pv.keys()].some(k => fil.has(k));
+      const menor = mp => { const l = [...mp.entries()].filter(([k, v]) => (!daFil || fil.has(k)) && v.length >= 3).map(([, v]) => modaDe(v)); return l.length ? Math.min(...l) : null; };
+      if (wk != null && (pv.get(wk) || []).length >= 3) { mv = modaDe(pv.get(wk)); ma = (pa.get(wk) || []).length >= 3 ? modaDe(pa.get(wk)) : null; f = 1; }
+      else { mv = menor(pv); ma = menor(pa); if (mv != null) f = 2; }
+    }
+    if (mv == null) { mv = D.mo[i] > 0 ? D.mo[i] : 0; f = 3; }
+    if (ma == null) ma = D.ma[i] > 0 ? D.ma[i] : 0;
+    MOV[i] = mv; MOA[i] = ma; MOF[i] = f; return [mv, ma, f];
+  }
+  const FONTE_MODA = ['', 'moda do concorrente vencedor', 'menor moda entre os concorrentes da filial', 'moda de maior frequência do relatório'];
+  function calc(i){
+    const c = D.cu[i], vmk = D.vmk[i], amk = D.amk[i] || 0, merch = D.merch[i] || 0;
+    const mobj = D.pobj[i] ?? MOBJ, mmax = (D.pmax[i] > 0 ? D.pmax[i] : MMAX), ps = PISO[D.ui[i]] || { cesta: -15, sem: 0 };
+    const umin = D.cesta[i] ? ps.cesta : (D.pmin[i] ?? ps.sem);
+    const mn = c / (1 - umin / 100), mx = c / (1 - mmax / 100), obj = c / (1 - mobj / 100), red = 1 - merch / 100;
+    let sug, rg, teto = false;
+    if (semPesq(i)) { sug = obj; rg = 4; } else if (vmk > mx) { sug = mx; rg = 2; teto = true; } else { sug = vmk - CENT; rg = 0; }
+    const pf = Math.max(Math.min(sug, mx), mn); if (rg !== 4 && sug < mn) rg = 3;
+    let nv = rg === 0 && pf === sug ? arredMercado(pf, vmk, mn) : roundVarejo(pf);
+    if (OV.has(i)) { nv = OV.get(i); rg = OPT.has(i) ? 6 : 5; }
+    let sa; if (rg === 4 || (OV.has(i) && semPesq(i))) sa = obj * red; else if (teto) sa = mx * red; else sa = amk > 0 ? amk - CENT : nv * red;
+    const pa = Math.max(Math.min(sa, mx * red), mn);
+    let na = roundAtacado(pa, nv);
+    if (OVA.has(i)) { na = OVA.get(i); rg = OPT.has(i) ? 6 : 5; }
+    else na = piso15(na, nv);                                   // padrão da companhia: atacado com no máximo 15% de desconto
+    if (na > nv) na = nv;
+    NV[i] = nv; NA[i] = na; RG[i] = rg; MN[i] = mn; MX[i] = mx; OB[i] = obj; UMIN[i] = umin; UMAX[i] = mmax; UOBJ[i] = mobj;
+    const fimHoje = D.dfim[i] > 0 && D.dfim[i] === HOJE, tp = (D.tipos[D.ti[i]] || '').toUpperCase(), ip = vmk > 0 ? D.vm[i] / vmk : NaN;
+    let ct = 0;
+    if (!fimHoje) { if (Math.abs(nv / D.vm[i] - 1) > CORTE / 100) ct |= 1; if (/ENCARTE|APP|MIDIA/.test(tp)) ct |= 2; if (/PROMOCAO COMERCIAL/.test(tp) && ip < 1) ct |= 4; }
+    CT[i] = ct;
+    { const d = D.dfim[i] - HOJE, dia = D.dfim[i] > 0 ? new Date(DF0 + (D.dfim[i] - 1) * 864e5).getUTCDay() : -1;
+      REAP[i] = D.dfim[i] > 0 && (d === 0 || (d > 0 && d <= 6 && (dia === 6 || dia === 0))) ? 1 : 0; }
+    MUD[i] = (Math.abs(nv - D.vm[i]) >= 0.005 || (D.am[i] > 0 && Math.abs(na - D.am[i]) >= 0.005) || (!(D.am[i] > 0) && na > 0)) ? 1 : 0;
+  }
+  /* atacado com desconto acima de 15% sobe até o primeiro preço válido dentro do limite */
+  function piso15(na, nv){ const lim = nv * (1 - DESC_MAX); if (!(na > 0) || na >= lim - 1e-9) return na;
+    for (let c = Math.ceil(lim * 100); c <= Math.round(nv * 100); c++) { const r = roundAtacado(c / 100, nv); if (r >= lim - 1e-9 && r <= nv) return r; } return nv; }
+  const podeAceitar = i => MUD[i] || REAP[i];
+  const aceito = i => MUD[i] ? (ACE.has(i) ? ACE.get(i) : CT[i] === 0) : REAP[i] ? ACE.get(i) === true : false;
+  const calcTudo = () => { for (let i = 0; i < N; i++) calc(i); };
+
+  /* ---------- formatação ---------- */
+  const nf2 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const nf1 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const nf0 = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 });
+  const brl = v => v == null || !isFinite(v) || v <= 0 ? '–' : 'R$ ' + nf2.format(v);
+  const pct = v => v == null || !isFinite(v) ? '–' : nf1.format(v * 100) + '%';
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+  const curto = s => String(s ?? '').replace(/^\d+\s*-\s*/, '').replace(/^-\s*/, '');
+  const titulo_ = s => String(s || '').toLowerCase().replace(/(^|\s)\S/g, x => x.toUpperCase());
+  function toast(t){ const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('on'), 2600); }
+  const optInfo = i => { const o = OPT.get(i); return typeof o === 'string' ? { m: o } : (o || {}); };
+  const rotRegra = i => RG[i] === 6 ? 'Optimus: ' + (optInfo(i).m || 'ajustado') : RG[i] === 2 ? `Aplicado máxima ${nf1.format(UMAX[i])}%` : RG[i] === 3 ? (D.cesta[i] ? `Aplicado mínima cesta ${nf1.format(UMIN[i])}%` : `Aplicado mínima ${nf1.format(UMIN[i])}%`)
+    : RG[i] === 4 ? `Aplicado objetiva ${nf1.format(UOBJ[i])}%` : REGRAS[RG[i]][0];
+  const tagRegra = i => { const [, n, c] = REGRAS[RG[i]]; return `<span class="tag" style="color:${c}" data-tip="${esc(explicaRegra(i))}">${ic(n, c)}${rotRegra(i)}</span>`; };
+  const tagCorte = i => { const t = esc(explicaCorte(i));
+    if (!MUD[i] && REAP[i]) return `<span class="tag" style="color:var(--amber)" data-tip="${t}">${ic('cal')}Reaplicar: vigência termina ${D.dfim[i] === HOJE ? 'hoje' : dfTxt(D.dfim[i]).slice(0, 5)}</span>`;
+    if (!MUD[i]) return `<span class="tag" style="color:var(--faint)" data-tip="${t}">Sem alteração</span>`;
+    if (!CT[i]) return `<span class="tag" style="color:var(--up)" data-tip="${t}">${ic('check')}Dentro da regra</span>`;
+    const l = CORTES.filter((_, k) => CT[i] & (1 << k)); return `<span class="tag" style="color:var(--down)" data-tip="${t}">${ic(l[0][1])}${l[0][0]}${l.length > 1 ? ' +' + (l.length - 1) : ''}</span>`; };
+  /* ---------- explicações detalhadas (caixa ao passar o mouse) ---------- */
+  const R$ = v => v == null || !isFinite(v) ? '–' : 'R$ ' + nf2.format(v), P1 = v => v == null || !isFinite(v) ? '–' : nf1.format(v * 100) + '%';
+  const origemMin = i => D.cesta[i] ? `piso da cesta do estado, ${nf1.format(UMIN[i])}%` : D.pmin[i] != null ? `margem mínima do Profimetrics, ${nf1.format(UMIN[i])}%` : `piso do estado, ${nf1.format(UMIN[i])}%`;
+  const origemMax = i => (D.pmax[i] > 0 ? 'Profimetrics, ' : 'padrão, ') + nf1.format(UMAX[i]) + '%';
+  const coleta = i => D.orig[i] ? 'moda do mercado (sem pesquisa direta)' : `${titulo_(curto(D.concs[D.ki[i]]).split(' - ')[0])}, ${D.datas[D.dti[i]] || 'sem data'}${D.tcol[i] ? ', ' + ['', 'regular', 'promoção', 'ponto extra'][D.tcol[i]] : ''}`;
+  const resultado = i => `Resultado: varejo ${R$(NV[i])} (margem ${P1((NV[i] - D.cu[i]) / NV[i])}${D.vmk[i] > 0 ? ', IP ' + nf1.format(NV[i] / D.vmk[i] * 100) : ''}) e atacado ${R$(NA[i])}${NA[i] > 0 ? ' (desconto de ' + P1(1 - NA[i] / NV[i]) + ')' : ''}.`;
+  const faixa = i => `Faixa permitida: mínimo ${R$(MN[i])} (${origemMin(i)}) até máximo ${R$(MX[i])} (margem máxima ${origemMax(i)}).`;
+  function explicaRegra(i){
+    const L = [];
+    if (RG[i] === 0) L.push('MERCADO − R$ 0,01', `Menor preço do mercado: ${R$(D.vmk[i])} (${coleta(i)}).`, `Novo varejo = ${R$(D.vmk[i])} − 0,01, arredondado pela regra ${REGRA_RND[RND].nome.toLowerCase()}.`, faixa(i));
+    if (RG[i] === 2) L.push('APLICADO MÁXIMA', `O mercado (${R$(D.vmk[i])}, ${coleta(i)}) está acima do preço máximo de ${R$(MX[i])}.`, `Varejo fica no máximo (margem ${origemMax(i)}); o atacado sai do máximo com a base de redução de ${nf1.format(D.merch[i] || 0)}%.`);
+    if (RG[i] === 3) L.push('APLICADO MÍNIMA', `Seguir o mercado (${R$(D.vmk[i])} − 0,01) deixaria a margem em ${P1((D.vmk[i] - CENT - D.cu[i]) / (D.vmk[i] - CENT))}, abaixo do mínimo.`, `O preço vai para o mínimo de ${R$(MN[i])} (${origemMin(i)}).`);
+    if (RG[i] === 4) L.push('APLICADO OBJETIVA', 'Item sem pesquisa direta do concorrente.', `Varejo pela margem objetiva de ${nf1.format(UOBJ[i])}% sobre o custo de ${R$(D.cu[i])}; atacado com a base de redução de ${nf1.format(D.merch[i] || 0)}%.`);
+    if (RG[i] === 5) L.push('AJUSTE MANUAL', `Preço definido na mesa. A sugestão do motor seria seguir o mercado de ${R$(D.vmk[i])}.`, faixa(i));
+    if (RG[i] !== 6 && !semPesq(i)) { const a = analisar(i);
+      if (a) { L.push('', 'DIAGNÓSTICO DA PESQUISA');
+        L.push(`Vencedor: ${a.nomeV} a ${R$(a.venc)}${a.tpV ? ' (' + a.tpV.toLowerCase() + ')' : ''}${a.diaV ? ' em ' + a.diaV : ''}.`);
+        if (a.moda != null) {
+          L.push(`Comparado com a ${a.fonte}: ${R$(a.moda)}. Diferença de ${(a.delta > 0 ? '+' : '') + P1(a.delta)}; limite de ±${nf0.format(a.lim * 100)}% (vencedor ${a.abaixoCusto ? 'abaixo' : 'acima'} do custo).`);
+          L.push(a.tipo === 'erro' ? `Possível erro de pesquisa: o Optimus usaria ${R$(a.alvo)} (${a.decisao.replace('fora do limite: ', '')}). Clique com o botão direito para aplicar.` : 'Pesquisa consistente: o preço vencedor é confiável.');
+        } else L.push('Sem moda confiável do concorrente para comparar.'); } }
+    if (RG[i] === 6) { const o = optInfo(i);
+      L.push(`OPTIMUS: ${(o.t === 'erro' ? 'POSSÍVEL ERRO DE PESQUISA' : o.t === 'custo' ? 'PESQUISA ABAIXO DO CUSTO, CONSISTENTE' : 'PESQUISA CONSISTENTE')}`);
+      if (o.v != null) L.push(`1. Preço vencedor da linha: ${o.n} a ${R$(o.v)}${o.tp ? ' (' + o.tp.toLowerCase() + ')' : ''}${o.dia ? ' em ' + o.dia : ''}, o mesmo menor preço do mercado usado na mesa.`);
+      if (o.mo != null) L.push(`2. Comparado com a ${o.f}: ${R$(o.mo)}. Diferença de ${(o.d > 0 ? '+' : '') + P1(o.d)}; o limite é ±${nf0.format((o.lim || 0) * 100)}% porque o vencedor está ${o.ac ? 'abaixo' : 'acima'} do custo (${R$(D.cu[i])}).`);
+      else L.push('2. Sem moda confiável para comparar.');
+      if (o.dec) L.push(`3. Decisão: ${o.dec}${o.al != null ? ' = ' + R$(o.al) : ''}.`);
+      if (o.nota) L.push(`4. Limite: o alvo passou do ${o.nota === 'teto' ? 'máximo' : 'mínimo'} e ficou em ${R$(o.nota === 'teto' ? MX[i] : MN[i])}.`);
+      if (o.dde) L.push(`DDE de ${nf0.format(o.dde)} dias, acima da meta de ${DDE_META}: prioridade para a menor referência de mercado, com IP no máximo 100%.`);
+      if (o.al != null && Math.abs(NV[i] - o.al) > 0.004 && !o.nota) L.push(`Arredondamento: ${R$(o.al)} não é um final válido na regra ${REGRA_RND[RND].nome.toLowerCase()}; ficou em ${R$(NV[i])}, sem passar do preço de referência.`);
+      L.push(`Atacado: ${o.vm ? 'mantém a relação atacado/varejo do mercado' : 'base de redução de ' + nf1.format(D.merch[i] || 0) + '%'}, com no máximo 15% de desconto.`); }
+    L.push(resultado(i));
+    return L.join('\n');
+  }
+  function explicaCorte(i){
+    const v = NV[i] / D.vm[i] - 1, tp = D.tipos[D.ti[i]] || '', fim = D.dfim[i] > 0 ? dfTxt(D.dfim[i]) : 'sem data fim', L = [];
+    if (!MUD[i] && REAP[i]) { const dia = ['domingo', '', '', '', '', '', 'sábado'][new Date(DF0 + (D.dfim[i] - 1) * 864e5).getUTCDay()];
+      return `MESMO PREÇO, VIGÊNCIA TERMINANDO\nO novo preço é igual ao atual (${R$(D.vm[i])}), mas a vigência atual termina ${D.dfim[i] === HOJE ? 'hoje' : 'no ' + dia + ', ' + fim}.\nPor isso o aceite fica liberado: marque para reaplicar o preço e ele seguir valendo depois do fim da vigência.`; }
+    if (!MUD[i]) return `SEM ALTERAÇÃO\nO novo preço é igual ao atual (${R$(D.vm[i])}) e a vigência atual ${D.dfim[i] > 0 ? 'vai até ' + fim : 'não tem data fim'}: nada a importar.\nO aceite só é liberado quando a vigência termina hoje ou no sábado/domingo.`;
+    if (!CT[i]) { L.push('DENTRO DA REGRA: ACEITE AUTOMÁTICO');
+      L.push(D.dfim[i] === HOJE ? `O preço atual termina hoje (${fim}), então não há corte.` : `Variação de ${(v > 0 ? '+' : '') + P1(v)}, dentro do limite de ±${nf1.format(CORTE)}%, e o preço atual não está em ação que trave a alteração.`);
+      return L.join('\n'); }
+    L.push('SEM ACEITE AUTOMÁTICO');
+    if (CT[i] & 1) L.push(`• Variação de ${(v > 0 ? '+' : '') + P1(v)} (de ${R$(D.vm[i])} para ${R$(NV[i])}), acima do limite de ±${nf1.format(CORTE)}%.`);
+    if (CT[i] & 2) L.push(`• Preço atual em ${titulo_(tp)} vigente (${fim}): encarte, app e mídia não mudam antes do fim da ação.`);
+    if (CT[i] & 4) L.push(`• Preço atual em promoção comercial com IP de ${nf1.format(D.vm[i] / D.vmk[i] * 100)}, abaixo de 100%: já está mais barato que o mercado.`);
+    L.push(`Data fim do preço atual: ${fim}. Preços que terminam hoje não sofrem corte.`, 'Se quiser aplicar mesmo assim, marque o aceite.');
+    return L.join('\n');
+  }
+  const vneg = (v, txt) => `<span class="${v < -1e-9 ? 'neg' : ''}">${txt}</span>`;
+  const num_ = v => v == null || !isFinite(v) ? '–' : nf2.format(v);
+  const ipCor = v => v > 1.009 ? 'var(--down)' : v >= 0.99 ? 'var(--primary)' : 'var(--amber)';
+  const ipFmt = v => isFinite(v) && v > 0 ? `<span style="color:${ipCor(v)};font-weight:600">${nf1.format(v * 100)}</span>` : '–';
+
+  /* ---------- catálogo de colunas ---------- */
+  const imp = i => (NV[i] - D.vm[i]) * D.un[i];
+  const C = {};
+  const col = (id, t, g, w, rend, ord, cls, txt) => C[id] = { id, t, g, w, rend, ord, cls: cls || '', txt };
+  col('ok', 'Aceite', 'Identificação', 62, i => `<span class="ok-box${podeAceitar(i) ? (aceito(i) ? ' on' : '') : ' na'}" data-ok="${i}">${ic('check')}</span>`, i => (MUD[i] ? (aceito(i) ? 2 : 1) : 0));
+  col('fil', 'Filial', 'Identificação', 140, i => esc(curto(D.filiais[D.fi[i]])), i => D.filiais[D.fi[i]], '', () => D.filiais.map(curto));
+  col('prod', 'Produto', 'Identificação', 280, i => esc(D.produtos[D.pi[i]]), i => D.produtos[D.pi[i]], '', () => D.produtos);
+  col('cv', 'Curva', 'Identificação', 58, i => `<span class="cv cv${'ABC'[D.curva[i]]}">${'ABC'[D.curva[i]]}</span>`, i => D.curva[i]);
+  col('uf', 'Estado', 'Identificação', 110, i => esc(D.ufs[D.ui[i]]), i => D.ufs[D.ui[i]], '', () => D.ufs);
+  col('comp', 'Comprador', 'Identificação', 160, i => esc(D.compradores[D.bi[i]]), i => D.compradores[D.bi[i]], '', () => D.compradores);
+  col('dep', 'Departamento', 'Identificação', 150, i => esc(D.deps[D.di[i]]), i => D.deps[D.di[i]], '', () => D.deps);
+  col('cat', 'Categoria', 'Identificação', 160, i => esc(D.cats[D.gi[i]]), i => D.cats[D.gi[i]], '', () => D.cats);
+  col('cesta', 'Cesta', 'Identificação', 70, i => D.cesta[i] ? 'Cesta' : '–', i => D.cesta[i]);
+  col('cu', 'Custo', 'Preço atual', 74, i => nf2.format(D.cu[i]), i => D.cu[i], 'r num');
+  col('vm', 'Varejo atual', 'Preço atual', 84, i => nf2.format(D.vm[i]), i => D.vm[i], 'r num');
+  col('am', 'Atacado atual', 'Preço atual', 86, i => num_(D.am[i] > 0 ? D.am[i] : null), i => D.am[i] || 0, 'r num');
+  col('m0', 'Margem atual', 'Preço atual', 84, i => { const v = (D.vm[i] - D.cu[i]) / D.vm[i]; return vneg(v, pct(v)); }, i => (D.vm[i] - D.cu[i]) / D.vm[i], 'r num');
+  col('ma0', 'Margem atacado atual', 'Preço atual', 92, i => D.am[i] > 0 ? (v => vneg(v, pct(v)))((D.am[i] - D.cu[i]) / D.am[i]) : '–', i => D.am[i] > 0 ? (D.am[i] - D.cu[i]) / D.am[i] : -9, 'r num');
+  col('tp', 'Tipo de preço PDV', 'Preço atual', 170, i => esc(D.tipos[D.ti[i]] || '–'), i => D.tipos[D.ti[i]] || '', '', () => D.tipos);
+  col('df', 'Data fim PDV', 'Preço atual', 92, i => D.dfim[i] > 0 ? dfTxt(D.dfim[i]) : '–', i => D.dfim[i]);
+  col('vmk', 'Varejo mercado', 'Mercado', 90, i => D.vmk[i] > 0 ? `${nf2.format(D.vmk[i])}${D.orig[i] ? '*' : ''}` : '–', i => D.vmk[i] || 0, 'r num');
+  col('amk', 'Atacado mercado', 'Mercado', 90, i => num_(D.amk[i] > 0 ? D.amk[i] : null), i => D.amk[i] || 0, 'r num');
+  col('mo', 'Moda varejo', 'Mercado', 84, i => num_(modaItem(i)[0] || null), i => modaItem(i)[0], 'r num');
+  col('mav', 'Moda atacado', 'Mercado', 86, i => num_(modaItem(i)[1] || null), i => modaItem(i)[1], 'r num');
+  col('dm', 'Menor ÷ moda', 'Mercado', 84, i => modaItem(i)[0] > 0 && D.vmk[i] > 0 && !D.orig[i] ? (v => vneg(v, (v > 0 ? '+' : '') + pct(v)))(D.vmk[i] / modaItem(i)[0] - 1) : '–', i => modaItem(i)[0] > 0 ? D.vmk[i] / modaItem(i)[0] : 0, 'r num');
+  col('conc', 'Concorrente', 'Mercado', 220, i => D.orig[i] ? '<span style="color:var(--faint)">moda</span>' : esc(curto(D.concs[D.ki[i]])), i => D.concs[D.ki[i]], '', () => D.concs.map(curto));
+  const TPC = [null, ['Regular', 'tpReg', 'var(--primary)'], ['Promoção', 'tpPro', 'var(--down)'], ['Ponto extra', 'tpExt', 'var(--amber)']];
+  col('tp', 'tp', 'Mercado', 46, i => { if (D.orig[i]) return `<span class="tpi" style="color:#B794FF" data-tip="Moda: sem pesquisa direta">${ic('moda')}</span>`;
+    const t = TPC[D.tcol[i]]; return t ? `<span class="tpi" style="color:${t[2]}" data-tip="Coleta: ${t[0]}">${ic(t[1])}</span>` : '–'; }, i => D.orig[i] ? 9 : D.tcol[i]);
+  col('dt', 'Data pesquisa', 'Mercado', 84, i => D.orig[i] ? '<span style="color:var(--faint)">moda</span>' : esc(D.datas[D.dti[i]] || '–'), i => D.datas[D.dti[i]] || '');
+  col('ip', 'IP atual', 'Mercado', 70, i => ipFmt(D.vm[i] / D.vmk[i]), i => D.vmk[i] > 0 ? D.vm[i] / D.vmk[i] : 0, 'r num');
+  col('nv', 'Novo varejo', 'Novo preço', 98, i => `<input type="text" data-e="v" data-i="${i}" class="${OV.has(i) ? 'man' : ''}" value="${nf2.format(NV[i])}">`, i => NV[i], 'r edc');
+  col('na', 'Novo atacado', 'Novo preço', 98, i => `<input type="text" data-e="a" data-i="${i}" class="${OVA.has(i) ? 'man' : ''}" value="${NA[i] > 0 ? nf2.format(NA[i]) : ''}">`, i => NA[i], 'r edc');
+  col('nm', 'Margem nova', 'Novo preço', 86, i => { const v = (NV[i] - D.cu[i]) / NV[i]; return `<input type="text" data-e="m" data-i="${i}" class="${v < 0 ? 'neg' : ''}" value="${nf1.format(v * 100)}">`; }, i => (NV[i] - D.cu[i]) / NV[i], 'r ed');
+  col('nma', 'Margem atacado nova', 'Novo preço', 92, i => NA[i] > 0 ? (v => vneg(v, pct(v)))((NA[i] - D.cu[i]) / NA[i]) : '–', i => NA[i] > 0 ? (NA[i] - D.cu[i]) / NA[i] : -9, 'r num');
+  col('ipn', 'IP novo', 'Novo preço', 70, i => ipFmt(NV[i] / D.vmk[i]), i => D.vmk[i] > 0 ? NV[i] / D.vmk[i] : 0, 'r num');
+  col('var', 'Delta preço', 'Novo preço', 84, i => { const v = NV[i] / D.vm[i] - 1; return `<span class="${v > 1e-4 ? 'pos' : v < -1e-4 ? 'neg' : ''}">${v > 0 ? '+' : ''}${pct(v)}</span>`; }, i => NV[i] / D.vm[i] - 1, 'r num');
+  col('ve', 'Venda mês', 'Venda e estoque', 104, i => 'R$ ' + nf0.format(D.venda[i]), i => D.venda[i], 'r num');
+  col('un', 'Volume mês', 'Venda e estoque', 90, i => nf0.format(D.un[i]) + ' un', i => D.un[i], 'r num');
+  col('imp', 'Impacto mês', 'Venda e estoque', 104, i => { const v = imp(i); return `<span class="${v > 0.5 ? 'pos' : v < -0.5 ? 'neg' : ''}">${v >= 0 ? '+' : '−'}R$ ${nf0.format(Math.abs(v))}</span>`; }, i => imp(i), 'r num');
+  col('est', 'Estoque R$', 'Venda e estoque', 100, i => D.estoque[i] != null ? 'R$ ' + nf0.format(D.estoque[i]) : '–', i => D.estoque[i] ?? -1, 'r num');
+  col('dde', 'DDE', 'Venda e estoque', 66, i => D.dde[i] != null ? (v => `<span class="${D.mcob[i] && v > D.mcob[i] ? 'neg' : ''}">${nf0.format(v)}</span>`)(D.dde[i]) : '–', i => D.dde[i] ?? -1, 'r num');
+  col('idade', 'Idade estoque', 'Venda e estoque', 80, i => D.idade[i] != null ? nf0.format(D.idade[i]) : '–', i => D.idade[i] ?? -1, 'r num');
+  col('mcob', 'Meta cobertura', 'Venda e estoque', 86, i => D.mcob[i] != null ? nf0.format(D.mcob[i]) : '–', i => D.mcob[i] ?? -1, 'r num');
+  col('pobj', 'Margem objetiva', 'Regras', 84, i => nf1.format(UOBJ[i]) + '%', i => UOBJ[i], 'r num');
+  col('pmin', 'Margem mínima', 'Regras', 84, i => vneg(UMIN[i], nf1.format(UMIN[i]) + '%'), i => UMIN[i], 'r num');
+  col('pmax', 'Margem máxima', 'Regras', 84, i => nf1.format(UMAX[i]) + '%', i => UMAX[i], 'r num');
+  col('red', 'Base redução atacado', 'Regras', 92, i => nf1.format(D.merch[i] || 0) + '%', i => D.merch[i] || 0, 'r num');
+  col('rg', 'Regra de negócio', 'Regras', 190, i => tagRegra(i), i => RG[i], '', () => ['Aplicado mínima cesta −15,0%', 'Optimus: abaixo do custo, consistente']);
+  col('ct', 'Regra de alteração', 'Regras', 220, i => tagCorte(i), i => CT[i] * 2 + MUD[i], '', () => ['Promoção comercial abaixo do mercado +1']);
+  const PADRAO_COLS = ['ok', 'fil', 'prod', 'cu', 'cv', 'vm', 'am', 'm0', 'vmk', 'amk', 'tp', 'dt', 'ip', 'nv', 'na', 'nm', 'ipn', 'var', 've', 'imp', 'dde', 'est', 'rg', 'ct'];
+  let ORDEM = (VIS0.cols || PADRAO_COLS).filter(id => C[id]); if (ORDEM[0] !== 'ok') ORDEM = ['ok', ...ORDEM.filter(x => x !== 'ok')];
+  const LARG = Object.assign({}, VIS0.larg || {});
+  /* largura automática para nada ficar cortado */
+  const cvs = document.createElement('canvas').getContext('2d');
+  const medir = c => { if (LARG[c.id]) return LARG[c.id]; if (!c.txt) return c.w; cvs.font = '500 12.5px Geist, sans-serif'; let m = 0;
+    for (const t of c.txt()) m = Math.max(m, cvs.measureText(String(t)).width); return Math.max(c.w, Math.min(560, m + (c.id === 'rg' || c.id === 'ct' ? 46 : 22))); };
+  let COLS = [], W = [];
+  const FIXAS = 4;
+  function aplicaColunas(){ COLS = ORDEM.map(id => C[id]); W = COLS.map(medir); document.documentElement.style.setProperty('--cols', W.map(w => w + 'px').join(' ')); cabecalho(); }
+  const esq = k => W.slice(0, k).reduce((a, b) => a + b, 0);
+  const cls = (c, k) => c.cls + (k < FIXAS ? ' fx' : '') + (k === FIXAS - 1 ? ' fxl' : '');
+  const sty = k => k < FIXAS ? ` style="left:${esq(k)}px"` : '';
+  let ORD = { k: 'imp', d: -1 };
+  function cabecalho(){ $('hdr').innerHTML = COLS.map((c, k) => `<div class="${cls(c, k)}"${sty(k)} data-s="${c.id}">${c.t}${ORD.k === c.id ? `<span class="ord">${ORD.d > 0 ? '▲' : '▼'}</span>` : ''}<span class="rz" data-rz="${k}"></span></div>`).join(''); }
+  let arr = null;
+  on($('hdr'), 'mousedown', e => { const r = e.target.closest('[data-rz]'); if (!r) return; e.preventDefault(); e.stopPropagation(); r.classList.add('on'); arr = { k: +r.dataset.rz, x: e.clientX, w: W[+r.dataset.rz] }; });
+  on(window, 'mousemove', e => { if (!arr) return; W[arr.k] = Math.max(48, arr.w + e.clientX - arr.x); LARG[COLS[arr.k].id] = W[arr.k];
+    document.documentElement.style.setProperty('--cols', W.map(w => w + 'px').join(' ')); if (arr.k < FIXAS) render(); });
+  on(window, 'mouseup', () => { if (!arr) return; arr = null; cabecalho(); render(); });
+  on($('hdr'), 'click', e => { if (e.target.closest('[data-rz]')) return; const d = e.target.closest('[data-s]'); if (!d) return; const k = d.dataset.s;
+    ORD = { k, d: ORD.k === k ? -ORD.d : -1 }; cabecalho(); filtrar(); render(); });
+
+  /* ---------- filtros e grade ---------- */
+  const F = { q: '', travas: new Set(), extra: new Set(), regra: -1, corte: -1 };
+  let VIS = [], SEL = -1;
+  const busca = new Array(N); for (let i = 0; i < N; i++) busca[i] = (D.produtos[D.pi[i]] + ' ' + D.filiais[D.fi[i]] + ' ' + D.concs[D.ki[i]]).toLowerCase();
+  function filtrar(){
+    const q = F.q.trim().toLowerCase(), out = [];
+    for (let i = 0; i < N; i++) {
+      if (F.travas.size && !F.travas.has(RG[i])) continue;
+      if (F.extra.size) { const neg = NV[i] < D.cu[i] - 1e-9, ipf = D.vmk[i] > 0 && NV[i] / D.vmk[i] > 1.009;
+        if ((F.extra.has('neg') && !neg) || (F.extra.has('pos') && neg) || (F.extra.has('ipf') && !ipf)) continue; }
+      if (F.regra >= 0 && RG[i] !== F.regra) continue;
+      if (F.corte === 9 && !(MUD[i] && !aceito(i))) continue;
+      if (F.corte >= 0 && F.corte < 9 && !(MUD[i] && (CT[i] & (1 << F.corte)))) continue;
+      if (q && !busca[i].includes(q)) continue;
+      out.push(i);
+    }
+    const g = C[ORD.k] ? C[ORD.k].ord : C.imp.ord, ch = new Map(out.map(i => [i, g(i)]));
+    out.sort((a, b) => { const x = ch.get(a), y = ch.get(b); return (x > y ? 1 : x < y ? -1 : 0) * ORD.d; });
+    VIS = out; $('cnt').textContent = nf0.format(out.length) + ' de ' + nf0.format(N) + ' itens';
+    const nf = (F.regra >= 0) + (F.corte >= 0); $('bRegras').querySelector('.badge')?.remove(); if (nf) $('bRegras').insertAdjacentHTML('beforeend', `<span class="badge">${nf}</span>`);
+  }
+  const H = 34, sc = $('scroll'), body = $('body');
+  function render(){
+    body.style.height = (VIS.length * H) + 'px';
+    const ini = Math.max(0, Math.floor(sc.scrollTop / H) - 6), fim = Math.min(VIS.length, ini + Math.ceil(sc.clientHeight / H) + 14);
+    let h = '';
+    for (let k = ini; k < fim; k++) { const i = VIS[k];
+      h += `<div class="row${i === SEL ? ' sel' : ''}" data-i="${i}" style="top:${k * H}px">` + COLS.map((c, j) => `<div class="${cls(c, j)}"${sty(j)}>${c.rend(i)}</div>`).join('') + '</div>'; }
+    body.innerHTML = h;
+  }
+  let raf = 0; on(sc, 'scroll', () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; render(); }); });
+  const num = s => parseFloat(String(s).replace(/\s|R\$|%/g, '').replace(/\./g, '').replace(',', '.'));
+  on(body, 'change', async e => {
+    const t = e.target; if (!t.dataset.e) return; const i = +t.dataset.i, v = num(t.value);
+    const desfaz = () => render();
+    if (t.dataset.e === 'v' || t.dataset.e === 'm') {
+      let f;
+      if (t.dataset.e === 'v') { if (!(v > 0)) { OV.delete(i); OPT.delete(i); calc(i); salvar(); atualizar(false); return; } f = roundVarejo(v); }
+      else { const m = v / 100; if (!(isFinite(m) && m < 0.95 && m > -1)) { desfaz(); return; } f = roundVarejo(D.cu[i] / (1 - m)); }
+      if (f < MN[i] - 0.004 && !(await confirmar('Preço abaixo da margem mínima', `R$ ${nf2.format(f)} fica abaixo do mínimo de R$ ${nf2.format(MN[i])} (margem ${nf1.format(UMIN[i])}%). Deseja seguir mesmo assim?`))) { desfaz(); return; }
+      if (f > MX[i] + 0.004 && !(await confirmar('Preço acima da margem máxima', `R$ ${nf2.format(f)} passa do máximo de R$ ${nf2.format(MX[i])} (margem ${nf1.format(UMAX[i])}%). Deseja seguir mesmo assim?`))) { desfaz(); return; }
+      OV.set(i, f); OPT.delete(i);
+      if (OVA.has(i) && OVA.get(i) > f) OVA.set(i, f);
+      if (Math.abs(f - v) > 0.001 && t.dataset.e === 'v') toast(`Arredondado pela regra: ${brl(v)} → ${brl(f)}`);
+      if (t.dataset.e === 'm') toast(`Margem ${nf1.format(v)}% → varejo ${brl(f)} (margem real ${pct((f - D.cu[i]) / f)})`);
+    }
+    if (t.dataset.e === 'a') {
+      if (!(v > 0)) OVA.delete(i);
+      else { if (v > NV[i] + 0.004) { toast(`O atacado não pode ser maior que o varejo (R$ ${nf2.format(NV[i])})`); desfaz(); return; }
+        const f = roundAtacado(v, NV[i]);
+        if (f < NV[i] * (1 - DESC_MAX) - 1e-9 && !(await confirmar('Desconto de atacado fora do padrão', `R$ ${nf2.format(f)} dá ${nf1.format((1 - f / NV[i]) * 100)}% de desconto sobre o varejo, acima dos 15% da companhia. Deseja seguir mesmo assim?`))) { desfaz(); return; }
+        OVA.set(i, f); OPT.delete(i); }
+    }
+    calc(i); salvar(); atualizar(false); if (SEL === i) { resumo(i); historico(i); }
+  });
+  /* janela de confirmação própria (a do navegador é bloqueada dentro do componente) */
+  function confirmar(titulo, texto){ return new Promise(ok => { const m = $('modal');
+    m.innerHTML = `<div class="mcard glass"><h4>${ic('alerta', 'var(--amber)')}${esc(titulo)}</h4><p>${esc(texto)}</p><div class="macts"><button class="tx" data-r="0">Cancelar</button><button class="tx pri" data-r="1">Seguir</button></div></div>`;
+    m.classList.add('on'); const fim = r => { m.classList.remove('on'); ok(r); };
+    m.querySelector('[data-r="1"]').onclick = () => fim(true); m.querySelector('[data-r="0"]').onclick = () => fim(false);
+    setTimeout(() => m.querySelector('[data-r="0"]').focus(), 120); }); }
+  on(body, 'keydown', e => { if (e.key === 'Enter' && e.target.dataset.e) { e.preventDefault(); e.target.blur(); } });
+  document.querySelectorAll('.ctx').forEach(x => x.remove());
+  const cm = document.createElement('div'); cm.className = 'ctx glass'; document.body.appendChild(cm);
+  const fechaCtx = () => cm.classList.remove('on');
+  on(body, 'contextmenu', e => { const r = e.target.closest('.row'); if (!r) return; e.preventDefault(); const i = +r.dataset.i; selecionar(i);
+    const it = (acao, icone, txt, des) => `<button data-ctx="${acao}" ${des ? 'disabled' : ''}>${ic(icone)}${txt}</button>`;
+    cm.innerHTML = `<div class="ctx-t">${esc(curto(D.produtos[D.pi[i]]))}<small>${esc(curto(D.filiais[D.fi[i]]))}</small></div>`
+      + it('aceitar', 'check', 'Aceitar preço', !podeAceitar(i) || aceito(i)) + it('anular', 'x', 'Anular aceite', !aceito(i))
+      + '<span class="ctx-s"></span>' + it('objetiva', 'obj', `Aplicar objetiva (R$ ${nf2.format(roundVarejo(OB[i]))})`) + it('optimus', 'robo', 'Aplicar Optimus', semPesq(i))
+      + '<span class="ctx-s"></span>' + it('motor', 'undo', 'Sugestão do motor', !OV.has(i) && !OVA.has(i) && !ACE.has(i));
+    cm.classList.add('on'); const w = cm.offsetWidth, h = cm.offsetHeight;
+    cm.style.left = Math.min(e.clientX, innerWidth - w - 8) + 'px'; cm.style.top = Math.min(e.clientY, innerHeight - h - 8) + 'px'; cm.dataset.i = i; });
+  on(cm, 'click', async e => { const b = e.target.closest('[data-ctx]'); if (!b || b.disabled) return; const i = +cm.dataset.i, a = b.dataset.ctx; fechaCtx();
+    if (a === 'aceitar') { ACE.set(i, true); }
+    if (a === 'anular') { ACE.set(i, false); }
+    if (a === 'objetiva') { const f = roundVarejo(OB[i]);
+      if (f > MX[i] + 0.004 && !(await confirmar('Objetiva acima da máxima', `R$ ${nf2.format(f)} passa do máximo de R$ ${nf2.format(MX[i])}. Deseja seguir?`))) return;
+      OV.set(i, f); OVA.delete(i); OPT.delete(i); calc(i); }
+    if (a === 'optimus') { optimusItem(i); return; }
+    if (a === 'motor') { OV.delete(i); OVA.delete(i); OPT.delete(i); ACE.delete(i); calc(i); }
+    salvar(); atualizar(false); resumo(i); historico(i); });
+  on(document, 'click', e => { if (!e.target.closest('.ctx')) fechaCtx(); });
+  on(document, 'keydown', e => { if (e.key === 'Escape') fechaCtx(); });
+  on(sc, 'scroll', fechaCtx);
+  on(body, 'click', e => { const ok = e.target.closest('[data-ok]'); if (ok) { alternarAceite(+ok.dataset.ok); return; }
+    if (e.target.tagName === 'INPUT') return; const r = e.target.closest('.row'); if (!r) return; selecionar(+r.dataset.i); sc.focus({ preventScroll: true }); });
+  function proximoPendente(){ const k0 = VIS.indexOf(SEL);
+    for (let d = 1; d <= VIS.length; d++) { const k = (Math.max(k0, -1) + d) % VIS.length, i = VIS[k]; if (MUD[i] && !aceito(i)) {
+      const y = k * H; sc.scrollTop = Math.max(0, y - sc.clientHeight / 3); selecionar(i); return; } }
+    toast('Nenhum preço pendente de aceite neste filtro'); }
+  function alternarAceite(i){ if (!podeAceitar(i)) return; ACE.set(i, !aceito(i)); salvar(); atualizar(false); if (SEL === i) resumo(i); }
+  function selecionar(i){ SEL = i; render(); resumo(i); historico(i); }
+  on(document, 'keydown', e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || !VIS.length) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); let k = VIS.indexOf(SEL); k = k < 0 ? 0 : Math.max(0, Math.min(VIS.length - 1, k + (e.key === 'ArrowDown' ? 1 : -1)));
+      const y = k * H; if (y < sc.scrollTop + H) sc.scrollTop = Math.max(0, y - H); else if (y > sc.scrollTop + sc.clientHeight - 2 * H) sc.scrollTop = y - sc.clientHeight + 2 * H; selecionar(VIS[k]); }
+    else if (e.key === ' ' && SEL >= 0) { e.preventDefault(); alternarAceite(SEL); }
+    else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); proximoPendente(); }
+  });
+
+  /* ---------- indicadores e painel de regras ---------- */
+  function kpis(){
+    let sobe = 0, baixa = 0, aceitos = 0, sem = 0, a = 0, b = 0, c_ = 0, m0n = 0, m0d = 0, m1n = 0, m1d = 0, ganho = 0, inv = 0;
+    const rc = new Array(REGRAS.length).fill(0), cc = new Array(CORTES.length).fill(0);
+    for (let i = 0; i < N; i++) { const un = D.un[i], w = un > 0 ? un : 1, nv = NV[i], vm = D.vm[i], cu = D.cu[i];
+      if (nv > vm + 0.004) sobe++; else if (nv < vm - 0.004) baixa++;
+      if (MUD[i]) { if (aceito(i)) aceitos++; else sem++; for (let k = 0; k < CORTES.length; k++) if (CT[i] & (1 << k)) cc[k]++; }
+      if (D.vmk[i] > 0) { a += vm * w; b += D.vmk[i] * w; c_ += nv * w; }
+      if (un > 0) { m0n += (vm - cu) * un; m0d += vm * un; m1n += (nv - cu) * un; m1d += nv * un; }
+      const d = (nv - vm) * un; if (d > 0) ganho += d; else inv -= d; rc[RG[i]]++; }
+    const ip0 = b ? a / b : NaN, ip1 = b ? c_ / b : NaN, mg0 = m0n / m0d, mg1 = m1n / m1d, saldo = ganho - inv;
+    const K = [['Aceitos', nf0.format(aceitos), `<i>${nf0.format(sem)} sem aceite</i>`, 'var(--up)', 'check'],
+      ['Sobem', nf0.format(sobe), `<i>${pct(sobe / N)} dos itens</i>`, 'var(--up)', 'tdUp'],
+      ['Baixam', nf0.format(baixa), `<i>${pct(baixa / N)} dos itens</i>`, 'var(--down)', 'tdDn'],
+      ['IP novo', isFinite(ip1) ? nf1.format(ip1 * 100) : '–', `<i class="${ip1 < ip0 ? 'pos' : ip1 > ip0 ? 'neg' : ''}">hoje ${isFinite(ip0) ? nf1.format(ip0 * 100) : '–'}</i>`, 'var(--primary)', 'merc'],
+      ['Margem nova', vneg(mg1, pct(mg1)), `<i class="${mg1 >= mg0 ? 'pos' : 'neg'}">hoje ${pct(mg0)}</i>`, 'var(--amber)', 'pct'],
+      ['Lucro adicional/mês', 'R$ ' + nf0.format(ganho), '<i>ganho com as subidas de preço</i>', 'var(--up)', 'cash'],
+      ['Investimento/mês', 'R$ ' + nf0.format(inv), '<i>custo das baixas de preço</i>', 'var(--down)', 'tdDn'],
+      ['Saldo/mês', vneg(saldo, `${saldo >= 0 ? '+' : '−'}R$ ${nf0.format(Math.abs(saldo))}`), `<i>${nf0.format(N)} itens</i>`, saldo >= 0 ? 'var(--up)' : 'var(--down)', 'cash']];
+    $('kpis').innerHTML = K.map(([t, v, sub, c, n]) => `<div class="kc" style="--t:${c}" data-tip="${t}: ${sub.replace(/<[^>]+>/g, '')}">${ic(n, c)}<span>${t}</span><b>${v}</b></div>`).join('');
+    const rm = Math.max(...rc, 1), cm = Math.max(...cc, sem, 1);
+    $('pRegras').innerHTML = `<div class="regp"><h4>Regra de negócio</h4><p>Motivo da formação do novo preço. Clique para filtrar a grade.</p><div class="lista">`
+      + ORDEM_R.map(k => { const [t, n, c] = REGRAS[k]; return `<div class="rg${F.regra === k ? ' on' : ''}" data-rgf="${k}">${ic(n, c)}<span>${t}</span><div class="bar"><i style="width:${100 * rc[k] / rm}%;background:${c}"></i></div><b>${nf0.format(rc[k])}</b></div>`; }).join('')
+      + `</div><h4>Regra de alteração</h4><p>Por que o preço ficou sem aceite automático.</p><div class="lista">`
+      + `<div class="rg${F.corte === 9 ? ' on' : ''}" data-ct="9">${ic('x', 'var(--down)')}<span>Todos sem aceite</span><div class="bar"><i style="width:${100 * sem / cm}%;background:var(--down)"></i></div><b>${nf0.format(sem)}</b></div>`
+      + CORTES.map(([t, n], k) => `<div class="rg${F.corte === k ? ' on' : ''}" data-ct="${k}">${ic(n, 'var(--down)')}<span>${t}</span><div class="bar"><i style="width:${100 * cc[k] / cm}%;background:var(--down)"></i></div><b>${nf0.format(cc[k])}</b></div>`).join('')
+      + `<div class="rg" style="cursor:default">${ic('cal', 'var(--faint)')}<span style="color:var(--muted)">Preço com data fim hoje não sofre corte</span><span></span><span></span></div></div>`
+      + `<button class="tx" id="limpaRegras">${ic('x')}Limpar filtros de regra</button></div>`;
+  }
+  on($('pRegras'), 'click', e => { if (e.target.closest('#limpaRegras')) { F.regra = -1; F.corte = -1; atualizar(); return; }
+    const r = e.target.closest('[data-rgf]'); if (r) { const k = +r.dataset.rgf; F.regra = F.regra === k ? -1 : k; atualizar(); return; }
+    const c = e.target.closest('[data-ct]'); if (c) { const k = +c.dataset.ct; F.corte = F.corte === k ? -1 : k; atualizar(); } });
+
+  /* ---------- histórico de preço do mercado ---------- */
+  const TPN = ['Regular', 'Promoção', 'Encarte', 'Mídia', 'Ponto extra'];
+  const HD = new Map(), HO = new Map();
+  for (let j = 0; j < D.dp.length; j++) { const k = D.dp[j] * 64 + D.du[j]; let a = HD.get(k); if (!a) HD.set(k, a = []); a.push(j); }
+  for (let j = 0; j < D.op.length; j++) { const k = D.op[j] * 64 + D.ou[j]; let a = HO.get(k); if (!a) HO.set(k, a = []); a.push(j); }
+  let HSEL = 'fil', HMODO = 'v', HDADOS = null;
+  const empresa = k => D.hE[k] ? titulo_(D.hE[k]) : curto(D.hK[k]);
+  function historico(i){
+    const box = $('hist'), chips = $('hChips');
+    if (i < 0) { $('histSub').textContent = ''; chips.innerHTML = ''; box.innerHTML = '<div class="hvazio">Selecione um item.</div>'; return; }
+    const p = D.pi[i], u = D.ui[i], T = D.hT.length, rows = HD.get(p * 64 + u) || [], fil = new Set(D.fk[D.fi[i]] || []);
+    $('histSub').textContent = `${curto(D.filiais[D.fi[i]])}, ${D.ufs[u] || ''}`;
+    const cont = new Map(), daFil = new Set();
+    for (const j of rows) { const e = empresa(D.dk[j]); cont.set(e, (cont.get(e) || 0) + 1); if (fil.has(D.dk[j])) daFil.add(e); }
+    const nFil = rows.filter(j => fil.has(D.dk[j])).length;
+    if (HSEL === 'fil' && !nFil) HSEL = 'uf';
+    if (HSEL.startsWith('e:') && !cont.has(HSEL.slice(2))) HSEL = nFil ? 'fil' : 'uf';
+    const sig = e => e.split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+    chips.innerHTML = (nFil ? `<button class="hchip${HSEL === 'fil' ? ' on' : ''}" data-hs="fil" data-tip="${nf0.format(nFil)} coletas">Da filial</button>` : '')
+      + `<button class="hchip${HSEL === 'uf' ? ' on' : ''}" data-hs="uf" data-tip="${nf0.format(rows.length)} coletas">Estado</button>`
+      + [...cont.entries()].sort((a, b) => b[1] - a[1]).map(([e, n]) => `<button class="hchip${HSEL === 'e:' + e ? ' on' : ''}" data-hs="e:${esc(e)}" data-tip="${esc(e)}: ${nf0.format(n)} coletas${daFil.has(e) ? ', concorre com a filial' : ''}">${esc(e.split(/\s+/)[0])}${daFil.has(e) ? '<i class="pt"></i>' : ''}</button>`).join('');
+    const ok = HSEL === 'fil' ? (k => fil.has(k)) : HSEL === 'uf' ? (() => true) : (k => 'e:' + empresa(k) === HSEL);
+    const mn = new Array(T).fill(Infinity), quem = new Array(T).fill(-1), dia = [...Array(T)].map(() => new Map()), nos = new Array(T).fill(0), nn = new Array(T).fill(0), og = [...Array(T)].map(() => new Map());
+    for (const j of rows) { if (!ok(D.dk[j])) continue; const t = D.dt[j], v = (HMODO === 'a' ? Math.min(D.da[j] || D.dv[j], D.dv[j]) : D.dv[j]) / 100; if (!(v > 0)) continue;
+      if (v < mn[t]) { mn[t] = v; quem[t] = D.dk[j]; } const e = empresa(D.dk[j]), cur = dia[t].get(e); if (!cur || v < cur.v) dia[t].set(e, { v, tp: D.dtp[j] }); }
+    for (const j of HO.get(p * 64 + u) || []) { const t = D.ot[j], v = (HMODO === 'a' ? D.oa[j] : D.ov[j]) / 100; if (v > 0 && t < T) { nos[t] += v; nn[t]++; const o = D.hOG[D.oo[j]] || ''; og[t].set(o, (og[t].get(o) || 0) + 1); } }
+    const dias = [...Array(T).keys()].filter(t => isFinite(mn[t]) || nn[t]);
+    if (!dias.length) { box.innerHTML = '<div class="hvazio">Sem histórico de pesquisa para este item no estado.</div>'; HDADOS = null; return; }
+    const our = dias.map(t => nn[t] ? nos[t] / nn[t] : null), mer = dias.map(t => isFinite(mn[t]) ? mn[t] : null), moda = HMODO === 'a' ? D.ma[i] : D.mo[i];
+    const vals = mer.filter(v => v > 0).concat(moda > 0 ? [moda] : []);
+    if (!vals.length) { box.innerHTML = '<div class="hvazio">Sem coletas da concorrência para este filtro.</div>'; HDADOS = null; return; }
+    const lo = Math.min(...vals) * 0.97, hi = Math.max(...vals) * 1.03, Wd = Math.max(420, box.clientWidth || 800), Ht = 178, pl = 8, pr = 54, pt = 16, pb = 16;
+    const X = n => pl + (Wd - pl - pr) * (dias.length > 1 ? n / (dias.length - 1) : 0.5), Y = v => pt + (Ht - pt - pb) * (1 - (v - lo) / (hi - lo || 1));
+    const pts = mer.map((v, n) => v == null ? null : [X(n), Y(v), v, n]).filter(Boolean);
+    let linha = '', area = '';
+    if (pts.length) { linha = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+      for (let k = 1; k < pts.length; k++) { const a = pts[k - 1], b = pts[k], cx = (a[0] + b[0]) / 2; linha += `C${cx.toFixed(1)},${a[1].toFixed(1)} ${cx.toFixed(1)},${b[1].toFixed(1)} ${b[0].toFixed(1)},${b[1].toFixed(1)}`; }
+      area = linha + `L${pts[pts.length - 1][0]},${Ht - pb}L${pts[0][0]},${Ht - pb}Z`; }
+    const vMin = Math.min(...pts.map(q => q[2])), vMax = Math.max(...pts.map(q => q[2]));
+    let g = `<svg viewBox="0 0 ${Wd} ${Ht}"><defs><linearGradient id="gM" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--down)" stop-opacity=".20"/><stop offset="1" stop-color="var(--down)" stop-opacity="0"/></linearGradient></defs>`;
+    dias.forEach((t, n) => { const mostra = dias.length <= 16 || n % 2 === 0 || n === dias.length - 1;
+      if (mostra) g += `<text x="${X(n)}" y="${Ht - 3}" text-anchor="middle" font-size="9" fill="var(--faint)" font-family="Geist Mono">${D.hT[t]}</text>`; });
+    if (moda > 0) g += `<line x1="${pl}" x2="${Wd - pr}" y1="${Y(moda)}" y2="${Y(moda)}" stroke="#B794FF" stroke-dasharray="5 4"/><text x="${Wd - pr + 4}" y="${Y(moda) + 3}" font-size="9" fill="#B794FF" font-family="Geist Mono">moda</text>`;
+    if (D.vm[i] > 0 && D.vm[i] >= lo && D.vm[i] <= hi) g += `<line x1="${pl}" x2="${Wd - pr}" y1="${Y(D.vm[i])}" y2="${Y(D.vm[i])}" stroke="var(--ink)" stroke-opacity=".35" stroke-dasharray="2 4"/><text x="${Wd - pr + 4}" y="${Y(D.vm[i]) + 3}" font-size="9" fill="var(--muted)" font-family="Geist Mono">atual</text>`;
+    g += `<path d="${area}" fill="url(#gM)"/><path d="${linha}" fill="none" stroke="var(--down)" stroke-width="2.2"/>`;
+    pts.forEach(([x, y, v]) => { const ext = v === vMin || v === vMax; g += `<circle cx="${x}" cy="${y}" r="${ext ? 3.4 : 2.4}" fill="${ext ? 'var(--down)' : 'var(--surface-solid)'}" stroke="var(--down)" stroke-width="1.6"/>`;
+      if (ext) g += `<text x="${x}" y="${v === vMax ? y - 7 : y + 13}" text-anchor="middle" font-size="9.5" fill="var(--down)" font-family="Geist Mono" font-weight="600">${nf2.format(v)}</text>`; });
+    const ult = pts.length ? pts[pts.length - 1] : null;
+    if (ult) g += `<rect x="${Wd - pr + 4}" y="${ult[1] - 8}" width="${pr - 6}" height="16" rx="5" fill="var(--down)"/><text x="${Wd - pr / 2 + 2}" y="${ult[1] + 3.5}" text-anchor="middle" font-size="9.5" fill="#fff" font-family="Geist Mono" font-weight="600">${nf2.format(ult[2])}</text>`;
+    g += `<line id="hGuia" x1="0" x2="0" y1="${pt}" y2="${Ht - pb}" stroke="var(--faint)" stroke-dasharray="3 3" style="display:none"/></svg>`;
+    box.innerHTML = `<div class="hbox">${g}<div class="htip" id="hTip"></div></div>`;
+    HDADOS = { dias, our, mer, quem, dia, og, X, Wd, pl, pr };
+  }
+  on($('hist'), 'mousemove', e => { if (!HDADOS) return; const svg = $('hist').querySelector('svg'); if (!svg) return; const r = svg.getBoundingClientRect();
+    const x = (e.clientX - r.left) * HDADOS.Wd / r.width; let n = 0, bd = Infinity; HDADOS.dias.forEach((_, k) => { const d = Math.abs(HDADOS.X(k) - x); if (d < bd) { bd = d; n = k; } });
+    const t = HDADOS.dias[n], gl = $('hGuia'), tp = $('hTip'); gl.setAttribute('x1', HDADOS.X(n)); gl.setAttribute('x2', HDADOS.X(n)); gl.style.display = '';
+    const l = [...HDADOS.dia[t]].sort((a, b) => a[1].v - b[1].v), ogm = [...HDADOS.og[t]].sort((a, b) => b[1] - a[1])[0];
+    tp.innerHTML = `<div class="t">${D.hT[t]}</div>` + (HDADOS.mer[n] != null ? `<div class="r"><i style="background:var(--down)"></i>Mercado: menor preço <b>R$ ${nf2.format(HDADOS.mer[n])}</b></div>` : '')
+
+      + (l.length ? '<div class="l">' + l.slice(0, 10).map(([e, x]) => `<span>${esc(e)}</span><em>${TPN[x.tp] || ''}</em><b>R$ ${nf2.format(x.v)}</b>`).join('') + '</div>' : '');
+    tp.style.display = 'block'; const px = HDADOS.X(n) * r.width / HDADOS.Wd; tp.style.left = (px > r.width * 0.6 ? px - tp.offsetWidth - 14 : px + 14) + 'px'; tp.style.top = '10px'; });
+  on($('hist'), 'mouseleave', () => { const tp = $('hTip'), gl = $('hGuia'); if (tp) tp.style.display = 'none'; if (gl) gl.style.display = 'none'; });
+  on($('hChips'), 'click', e => { const b = e.target.closest('[data-hs]'); if (!b || SEL < 0) return; HSEL = b.dataset.hs; historico(SEL); });
+  on($('hSeg'), 'click', e => { const b = e.target.closest('[data-hm]'); if (!b) return; HMODO = b.dataset.hm; $('hSeg').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); if (SEL >= 0) historico(SEL); });
+
+  /* ---------- resumo do item (ao lado do histórico) ---------- */
+  const EXPL_ANTIGA = [i => 'Segue o menor preço do mercado, R$ 0,01 abaixo, dentro da trava mínima e da trava máxima de margem.', null,
+    i => `O mercado está acima do preço máximo (margem máxima de ${nf1.format(UMAX[i])}%): o varejo fica no teto e o atacado sai do teto com a base de redução de ${nf1.format(D.merch[i] || 0)}%.`,
+    i => D.cesta[i] ? `Item da cesta: seguir o mercado deixaria a margem abaixo de ${nf1.format(UMIN[i])}%, então o preço fica na trava mínima da cesta.` : `Seguir o mercado deixaria a margem abaixo da mínima (${nf1.format(UMIN[i])}%): o preço fica na trava mínima.`,
+    i => `Sem pesquisa direta: o varejo vai para a margem objetiva de ${nf1.format(UOBJ[i])}% e o atacado sai do objetivo com a base de redução de ${nf1.format(D.merch[i] || 0)}%.`,
+    i => 'Preço definido manualmente na mesa.'];
+  function resumo(i){
+    if (i < 0) { $('resumo').innerHTML = `<div class="hvazio">Clique em um item. <span class="kbd">↑</span><span class="kbd">↓</span> navegam, <span class="kbd">espaço</span> aceita, <span class="kbd">N</span> vai ao próximo pendente.</div>`; return; }
+    const c = D.cu[i], pts = [['Custo', c, 'var(--faint)'], ['Mín', MN[i], 'var(--up)'], ['Obj', OB[i], 'var(--amber)'], ['Merc', D.vmk[i] || null, 'var(--primary)'],
+      ['Moda', modaItem(i)[0] || null, '#B794FF'], ['Máx', MX[i], 'var(--down)'], ['Atual', D.vm[i], 'var(--ink)'], ['Novo', NV[i], 'var(--primary)']].filter(p => p[1] > 0).sort((a, b) => a[1] - b[1]);
+    const vs = pts.map(p => p[1]), lo = Math.min(...vs) * 0.98, hi = Math.max(...vs) * 1.02, X = v => 10 + (v - lo) / (hi - lo) * 280;
+    let svg = `<svg class="lad" viewBox="0 0 300 74"><line x1="10" y1="37" x2="290" y2="37" stroke="var(--line)" stroke-width="4" stroke-linecap="round"/><line x1="${X(MN[i])}" y1="37" x2="${X(MX[i])}" y2="37" stroke="var(--up)" stroke-opacity=".35" stroke-width="4" stroke-linecap="round"/>`;
+    const rot = pts.filter(p => ['Atual', 'Novo', 'Merc', 'Mín', 'Máx', 'Moda'].includes(p[0]));
+    pts.forEach(([t, v, cor]) => { const novo = t === 'Novo'; svg += `<circle cx="${X(v)}" cy="37" r="${novo ? 5 : 3.2}" fill="${cor}" stroke="var(--surface-solid)" stroke-width="1.5"><title>${t}: R$ ${nf2.format(v)}</title></circle>`; });
+    rot.forEach(([t, v, cor], k) => { const nivel = k % 4, y = [10, 70, 22, 58][nivel], x = Math.min(276, Math.max(24, X(v))), novo = t === 'Novo';
+      svg += `<line x1="${X(v)}" y1="37" x2="${x}" y2="${nivel % 2 === 0 ? y + 2 : y - 9}" stroke="${cor}" stroke-opacity=".45"/><text x="${x}" y="${y}" text-anchor="middle" font-size="9" fill="${cor}" font-family="Geist Mono" font-weight="${novo ? 700 : 500}">${t} ${nf2.format(v)}</text>`; });
+    svg += '</svg>';
+    const [mV, mA, mF] = modaItem(i), dm = mV > 0 && D.vmk[i] > 0 && !D.orig[i] ? D.vmk[i] / mV - 1 : null, m1 = (NV[i] - c) / NV[i];
+    const st = (t, v, k) => `<div class="ms"><span>${t}</span><b class="${k || ''}">${v}</b></div>`;
+    $('resumo').innerHTML = `<div class="rtop"><div class="rnome" title="${esc(D.produtos[D.pi[i]])}">${esc(curto(D.produtos[D.pi[i]]))}</div>${tagRegra(i)}</div>
+      <div class="rsub">${esc(curto(D.filiais[D.fi[i]]))}, curva ${'ABC'[D.curva[i]]}${D.cesta[i] ? ', cesta' : ''}. ${esc(D.orig[i] ? 'Moda (sem pesquisa direta)' : titulo_(curto(D.concs[D.ki[i]]).split(' - ')[0]))}${D.orig[i] ? '' : ', ' + esc(D.datas[D.dti[i]] || '')}. ${esc(titulo_(D.tipos[D.ti[i]] || ''))}${D.dfim[i] > 0 ? ' até ' + dfTxt(D.dfim[i]) : ''}.</div>
+      ${svg}
+      <div class="mgrid" data-tip="Moda: ${FONTE_MODA[mF]}">${st('Moda var.', brl(mV))}${st('Moda atac.', brl(mA))}${st('Menor ÷ moda', dm == null ? '–' : (dm > 0 ? '+' : '') + pct(dm), dm < 0 ? 'neg' : '')}
+        ${st('Menor var.', brl(D.vmk[i]))}${st('Menor atac.', brl(D.amk[i]))}${st('Margem nova', pct(m1), m1 < 0 ? 'neg' : 'pos')}</div>
+      <div class="ralts"><button class="ib2" data-alt="m" data-tip="Usar mercado − 0,01">${ic('merc')}</button><button class="ib2" data-alt="o" data-tip="Usar moda − 0,01">${ic('moda')}</button>
+        <button class="ib2" data-alt="b" data-tip="Usar objetivo">${ic('obj')}</button><button class="ib2" data-alt="r" data-tip="Voltar à sugestão do motor">${ic('undo')}</button>
+        <span class="rwhy" data-tip="${esc(explicaRegra(i))}">${ic('regra')}por quê?</span>
+        <button class="tx sm ${aceito(i) ? 'ok' : ''}" data-alt="ok" ${podeAceitar(i) ? '' : 'disabled'}>${ic('check')}${aceito(i) ? 'Aceito' : 'Aceitar'}</button></div>`;
+  }
+  on($('resumo'), 'click', e => { const b = e.target.closest('[data-alt]'); if (!b || SEL < 0) return; const i = SEL, k = b.dataset.alt;
+    if (k === 'ok') { alternarAceite(i); return; } if (k === 'r') { OV.delete(i); OVA.delete(i); OPT.delete(i); ACE.delete(i); }
+    else { const v = k === 'm' ? (D.vmk[i] > 0 ? D.vmk[i] - CENT : null) : k === 'o' ? (D.mo[i] ? D.mo[i] - CENT : null) : OB[i]; if (!v) { toast('Sem esse preço para o item'); return; } OV.set(i, Math.max(roundVarejo(v), 0.01)); OVA.delete(i); }
+    calc(i); salvar(); atualizar(false); resumo(i); historico(i); });
+
+  /* ---------- gestor de colunas (visão do usuário) ---------- */
+  let BUSCA_COL = '';
+  function montaColunas(){
+    const grupos = {}; Object.values(C).forEach(c => (grupos[c.g] = grupos[c.g] || []).push(c));
+    const q = BUSCA_COL.toLowerCase();
+    $('pCols').innerHTML = `<h4>Colunas da mesa</h4><p>Arraste ou use as setas: a ordem da lista é a ordem da tabela. As quatro primeiras ficam travadas ao rolar para o lado.</p>
+      <div class="cm"><div><h5>Colunas na tabela</h5><small>${ORDEM.length} colunas</small><div class="lst" id="cmLista">${ORDEM.map((id, k) => `<div class="it" draggable="${id !== 'ok'}" data-id="${id}">${ic('grip', 'var(--faint)')}<span>${C[id].t} <em>${C[id].g}</em></span>
+        <button data-mv="-1" ${k <= 1 ? 'disabled' : ''}>${ic('seta_c')}</button><button data-mv="1" ${k === 0 || k === ORDEM.length - 1 ? 'disabled' : ''}>${ic('seta_b')}</button><button data-rm="1" ${id === 'ok' ? 'disabled' : ''}>${ic('x')}</button></div>`).join('')}</div></div>
+      <div><h5>Colunas disponíveis</h5><small>Marque para incluir</small><input type="search" id="cmBusca" placeholder="Buscar coluna" value="${esc(BUSCA_COL)}"><div class="lst">${Object.entries(grupos).map(([g, l]) => {
+        const it = l.filter(c => !q || c.t.toLowerCase().includes(q)); if (!it.length) return '';
+        return `<div class="grp">${g}</div>` + it.map(c => `<label><input type="checkbox" data-ck="${c.id}" ${ORDEM.includes(c.id) ? 'checked' : ''} ${c.id === 'ok' ? 'disabled' : ''}>${c.t}</label>`).join(''); }).join('')}</div></div></div>
+      <div class="cm-acts"><button class="tx" id="cmPadrao">${ic('undo')}Visão padrão</button><button class="tx pri" id="cmSalvar">${ic('save')}Salvar minha visão</button></div>`;
+  }
+  const mudouColunas = () => { aplicaColunas(); render(); montaColunas(); };
+  on($('pCols'), 'click', e => {
+    const it = e.target.closest('.it'), b = e.target.closest('button');
+    if (b && it && b.dataset.mv) { const k = ORDEM.indexOf(it.dataset.id), n = k + +b.dataset.mv; if (n < 1 || n >= ORDEM.length) return; [ORDEM[k], ORDEM[n]] = [ORDEM[n], ORDEM[k]]; mudouColunas(); return; }
+    if (b && it && b.dataset.rm) { ORDEM = ORDEM.filter(x => x !== it.dataset.id); mudouColunas(); return; }
+    if (e.target.closest('#cmPadrao')) { ORDEM = [...PADRAO_COLS]; Object.keys(LARG).forEach(k => delete LARG[k]); mudouColunas(); return; }
+    if (e.target.closest('#cmSalvar')) { ST.valor({ acao: 'salvar_visao', visao: { cols: ORDEM, larg: LARG, rnd: RND }, ts: Date.now() }); toast('Salvando sua visão no perfil…'); }
+  });
+  on($('pCols'), 'change', e => { const id = e.target.dataset.ck; if (!id) return; if (e.target.checked) { if (!ORDEM.includes(id)) ORDEM.push(id); } else ORDEM = ORDEM.filter(x => x !== id); mudouColunas(); });
+  on($('pCols'), 'input', e => { if (e.target.id !== 'cmBusca') return; BUSCA_COL = e.target.value; const pos = e.target.selectionStart; montaColunas(); const s = $('cmBusca'); s.focus(); s.setSelectionRange(pos, pos); });
+  let ARR = null;
+  on($('pCols'), 'dragstart', e => { const it = e.target.closest('.it'); if (!it) return; ARR = it.dataset.id; it.classList.add('drag'); });
+  on($('pCols'), 'dragover', e => { const it = e.target.closest('.it'); if (!it || !ARR) return; e.preventDefault(); $('pCols').querySelectorAll('.sobre').forEach(x => x.classList.remove('sobre')); it.classList.add('sobre'); });
+  on($('pCols'), 'drop', e => { const it = e.target.closest('.it'); if (!it || !ARR) return; e.preventDefault(); const alvo = it.dataset.id; if (alvo === ARR || alvo === 'ok') { ARR = null; montaColunas(); return; }
+    ORDEM = ORDEM.filter(x => x !== ARR); ORDEM.splice(ORDEM.indexOf(alvo), 0, ARR); ARR = null; mudouColunas(); });
+  on($('pCols'), 'dragend', () => { ARR = null; $('pCols').querySelectorAll('.drag,.sobre').forEach(x => x.classList.remove('drag', 'sobre')); });
+
+  /* ---------- painéis: arredondamento, piso e importação ---------- */
+  const pops = ['pRegras', 'pCols', 'pRnd', 'pPiso', 'pExp', 'pProp', 'pOpt'];
+  function abrir(id, botao){ pops.forEach(p => $(p).classList.toggle('on', p === id && !$(p).classList.contains('on')));
+    const p = $(id); if (p.classList.contains('on') && botao) { const r = botao.getBoundingClientRect(); p.style.top = Math.max(8, Math.min(innerHeight - p.offsetHeight - 8, r.top - 10)) + 'px'; } }
+  on(document, 'click', e => { if (!e.target.closest('.pop') && !e.target.closest('#bRegras,#bCols,#bRnd,#bPiso,#bExp,#bProp,#bOpt,.modal')) pops.forEach(p => $(p).classList.remove('on')); });
+  on(document, 'keydown', e => { if (e.key === 'Escape') pops.forEach(p => $(p).classList.remove('on')); });
+  const faixas = [['A', 'Até R$ 10,99'], ['B', 'R$ 11,00 a R$ 19,99'], ['C', 'R$ 20,00 a R$ 40,00'], ['D', 'Acima de R$ 40,00']];
+  const fimTxt = (reg, f) => f === 'A' ? `centavos terminando em ${reg[f].join(', ')}` : f === 'B' ? `dezena 1 a 9, final ${reg[f].join(', ')}` : `dezena 3 a 9, final ${reg[f].filter(x => x).join(', ')}${reg[f].includes(0) ? ' (ou ,50 e ,90)' : ''}`;
+  function montaRnd(){ $('pRnd').innerHTML = `<h4>Regra de arredondamento</h4><p>O novo varejo vai para o centavo permitido mais próximo. O atacado sempre termina no mesmo dígito do varejo e nunca passa dele.</p>
+      <div class="opt">${Object.entries(REGRA_RND).map(([k, r]) => `<label class="${RND === k ? 'on' : ''}"><input type="radio" name="rnd" value="${k}" ${RND === k ? 'checked' : ''}><b>${r.nome}</b></label>`).join('')}</div>
+      <table><tr><th>Faixa</th><th>Preço</th><th>Centavos permitidos</th></tr>${faixas.map(([f, t]) => `<tr><td>${f}</td><td>${t}</td><td>${fimTxt(REGRA_RND[RND], f)}</td></tr>`).join('')}</table>`; }
+  on($('pRnd'), 'change', e => { if (e.target.name !== 'rnd') return; RND = e.target.value; VC = tabelaVC(REGRA_RND[RND]); montaRnd(); calcTudo(); atualizar(); if (SEL >= 0) { resumo(SEL); historico(SEL); } toast('Regra: ' + REGRA_RND[RND].nome); });
+  function montaPiso(){ $('pPiso').innerHTML = `<h4>Piso de margem por estado</h4><p>Itens da cesta usam a margem mínima do estado (padrão −15%). Os demais usam a margem mínima do Profimetrics; sem regra, o piso do estado (padrão 0%, o custo).</p>
+      <table><tr><th>Estado</th><th>Cesta (%)</th><th>Sem Profimetrics (%)</th></tr>${D.ufs.map((u, k) => `<tr><td>${esc(u)}</td><td><input type="number" step="0.5" data-uf="${k}" data-c="cesta" value="${PISO[k].cesta}"></td><td><input type="number" step="0.5" data-uf="${k}" data-c="sem" value="${PISO[k].sem}"></td></tr>`).join('')}</table>
+      <button class="tx" id="pisoPad">${ic('undo')}Voltar ao padrão</button>`; }
+  on($('pPiso'), 'change', e => { const t = e.target; if (!t.dataset.uf) return; const v = parseFloat(String(t.value).replace(',', '.')); if (!isFinite(v)) return; PISO[+t.dataset.uf][t.dataset.c] = v; calcTudo(); salvar(); atualizar(); if (SEL >= 0) resumo(SEL); });
+  on($('pPiso'), 'click', e => { if (!e.target.closest('#pisoPad')) return; D.ufs.forEach((_, u) => PISO[u] = { cesta: -15, sem: 0 }); montaPiso(); calcTudo(); salvar(); atualizar(); });
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`, br = s => s.split('-').reverse().join('/');
+  function datasImportacao(){ const ini = new Date(), fim = new Date(); ini.setDate(ini.getDate() + 1); fim.setDate(fim.getDate() + 4);
+    if (fim.getDay() === 6) fim.setDate(fim.getDate() + 2); else if (fim.getDay() === 0) fim.setDate(fim.getDate() + 1); return [ini, fim]; }
+  function montaExp(){ const [h, f] = datasImportacao();
+    $('pExp').innerHTML = `<h4>Importação de preços</h4><p>Layout PRICE do Preço Bot, tipo de oferta 21. Vão só os preços aceitos: varejo (tipo 1) e atacado (tipo 2).</p>
+      <div class="opt"><label class="on"><input type="radio" name="op" value="1" checked><b>Aplicar preço</b></label><label><input type="radio" name="op" value="2"><b>Cancelar preço</b></label></div>
+      <div class="grid2"><div><span>Data início</span><input type="date" id="eIni" value="${iso(h)}"></div><div><span>Data fim</span><input type="date" id="eFim" value="${iso(f)}"></div>
+        <div><span>Aplicar similar</span><select id="eSim"><option>NAO</option><option>SIM</option></select></div><div><span>Tipo de oferta</span><input type="number" id="eTipo" value="21"></div></div>
+      <div style="display:flex;gap:8px"><button class="tx pri" id="eXls">${ic('up')}Baixar Excel</button><button class="tx" id="eCopy">${ic('copy')}Copiar</button></div>`; }
+  on($('pExp'), 'change', e => { if (e.target.name === 'op') $('pExp').querySelectorAll('.opt label').forEach(l => l.classList.toggle('on', l.querySelector('input').checked)); });
+  function linhasImportacao(){ const op = $('pExp').querySelector('input[name=op]:checked').value, ini = br($('eIni').value), fimd = br($('eFim').value), sim = $('eSim').value, tipo = String($('eTipo').value || '21');
+    const f2 = v => v > 0 ? nf2.format(v).replace(/\./g, '') : '', l = [];
+    for (let i = 0; i < N; i++) { if (!aceito(i)) continue; const fil = D.filial_cod[D.fi[i]], prod = D.produto_cod[D.pi[i]];
+      l.push([fil, '1', tipo, prod, f2(NV[i]), ini, fimd, sim, op]); if (NA[i] > 0 || op === '2') l.push([fil, '2', tipo, prod, f2(NA[i]), ini, fimd, sim, op]); }
+    return l; }
+  const CAB = ['Código da Filial', 'Tipo de Preço', 'ID Classificação', 'Código do Produto', 'Preço', 'Data Início', 'Data Fim', 'Similar', 'Tipo Operação'];
+  on($('pExp'), 'click', async e => { const b = e.target.closest('button'); if (!b) return; const l = linhasImportacao(); if (!l.length) { toast('Nenhum preço aceito para importar'); return; }
+    if (b.id === 'eXls') { if (!window.XLSX) { toast('Biblioteca de Excel indisponível'); return; }
+      const ini = br($('eIni').value), fimd = br($('eFim').value), an = [['Código da Filial', 'Filial', 'Código do Produto', 'Produto', 'Comprador', 'Categoria', 'Curva', 'Custo', 'Varejo atual', 'Atacado atual',
+        'Varejo mercado', 'Novo varejo', 'Novo atacado', 'Margem nova', 'IP novo', 'Delta preço', 'Regra de negócio', 'Regra de alteração', 'Data início', 'Data fim']];
+      for (let i = 0; i < N; i++) if (aceito(i)) an.push([+D.filial_cod[D.fi[i]], curto(D.filiais[D.fi[i]]), +D.produto_cod[D.pi[i]], curto(D.produtos[D.pi[i]]), D.compradores[D.bi[i]], D.cats[D.gi[i]], 'ABC'[D.curva[i]],
+        D.cu[i], D.vm[i], D.am[i] || null, D.vmk[i] || null, NV[i], NA[i] || null, +((NV[i] - D.cu[i]) / NV[i]).toFixed(4), D.vmk[i] > 0 ? +(NV[i] / D.vmk[i]).toFixed(4) : null, +(NV[i] / D.vm[i] - 1).toFixed(4),
+        rotRegra(i), MUD[i] ? (CT[i] ? CORTES.filter((_, k) => CT[i] & (1 << k)).map(x => x[0]).join(' / ') : 'Dentro da regra') : 'Reaplicar', ini, fimd]);
+      const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(an), 'Analise'); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([CAB, ...l]), 'Importacao');
+      XLSX.writeFile(wb, `PriceSense_Regular_PRICE_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`); toast(nf0.format(l.length) + ' linhas no Excel'); }
+    if (b.id === 'eCopy') { try { await navigator.clipboard.writeText(l.map(r => r.join('\t')).join('\n')); b.classList.add('ok'); setTimeout(() => b.classList.remove('ok'), 1800); toast(nf0.format(l.length) + ' linhas copiadas'); } catch (err) { toast('Não foi possível copiar; use o Excel'); } } });
+  $('bRegras').onclick = e => abrir('pRegras', e.currentTarget);
+  $('bCols').onclick = e => { montaColunas(); abrir('pCols', e.currentTarget); };
+  $('bRnd').onclick = e => { montaRnd(); abrir('pRnd', e.currentTarget); };
+  $('bPiso').onclick = e => { montaPiso(); abrir('pPiso', e.currentTarget); };
+  $('bExp').onclick = e => { montaExp(); abrir('pExp', e.currentTarget); };
+
+  /* ===================== OPTIMUS: análise inteligente da pesquisa ===================== */
+  const TIPO_OK = new Set([0, 1, 4]);                        // Regular, Promoção e Ponto extra (fora: Encarte e Mídia)
+  const modaDe = vals => { const f = new Map(); vals.forEach(v => { const k = Math.round(v * 100); f.set(k, (f.get(k) || 0) + 1); });
+    let best = null, bn = 0; for (const [k, n] of f) if (n > bn || (n === bn && k < best)) { best = k; bn = n; } return best == null ? null : best / 100; };
+  function roundAbaixo(p){ const pc = Math.round(p * 100), l = ciaCands(pc).filter(v => v <= pc); return l.length ? Math.max(...l) / 100 : roundVarejo(p); }
+  const KPOS = new Map(D.hK.map((n, k) => [n, k]));
+  /* O Optimus parte sempre do MESMO preço vencedor da linha (menor preço do mercado da mesa, com o mesmo
+     concorrente, data e tipo). O histórico serve só para medir as modas e checar a consistência. */
+  function analisar(i){
+    if (semPesq(i)) return null;
+    const c = D.cu[i], venc = D.vmk[i], nomeRow = D.concs[D.ki[i]], wk = KPOS.has(nomeRow) ? KPOS.get(nomeRow) : null;
+    const rows = HD.get(D.pi[i] * 64 + D.ui[i]) || [], fil = new Set(D.fk[D.fi[i]] || []);
+    const porK = new Map();
+    for (const j of rows) { if (!TIPO_OK.has(D.dtp[j])) continue; const v = D.dv[j] / 100; if (!(v > 0)) continue;
+      const k = D.dk[j]; let l = porK.get(k); if (!l) porK.set(k, l = []); l.push(v); }
+    const propriaVals = wk != null ? porK.get(wk) : null;
+    const propria = propriaVals && propriaVals.length >= 3 ? modaDe(propriaVals) : null;
+    const usaFil = [...porK.keys()].some(k => fil.has(k));
+    const modasFil = [...porK.entries()].filter(([k, l]) => (!usaFil || fil.has(k)) && l.length >= 3).map(([, l]) => modaDe(l));
+    const menorModa = modasFil.length ? Math.min(...modasFil) : (D.mo[i] > 0 ? D.mo[i] : null);
+    const moda = propria ?? menorModa;
+    const nomeV = titulo_(curto(nomeRow).split(' - ')[0]) || 'concorrente';
+    const tpV = ['', 'Regular', 'Promoção', 'Ponto extra'][D.tcol[i]] || '', diaV = D.datas[D.dti[i]] || '';
+    const fonte = propria != null ? `moda do próprio ${nomeV}` : modasFil.length ? `menor moda entre os concorrentes ${usaFil ? 'da filial' : 'do estado'}` : 'moda do relatório';
+    const comum = { venc, nomeV, tpV, diaV, fonte, menorModa, filial: usaFil };
+    if (!(moda > 0)) return { ...comum, alvo: venc - CENT, motivo: 'sem moda para comparar', moda: null, delta: null, lim: null, tipo: 'ok', decisao: 'segue o preço vencedor − 0,01' };
+    const delta = venc / moda - 1, abaixoCusto = venc < c, lim = abaixoCusto ? 0.15 : 0.25;
+    if (Math.abs(delta) <= lim) return { ...comum, alvo: venc - CENT, motivo: abaixoCusto ? 'abaixo do custo, consistente' : 'pesquisa consistente', moda, delta, lim, abaixoCusto, tipo: abaixoCusto ? 'custo' : 'ok', decisao: 'dentro do limite: segue o preço vencedor − 0,01' };
+    const base = menorModa != null ? Math.min(moda, menorModa) : moda;
+    return { ...comum, alvo: base - CENT, motivo: 'possível erro de pesquisa', moda, delta, lim, abaixoCusto, base, tipo: 'erro',
+      decisao: base < moda - 0.004 ? `fora do limite: usa a menor moda entre os concorrentes (R$ ${nf2.format(base)}, abaixo da moda do vencedor) − 0,01` : `fora do limite: usa a moda (R$ ${nf2.format(base)}) − 0,01` };
+  }
+  function precoOptimus(i, a){
+    const dde = D.dde[i] != null && D.dde[i] > DDE_META;
+    let alvo = a.alvo, nota = '';
+    if (alvo > MX[i]) { alvo = MX[i]; nota = 'teto'; }
+    if (alvo < MN[i]) { alvo = MN[i]; nota = 'piso'; }
+    // nunca passa da referência de mercado: alvo válido, ou o próprio preço da referência (IP 100%), ou o final válido logo abaixo
+    let nv = nota === 'teto' ? roundAbaixo(alvo) : nota === 'piso' ? arredMercado(alvo, alvo, MN[i]) : arredMercado(alvo, a.alvo + CENT, MN[i]);
+    const red = 1 - (D.merch[i] || 0) / 100;
+    const viaMerc = D.amk[i] > 0 && D.vmk[i] > 0;
+    let sa = viaMerc ? nv * Math.min(1, D.amk[i] / D.vmk[i]) : nv * red;
+    sa = Math.min(nv, Math.max(sa, MN[i]));
+    let na = piso15(roundAtacado(sa, nv), nv); if (na > nv) na = nv;
+    return { nv, na, motivo: a.motivo, dde, nota, viaMerc, alvoBruto: a.alvo };
+  }
+  let PREVIA = null;
+  function gravaOptimus(x){ OV.set(x.i, x.nv); OVA.set(x.i, x.na);
+    OPT.set(x.i, { m: x.motivo, t: x.tipo, v: x.venc, n: x.nomeV, tp: x.tpV, dia: x.diaV, mo: x.moda, f: x.fonte, d: x.delta, lim: x.lim, ac: !!x.abaixoCusto,
+      dec: x.decisao, al: x.alvoBruto, nota: x.nota, dde: x.dde ? D.dde[x.i] : null, vm: x.viaMerc, fil: x.filial }); calc(x.i); }
+  function optimusItem(i){ const a = analisar(i); if (!a) { toast('Item sem pesquisa direta: o Optimus não se aplica'); return; }
+    gravaOptimus({ i, ...a, ...precoOptimus(i, a) }); salvar(); atualizar(false); if (SEL === i) { resumo(i); historico(i); } toast(`Optimus: ${a.motivo}, novo varejo R$ ${nf2.format(NV[i])}`); }
+  function rodarOptimus(){
+    const b = $('bOpt'); b.classList.add('rodando');
+    setTimeout(() => {
+      const itens = []; let erros = 0, custo = 0, ddeN = 0, manuais = 0;
+      for (const i of VIS) {
+        if (OV.has(i) && !OPT.has(i)) { manuais++; continue; }
+        const a = analisar(i); if (!a) continue; const r = precoOptimus(i, a);
+        if (a.tipo === 'erro') erros++; if (a.tipo === 'custo') custo++; if (r.dde) ddeN++;
+        itens.push({ i, ...a, ...r });
+      }
+      const mud = itens.filter(x => Math.abs(x.nv - NV[x.i]) >= 0.005 || Math.abs(x.na - NA[x.i]) >= 0.005);
+      let imp0 = 0, imp1 = 0; mud.forEach(x => { imp0 += (NV[x.i] - D.vm[x.i]) * D.un[x.i]; imp1 += (x.nv - D.vm[x.i]) * D.un[x.i]; });
+      PREVIA = itens; b.classList.remove('rodando');
+      $('pOpt').innerHTML = `<h4>${ic('robo', '#7A3FD1')} Optimus</h4>
+        <div class="regras-opt">Para cada item, o Optimus parte do mesmo preço vencedor da linha (o menor preço do mercado da mesa) e compara com a moda do próprio concorrente vencedor (coletas regulares, de promoção e de ponto extra), ou com a menor moda dos concorrentes da filial quando faltam dados. Acima do custo, tolera ±25%; abaixo do custo, ±15%. Dentro da faixa, segue o menor preço − R$ 0,01; fora, usa a menor moda confiável (do vencedor ou de outro concorrente da filial) − R$ 0,01. O arredondamento nunca passa do preço de referência: quando o centavo abaixo não é válido, fica igual ao mercado. Respeita mínima, máxima, piso da cesta, arredondamento e o limite de 15% no atacado. Com DDE acima de ${DDE_META} dias, mantém o IP no máximo em 100%. Itens ajustados à mão não são alterados.</div>
+        <div class="oresumo"><div><span>Analisados</span><b>${nf0.format(itens.length)}</b></div><div><span>Mudam de preço</span><b>${nf0.format(mud.length)}</b></div>
+          <div><span>Possíveis erros de pesquisa</span><b class="neg">${nf0.format(erros)}</b></div><div><span>DDE acima de ${DDE_META}</span><b>${nf0.format(ddeN)}</b></div>
+          <div><span>Abaixo do custo (consistente)</span><b>${nf0.format(custo)}</b></div><div><span>Ajustados à mão (mantidos)</span><b>${nf0.format(manuais)}</b></div>
+          <div><span>Impacto/mês hoje</span><b class="${imp0 < 0 ? 'neg' : 'pos'}">R$ ${nf0.format(imp0)}</b></div><div><span>Impacto/mês com Optimus</span><b class="${imp1 < 0 ? 'neg' : 'pos'}">R$ ${nf0.format(imp1)}</b></div></div>
+        <div class="olist"><table><tr><th>Produto</th><th>Filial</th><th>Vencedor</th><th>Moda</th><th>Δ</th><th>Atual</th><th>Optimus</th><th>Motivo</th></tr>
+          ${mud.sort((a, b) => Math.abs(b.delta || 0) - Math.abs(a.delta || 0)).slice(0, 150).map(x => `<tr><td>${esc(curto(D.produtos[D.pi[x.i]]).slice(0, 34))}</td><td>${esc(curto(D.filiais[D.fi[x.i]]))}</td>
+            <td title="${esc(x.nomeV)}">${nf2.format(x.venc)}</td><td>${x.moda ? nf2.format(x.moda) : '–'}</td><td class="${x.tipo === 'erro' ? 'neg' : ''}">${x.delta == null ? '–' : (x.delta > 0 ? '+' : '') + nf1.format(x.delta * 100) + '%'}</td>
+            <td>${nf2.format(NV[x.i])}</td><td><b>${nf2.format(x.nv)}</b></td><td>${esc(x.motivo)}</td></tr>`).join('')}</table></div>
+        <div class="cm-acts"><button class="tx" id="optDesfaz">${ic('undo')}Desfazer Optimus no filtro</button><button class="tx pri" id="optAplica">${ic('robo')}Aplicar ${nf0.format(mud.length)} ajustes</button></div>`;
+      abrir('pOpt', b);
+    }, 30);
+  }
+  on($('pOpt'), 'click', e => {
+    if (e.target.closest('#optAplica') && PREVIA) { let n = 0;
+      for (const x of PREVIA) { if (Math.abs(x.nv - NV[x.i]) < 0.005 && Math.abs(x.na - NA[x.i]) < 0.005) continue; gravaOptimus(x); n++; }
+      salvar(); atualizar(); if (SEL >= 0) { resumo(SEL); historico(SEL); } $('pOpt').classList.remove('on'); toast(`Optimus ajustou ${nf0.format(n)} preços`); }
+    if (e.target.closest('#optDesfaz')) { let n = 0; for (const i of VIS) if (OPT.has(i)) { OPT.delete(i); OV.delete(i); OVA.delete(i); calc(i); n++; }
+      salvar(); atualizar(); if (SEL >= 0) resumo(SEL); $('pOpt').classList.remove('on'); toast(`${nf0.format(n)} ajustes do Optimus desfeitos`); }
+  });
+  $('bOpt').onclick = () => rodarOptimus();
+
+  /* ===================== proporcionais (filhos do PAI) ===================== */
+  const FILHOS = new Map(); for (const [pai, filho, prop, nome] of (D.props || [])) { const k = String(pai); if (!FILHOS.has(k)) FILHOS.set(k, []); FILHOS.get(k).push([filho, prop, nome]); }
+  function montaProp(){
+    const [h, f] = datasImportacao(); let pais = 0, filhos = 0, estranhos = 0;
+    for (let i = 0; i < N; i++) { const l = FILHOS.get(String(D.produto_cod[D.pi[i]])); if (!l || !aceito(i)) continue; pais++; filhos += l.length; estranhos += l.filter(x => x[1] > 1000).length; }
+    $('pProp').innerHTML = `<h4>${ic('prop', 'var(--primary)')} Importação de proporcionais</h4>
+      <p>Para cada preço PAI aceito, os produtos filhos recebem o preço proporcional (ex.: pacote de 2,5 kg = 250%), arredondado pela regra da mesa. Proporção 100 fica de fora.</p>
+      <div class="oresumo" style="grid-template-columns:repeat(3,1fr)"><div><span>PAIs aceitos com filhos</span><b>${nf0.format(pais)}</b></div><div><span>Linhas de filhos</span><b>${nf0.format(filhos)}</b></div>
+        <div><span>Proporção acima de 1.000%</span><b class="${estranhos ? 'neg' : ''}">${nf0.format(estranhos)}</b></div></div>
+      ${(D.props || []).length ? '' : '<p class="neg">Nenhuma proporção cadastrada para os produtos desta mesa. Suba a base PROP% em Regras de margem.</p>'}
+      <div class="grid2"><div><span>Data início</span><input type="date" id="pIni" value="${iso(h)}"></div><div><span>Data fim</span><input type="date" id="pFim" value="${iso(f)}"></div>
+        <div><span>Tipo de oferta</span><input type="number" id="pTipo" value="21"></div>
+        <div><span>Operação</span><select id="pOp"><option value="1">Aplicar preço</option><option value="2">Cancelar preço</option></select></div></div>
+      <div style="display:flex;gap:8px"><button class="tx pri" id="pXls">${ic('up')}Baixar Excel</button><button class="tx" id="pCopy">${ic('copy')}Copiar</button></div>`;
+  }
+  /* aplicar: Filial | Tipo de Preço | Tipo de Oferta | 1 | Produto | Preço | Início | Fim (varejo = 1, atacado = 2)
+     cancelar: Filial | Tipo de Preço | Tipo de Oferta | Produto */
+  function filhosAceitos(){ const out = [], vistos = new Set();
+    for (let i = 0; i < N; i++) { if (!aceito(i)) continue; const pai = D.produto_cod[D.pi[i]], fs = FILHOS.get(String(pai)); if (!fs) continue; const fil = D.filial_cod[D.fi[i]];
+      for (const [filho, prop, nome] of fs) { const ch = fil + '|' + filho; if (vistos.has(ch)) continue; vistos.add(ch);
+        const pv = roundVarejo(NV[i] * prop / 100), pa = NA[i] > 0 ? Math.min(pv, roundAtacado(NA[i] * prop / 100, pv)) : pv;
+        out.push({ i, fil, pai, filho, prop, nome: nome || '', pv, pa }); } }
+    return out; }
+  function linhasProp(){ const ini = br($('pIni').value), fimd = br($('pFim').value), tipo = String($('pTipo').value || '21'), op = $('pOp').value, l = [];
+    const f2 = v => nf2.format(v).replace(/\./g, '');
+    for (const x of filhosAceitos()) {
+      if (op === '1') { l.push([x.fil, '1', tipo, '1', x.filho, f2(x.pv), ini, fimd]); l.push([x.fil, '2', tipo, '1', x.filho, f2(x.pa), ini, fimd]); }
+      else { l.push([x.fil, '1', tipo, x.filho]); l.push([x.fil, '2', tipo, x.filho]); } }
+    return l; }
+  on($('pProp'), 'click', async e => { const b = e.target.closest('button'); if (!b) return; const l = linhasProp(); if (!l.length) { toast('Nenhum PAI aceito com proporcionais'); return; }
+    if (b.id === 'pXls') { const ini = br($('pIni').value), fimd = br($('pFim').value);
+      const an = [['Código da Filial', 'Filial', 'Comprador', 'Categoria', 'ID PAI', 'Produto PAI', 'Varejo PAI', 'Atacado PAI', 'Proporção %', 'ID Produto', 'Produto', 'Preço varejo', 'Preço atacado', 'Data início', 'Data fim']];
+      for (const x of filhosAceitos()) an.push([+x.fil, curto(D.filiais[D.fi[x.i]]), D.compradores[D.bi[x.i]], D.cats[D.gi[x.i]], +x.pai, curto(D.produtos[D.pi[x.i]]), NV[x.i], NA[x.i] || null, x.prop, x.filho, x.nome, x.pv, x.pa, ini, fimd]);
+      const cab = $('pOp').value === '1' ? ['ID Filial', 'Tipo de Preço', 'Tipo de Oferta', 'Tipo Operação', 'ID Produto', 'Preço', 'Data Início', 'Data Fim'] : ['ID Filial', 'Tipo de Preço', 'Tipo de Oferta', 'ID Produto'];
+      const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(an), 'Analise'); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([cab, ...l]), 'Importacao');
+      XLSX.writeFile(wb, `PriceMetrics_Proporcionais_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`); toast(nf0.format(an.length - 1) + ' produtos proporcionais no Excel'); }
+    if (b.id === 'pCopy') { try { await navigator.clipboard.writeText(l.map(r => r.join('\t')).join('\n')); toast(nf0.format(l.length) + ' linhas de importação copiadas'); } catch (err) { toast('Não foi possível copiar; use o Excel'); } } });
+  $('bProp').onclick = e => { montaProp(); abrir('pProp', e.currentTarget); };
+
+  /* ---------- ações ---------- */
+  function atualizar(refiltrar = true){ kpis(); if (refiltrar) filtrar(); render(); }
+  on($('q'), 'input', e => { F.q = e.target.value; clearTimeout(e.target._t); e.target._t = setTimeout(() => { filtrar(); sc.scrollTop = 0; render(); }, 150); });
+  document.querySelectorAll('.chip').forEach(b => on(b, 'click', () => {
+    if (b.dataset.fx) { const v = b.dataset.fx; if (F.extra.has(v)) F.extra.delete(v); else { if (v === 'neg') F.extra.delete('pos'); if (v === 'pos') F.extra.delete('neg'); F.extra.add(v); }
+      document.querySelectorAll('[data-fx]').forEach(x => x.classList.toggle('on', F.extra.has(x.dataset.fx))); }
+    else { const v = +b.dataset.rg; F.travas.has(v) ? F.travas.delete(v) : F.travas.add(v); b.classList.toggle('on'); }
+    filtrar(); sc.scrollTop = 0; render(); }));
+  $('bAll').onclick = () => { let n = 0; for (const i of VIS) if (MUD[i] && !aceito(i)) { ACE.set(i, true); n++; } salvar(); atualizar(false); if (SEL >= 0) resumo(SEL); toast(n ? `${nf0.format(n)} preços aceitos` : 'Itens filtrados já estão aceitos'); };
+  $('bNone').onclick = () => { let n = 0; for (const i of VIS) if (MUD[i] && aceito(i)) { ACE.set(i, false); n++; } salvar(); atualizar(false); if (SEL >= 0) resumo(SEL); toast(`${nf0.format(n)} aceites retirados`); };
+  $('bProx').onclick = () => proximoPendente();
+  $('bReset').onclick = async () => { if (!OV.size && !OVA.size && !ACE.size) { toast('Não há ajustes manuais'); return; }
+    if (!(await confirmar('Voltar à sugestão do motor', 'Todos os preços ajustados, aceites e ajustes do Optimus deste recorte voltam para a sugestão do motor. Deseja seguir?'))) return;
+    OV.clear(); OVA.clear(); ACE.clear(); OPT.clear(); calcTudo(); salvar(); atualizar(); if (SEL >= 0) resumo(SEL); toast('Preços e aceites voltaram à sugestão do motor'); };
+  $('bFoco').onclick = () => { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => { document.body.classList.toggle('foco'); render(); }); };
+  on(document, 'fullscreenchange', () => { const fs = !!document.fullscreenElement; document.body.classList.toggle('fs', fs); document.body.classList.toggle('foco', fs); $('bFoco').classList.toggle('on', fs);
+    $('root').style.height = fs ? '100vh' : ALT + 'px'; if (!fs) ajustarAltura(); render(); if (SEL >= 0) historico(SEL); });
+  on(window, 'resize', () => { render(); if (SEL >= 0) historico(SEL); });
+  if (A.aviso) setTimeout(() => toast(A.aviso), 300);
+
+  const comPesq = D.orig.some(o => o === 0), nRegra = D.pobj.filter(v => v != null).length;
+  $('escopo').textContent = `${nf0.format(N)} itens ${comPesq ? 'com pesquisa' : 'sem pesquisa'}, ${D.filiais.length} filiais`;
+  $('escopo').dataset.tip = `${nf0.format(D.produtos.length)} produtos. ${nRegra ? nf0.format(nRegra) + ' itens com regra do Profimetrics.' : 'Sem regras do Profimetrics: margem objetiva 10% e máxima 30%.'} ${A.info || ''}`;
+  aplicaColunas(); calcTudo(); filtrar(); kpis();
+  if (VIS.length) selecionar(VIS[0]); else { render(); resumo(-1); historico(-1); }
+}
+
+
+return montar;
+})();
+const APP_PROMO = (() => {
+const MARCACAO = "<div id=\"app\">\n  <div class=\"topo\"><div class=\"marca\"><h1 id=\"titulo\"></h1><small id=\"escopo\"></small></div><div class=\"kstrip\" id=\"kpis\"></div></div>\n  <div class=\"linha2\">\n    <div class=\"glass histc\"><div class=\"hhead\"><span class=\"htit\">Linha do tempo das campanhas <small>clique para filtrar, a linha azul \u00e9 hoje</small></span></div><div id=\"gantt\" class=\"gantt\"></div></div>\n    <div class=\"glass resumo\" id=\"det\"></div>\n  </div>\n  <div class=\"gridbox glass\">\n    <div class=\"tools\"><input type=\"search\" id=\"q\" placeholder=\"Buscar produto, filial ou campanha\"><div class=\"chips\" id=\"cntSt\"></div><span class=\"cnt\" id=\"cnt\"></span></div>\n    <div id=\"scroll\" tabindex=\"0\"><div class=\"hdr\" id=\"hdr\"></div><div id=\"body\"></div></div>\n  </div>\n</div>\n<nav class=\"dock glass\">\n  <button class=\"ib robo\" id=\"bPreco\" data-tip=\"Unificar erros de pre\u00e7o do filtro pelo pre\u00e7o da maioria\" data-ic=\"moeda\"></button>\n  <button class=\"ib robo\" id=\"bDatas\" data-tip=\"Resolver sobreposi\u00e7\u00f5es do filtro: a oferta anterior termina na v\u00e9spera da seguinte\" data-ic=\"cal\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib\" id=\"bReset\" data-tip=\"Desfazer todas as edi\u00e7\u00f5es\" data-ic=\"undo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib pri\" id=\"bExp\" data-tip=\"Importa\u00e7\u00e3o: padr\u00e3o ou antigo, aplicar ou cancelar\" data-ic=\"up\"></button>\n  <button class=\"ib\" id=\"bFoco\" data-tip=\"Modo foco em tela cheia\" data-ic=\"foco\"></button>\n</nav>\n<div class=\"pop glass larga\" id=\"pExp\"></div>\n<div class=\"modal\" id=\"modal\"></div>\n<div id=\"tip\"></div><div class=\"toast\" id=\"toast\"></div>\n";
+const ST = {
+  send(type, extra){ window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type }, extra || {}), '*'); },
+  pronto(){ this.send('streamlit:componentReady', { apiVersion: 1 }); }, altura(h){ this.send('streamlit:setFrameHeight', { height: h }); },
+};
+let CHAVE_ATUAL = null, CTL = null;
+
+
+async function montar(A){
+  if (CTL) CTL.abort(); CTL = new AbortController(); const SIG = { signal: CTL.signal };
+  const on = (alvo, ev, fn) => alvo.addEventListener(ev, fn, SIG);
+  document.getElementById('estilo-tema').textContent = `@import url('${A.fonte}');:root{${A.tokens}}`;
+  document.getElementById('root').innerHTML = MARCACAO;
+  const $ = id => document.getElementById(id);
+  let ALT = A.altura || 900;
+  const medirAltura = () => { try { const fe = window.frameElement, pw = window.parent, main = pw.document.querySelector('[data-testid="stMain"]');
+    return Math.max(620, Math.round(pw.innerHeight - fe.getBoundingClientRect().top - (main ? main.scrollTop : 0) - 10)); } catch (e) { return ALT; } };
+  const ajustar = () => { if (document.fullscreenElement) return; ALT = medirAltura(); $('root').style.height = ALT + 'px'; ST.altura(ALT); };
+  ajustar(); try { on(window.parent, 'resize', ajustar); } catch (e) {}
+  const bin = atob(A.dados), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  const D = JSON.parse(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).text());
+  const N = D.preco.length;
+
+  const P_ = { check: '<path d="m5 12 5 5 9-10"/>', x: '<path d="M6 6l12 12M18 6 6 18"/>', undo: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+  up: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>', copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+  foco: '<circle cx="12" cy="12" r="3"/><path d="M3 9V5a2 2 0 0 1 2-2h4M15 3h4a2 2 0 0 1 2 2v4M21 15v4a2 2 0 0 1-2 2h-4M9 21H5a2 2 0 0 1-2-2v-4"/>',
+  rnd: '<path d="M4 12h3l3-7 4 14 3-7h3"/>', regra: '<path d="M4 6h16M4 12h10M4 18h6"/>', hist: '<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-6"/>',
+  corte: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/>',
+  merc: '<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-6"/>', teto: '<path d="M5 4h14"/><path d="M12 20V8"/><path d="m7 13 5-5 5 5"/>',
+  piso: '<path d="M5 20h14"/><path d="M12 4v12"/><path d="m7 11 5 5 5-5"/>', obj: '<circle cx="12" cy="12" r="9"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>',
+  mao: '<path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8a8 8 0 0 0 16 0v-3a2 2 0 0 0-4 0"/>',
+  alerta: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>', cal: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  tagi: '<path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3a1.4 1.4 0 0 1 0 2l-6.7 6.7a1.4 1.4 0 0 1-2 0Z"/><circle cx="8" cy="8" r="1.4"/>', loja: '<path d="M3 9 5 4h14l2 5M4 9v11h16V9M9 20v-6h6v6"/>',
+  cash: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>', pct: '<path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',
+  tdUp: '<path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/>', tdDn: '<path d="m3 7 6 6 4-4 8 8"/><path d="M14 17h7v-7"/>', conc: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
+  mesa: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/>', moda: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>' };
+const ic = (n, cor) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="${cor || 'currentColor'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${P_[n]}</svg>`;
+
+  Object.assign(P_, { robo: '<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4"/><circle cx="12" cy="3" r="1"/><circle cx="9" cy="13.5" r="1.4"/><circle cx="15" cy="13.5" r="1.4"/><path d="M9.5 17h5M2 13v2M22 13v2"/>',
+    promo: '<path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3a1.4 1.4 0 0 1 0 2l-6.7 6.7a1.4 1.4 0 0 1-2 0Z"/><path d="M8 8h.01M15 9l-6 6"/>',
+    dup: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/>', olho: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+    ban: '<circle cx="12" cy="12" r="9"/><path d="m5.7 5.7 12.6 12.6"/>', gantt: '<path d="M3 5h10M7 12h12M5 19h8"/>', moeda: '<circle cx="12" cy="12" r="9"/><path d="M15 9.5c-.5-1-1.6-1.5-3-1.5-1.7 0-3 .8-3 2s1.3 1.8 3 2 3 .8 3 2-1.3 2-3 2c-1.4 0-2.5-.5-3-1.5M12 6v2M12 16v2"/>' });
+  document.querySelectorAll('[data-ic]').forEach(b => { if (!b.querySelector('svg')) b.insertAdjacentHTML('afterbegin', ic(b.dataset.ic)); });
+  $('titulo').innerHTML = `<span class="logo">${ic('promo', '#fff')}</span>Promo<span>Metrics</span>`;
+  const tip = $('tip');
+  on(document, 'mouseover', e => { const t = e.target.closest('[data-tip]'); if (!t) { tip.classList.remove('on'); return; }
+    tip.textContent = t.dataset.tip; const r = t.getBoundingClientRect(); tip.classList.add('on'); const w = tip.offsetWidth, h = tip.offsetHeight;
+    if (t.closest('.dock')) { tip.style.left = (r.left - w - 10) + 'px'; tip.style.top = (r.top + r.height / 2 - h / 2) + 'px'; }
+    else { tip.style.left = Math.max(6, Math.min(innerWidth - w - 6, r.left + r.width / 2 - w / 2)) + 'px'; tip.style.top = (r.bottom + h + 14 > innerHeight ? r.top - h - 8 : r.bottom + 8) + 'px'; } });
+
+  /* ---------- formatos ---------- */
+  const nf2 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), nf1 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }), nf0 = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 });
+  const R$ = v => v == null || !isFinite(v) || v <= 0 ? '–' : 'R$ ' + nf2.format(v), pct = v => v == null || !isFinite(v) ? '–' : nf1.format(v * 100) + '%';
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+  const curto = s => String(s ?? '').replace(/^\d+\s*-\s*/, '');
+  const dn = s => { if (!s) return NaN; const [y, m, d] = s.split('-').map(Number); return Date.UTC(y, m - 1, d) / 864e5; };
+  const ds = n => { if (!isFinite(n)) return ''; const t = new Date(n * 864e5); return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}-${String(t.getUTCDate()).padStart(2, '0')}`; };
+  const br = s => s ? s.split('-').reverse().join('/') : '–', brc = s => s ? s.slice(8, 10) + '/' + s.slice(5, 7) : '–';
+  const hj = new Date(), HOJE = Date.UTC(hj.getFullYear(), hj.getMonth(), hj.getDate()) / 864e5;
+  function toast(t){ const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('on'), 2600); }
+  function confirmar(titulo, texto, botoes){ return new Promise(ok => { const m = $('modal'); const bs = botoes || [['0', 'Cancelar'], ['1', 'Seguir', 'pri']];
+    m.innerHTML = `<div class="mcard glass"><h4>${ic('alerta', 'var(--amber)')}${esc(titulo)}</h4><p>${esc(texto)}</p><div class="macts">${bs.map(([v, t, c]) => `<button class="tx ${c || ''}" data-r="${v}">${t}</button>`).join('')}</div></div>`;
+    m.classList.add('on'); m.querySelectorAll('[data-r]').forEach(b => b.onclick = () => { m.classList.remove('on'); ok(b.dataset.r); }); }); }
+
+  /* ---------- estado editável e persistência (por usuário e conjunto de planilhas) ---------- */
+  const PR = Float64Array.from(D.preco), INI = D.ini.map(dn), FIM = D.fim.map(dn), EXC = new Uint8Array(N), EDT = new Uint8Array(N);
+  const ARMAZ = 'promometrics:' + (A.usuario || 'anon') + ':' + A.chave;
+  try { const g = JSON.parse(localStorage.getItem(ARMAZ) || 'null'); if (g) for (const [i, p, a, b, x] of g.e || []) { if (i < N) { PR[i] = p; INI[i] = a; FIM[i] = b; EXC[i] = x; EDT[i] = 1; } } } catch (e) {}
+  const salvar = () => { try { const e = []; for (let i = 0; i < N; i++) if (EDT[i] || EXC[i]) e.push([i, PR[i], INI[i], FIM[i], EXC[i]]); localStorage.setItem(ARMAZ, JSON.stringify({ e })); } catch (err) {} };
+  const marcarEd = i => { EDT[i] = PR[i] !== D.preco[i] || INI[i] !== dn(D.ini[i]) || FIM[i] !== dn(D.fim[i]) ? 1 : 0; };
+
+  /* ---------- validação (mesma regra do motor: preço divergente e período sobreposto) ---------- */
+  const ST_OK = 0, ST_PRECO = 1, ST_DATA = 2, ST_VENC = 3;
+  const STN = ['Válido', 'Erro de preço', 'Conflito de datas', 'Vencida'], STC = ['var(--up)', 'var(--down)', 'var(--amber)', 'var(--faint)'], STI = ['check', 'moeda', 'cal', 'ban'];
+  const S = new Uint8Array(N), QTD = new Uint8Array(N), VIZ = new Int32Array(N).fill(-1);
+  const AL = new Uint8Array(N);       // alertas: 1 sem desconto, 2 abaixo do custo, 4 acima do mercado, 8 período curto
+  function validar(){
+    const g = new Map();
+    for (let i = 0; i < N; i++) { const k = D.fil[i] + '|' + D.prod[i] + '|' + D.ci[i] + '|' + INI[i] + '|' + FIM[i]; let s = g.get(k); if (!s) g.set(k, s = new Set()); s.add(PR[i]); }
+    for (let i = 0; i < N; i++) QTD[i] = g.get(D.fil[i] + '|' + D.prod[i] + '|' + D.ci[i] + '|' + INI[i] + '|' + FIM[i]).size;
+    const por = new Map(); for (let i = 0; i < N; i++) { const k = D.fil[i] + '|' + D.prod[i]; let l = por.get(k); if (!l) por.set(k, l = []); l.push(i); }
+    const conf = new Uint8Array(N); VIZ.fill(-1);
+    for (const l of por.values()) { if (l.length < 2) continue; l.sort((a, b) => INI[a] - INI[b]); let maxFim = -Infinity, quem = -1;
+      for (let k = 0; k < l.length; k++) { const i = l[k];
+        const igual = quem >= 0 && INI[i] === INI[quem] && FIM[i] === FIM[quem] && PR[i] === PR[quem];   // linha repetida: é a mesma oferta
+        if (INI[i] <= maxFim && !igual) { conf[i] = 1; conf[quem] = 1; VIZ[i] = quem; if (VIZ[quem] < 0) VIZ[quem] = i; }
+        if (FIM[i] > maxFim) { maxFim = FIM[i]; quem = i; } } }
+    for (let i = 0; i < N; i++) {
+      S[i] = QTD[i] > 1 ? ST_PRECO : conf[i] ? ST_DATA : FIM[i] < HOJE ? ST_VENC : ST_OK;
+      const r = D.ref[i]; let a = 0;
+      if (r) { if (r[1] > 0 && PR[i] >= r[1] - 0.004) a |= 1; if (r[0] > 0 && PR[i] < r[0] - 0.004) a |= 2; if (r[3] > 0 && PR[i] > r[3] + 0.004) a |= 4; }
+      if (FIM[i] - INI[i] + 1 < 2) a |= 8; AL[i] = a; }
+  }
+  const ALN = [[1, 'Sem desconto', 'Preço da oferta igual ou acima do varejo atual', 'var(--down)'], [2, 'Abaixo do custo', 'Preço da oferta abaixo do custo médio', 'var(--amber)'],
+    [4, 'Acima do mercado', 'Preço da oferta acima do menor preço do mercado', '#B794FF'], [8, 'Período curto', 'Oferta de 1 dia', 'var(--faint)']];
+  const dias = i => FIM[i] - INI[i] + 1, midia = i => dias(i) >= 4 ? 2 : 1;
+  const desc_ = i => { const r = D.ref[i]; return r && r[1] > 0 ? 1 - PR[i] / r[1] : null; };
+  const marg = i => { const r = D.ref[i]; return r && r[0] > 0 ? (PR[i] - r[0]) / PR[i] : null; };
+  const ipP = i => { const r = D.ref[i]; return r && r[3] > 0 ? PR[i] / r[3] : null; };
+  const invest = i => { const r = D.ref[i]; if (!r || !(r[1] > 0) || !(r[6] > 0)) return 0; return (r[1] - PR[i]) * r[6] / 30 * dias(i); };   // custo do desconto no período (volume médio diário)
+  const ipCor = v => v > 1.009 ? 'var(--down)' : v >= 0.99 ? 'var(--primary)' : 'var(--amber)';
+
+  /* ---------- explicações ---------- */
+  function explica(i){
+    const L = [STN[S[i]].toUpperCase()];
+    if (S[i] === ST_PRECO) { const precos = new Map(); for (let j = 0; j < N; j++) if (D.fil[j] === D.fil[i] && D.prod[j] === D.prod[i] && D.ci[j] === D.ci[i] && INI[j] === INI[i] && FIM[j] === FIM[i]) precos.set(PR[j], (precos.get(PR[j]) || 0) + 1);
+      L.push(`O mesmo produto, na mesma filial, campanha e período, aparece com ${precos.size} preços: ${[...precos].map(([p, n]) => R$(p) + ' (' + n + 'x)').join(', ')}.`, 'Clique com o botão direito para usar o preço da maioria.'); }
+    if (S[i] === ST_DATA) { const j = VIZ[i]; L.push('Há outra oferta deste produto nesta filial com período que se cruza:');
+      if (j >= 0) L.push(`${D.campanhas[D.ci[j]]}: ${R$(PR[j])}, de ${br(ds(INI[j]))} a ${br(ds(FIM[j]))}.`);
+      L.push(`Esta: ${D.campanhas[D.ci[i]]}, de ${br(ds(INI[i]))} a ${br(ds(FIM[i]))}.`, 'Clique com o botão direito para encerrar a anterior na véspera da próxima.'); }
+    if (S[i] === ST_VENC) L.push(`A oferta terminou em ${br(ds(FIM[i]))}.`);
+    if (S[i] === ST_OK) L.push('Preço único na campanha e sem sobreposição de período com outra oferta do produto na filial.');
+    const r = D.ref[i];
+    if (r) { L.push('', 'COMPETITIVIDADE', `Varejo atual ${R$(r[1])}, custo ${R$(r[0])}, menor preço do mercado ${R$(r[3])}.`,
+      `Desconto da oferta: ${pct(desc_(i))}; margem na oferta: ${pct(marg(i))}${ipP(i) ? '; IP ' + nf1.format(ipP(i) * 100) : ''}.`);
+      if (invest(i) > 0) L.push(`Investimento estimado no período (${dias(i)} dias): R$ ${nf0.format(invest(i))}.`); }
+    for (const [b, t, d] of ALN) if (AL[i] & b) L.push('⚠ ' + t + ': ' + d.toLowerCase() + '.');
+    return L.join('\n');
+  }
+
+  /* ---------- colunas ---------- */
+  const COLS = [
+    ['st', 'Status', 132, i => `<span class="tag" style="color:${STC[S[i]]}" data-tip="${esc(explica(i))}">${ic(STI[S[i]])}${STN[S[i]]}</span>`, i => S[i]],
+    ['camp', 'Campanha', 170, i => `<span data-tip="${esc(D.campanhas[D.ci[i]])}">${esc(D.campanhas[D.ci[i]])}</span>`, i => D.campanhas[D.ci[i]]],
+    ['fil', 'Filial', 170, i => esc(D.filn[i]), i => D.filn[i]],
+    ['prod', 'Produto', 300, i => `<b class="num">${esc(D.prod[i])}</b>&nbsp;${esc(curto(D.desc[i]))}`, i => +D.prod[i] || D.prod[i]],
+    ['pr', 'Preço oferta', 96, i => `<input type="text" data-e="p" data-i="${i}" class="${PR[i] !== D.preco[i] ? 'man' : ''}" value="${nf2.format(PR[i])}">`, i => PR[i], 'r edc'],
+    ['ini', 'Início', 128, i => `<input type="date" data-e="i" data-i="${i}" class="${INI[i] !== dn(D.ini[i]) ? 'man' : ''}" value="${ds(INI[i])}">`, i => INI[i], 'edc'],
+    ['fim', 'Fim', 128, i => `<input type="date" data-e="f" data-i="${i}" class="${FIM[i] !== dn(D.fim[i]) ? 'man' : ''}" value="${ds(FIM[i])}">`, i => FIM[i], 'edc'],
+    ['dias', 'Dias', 56, i => nf0.format(dias(i)), i => dias(i), 'r num'],
+    ['mid', 'Mídia', 58, i => `<span data-tip="${dias(i) >= 4 ? '4 dias ou mais: mídia 2' : 'Menos de 4 dias: mídia 1'}">${midia(i)}</span>`, i => midia(i), 'r num'],
+    ['vm', 'Varejo atual', 86, i => R$(D.ref[i]?.[1]).replace('R$ ', ''), i => D.ref[i]?.[1] || 0, 'r num'],
+    ['dc', 'Desconto', 78, i => { const v = desc_(i); return v == null ? '–' : `<span class="${v <= 0 ? 'neg' : 'pos'}">${pct(v)}</span>`; }, i => desc_(i) ?? -9, 'r num'],
+    ['cu', 'Custo', 74, i => R$(D.ref[i]?.[0]).replace('R$ ', ''), i => D.ref[i]?.[0] || 0, 'r num'],
+    ['mg', 'Margem oferta', 86, i => { const v = marg(i); return v == null ? '–' : `<span class="${v < 0 ? 'neg' : ''}">${pct(v)}</span>`; }, i => marg(i) ?? -9, 'r num'],
+    ['mk', 'Menor mercado', 90, i => R$(D.ref[i]?.[3]).replace('R$ ', ''), i => D.ref[i]?.[3] || 0, 'r num'],
+    ['ip', 'IP oferta', 72, i => { const v = ipP(i); return v == null ? '–' : `<span style="color:${ipCor(v)};font-weight:600">${nf1.format(v * 100)}</span>`; }, i => ipP(i) ?? 0, 'r num'],
+    ['inv', 'Investimento', 100, i => { const v = invest(i); return v > 0 ? 'R$ ' + nf0.format(v) : '–'; }, i => invest(i), 'r num'],
+    ['al', 'Alertas', 150, i => ALN.filter(([b]) => AL[i] & b).map(([, t, d, c]) => `<span class="ald" style="background:${c}" data-tip="${t}: ${d}"></span>`).join('') + (EXC[i] ? '<span class="tag" style="color:var(--faint)">fora da importação</span>' : ''), i => AL[i]],
+  ];
+  const FIXAS = 4, W = COLS.map(c => c[2]);
+  (() => { const cv = document.createElement('canvas').getContext('2d'); cv.font = '500 12.5px Geist, sans-serif'; let m1 = 0, m2 = 0, m3 = 0;
+    D.campanhas.forEach(t => m1 = Math.max(m1, cv.measureText(t).width)); [...new Set(D.filn)].forEach(t => m2 = Math.max(m2, cv.measureText(t).width));
+    for (let i = 0; i < Math.min(N, 4000); i++) m3 = Math.max(m3, cv.measureText(D.prod[i] + '  ' + curto(D.desc[i])).width);
+    W[1] = Math.min(260, Math.max(W[1], m1 + 20)); W[2] = Math.min(260, Math.max(W[2], m2 + 20)); W[3] = Math.min(520, Math.max(W[3], m3 + 24)); })();
+  document.documentElement.style.setProperty('--cols', W.map(w => w + 'px').join(' '));
+  const esq = k => W.slice(0, k).reduce((a, b) => a + b, 0);
+  const cls = (c, k) => (c[5] || '') + (k < FIXAS ? ' fx' : '') + (k === FIXAS - 1 ? ' fxl' : ''), sty = k => k < FIXAS ? ` style="left:${esq(k)}px"` : '';
+  let ORD = { k: 'st', d: -1 };
+  const cab = () => { $('hdr').innerHTML = COLS.map((c, k) => `<div class="${cls(c, k)}"${sty(k)} data-s="${c[0]}">${c[1]}${ORD.k === c[0] ? `<span class="ord">${ORD.d > 0 ? '▲' : '▼'}</span>` : ''}</div>`).join(''); };
+  cab();
+  on($('hdr'), 'click', e => { const d = e.target.closest('[data-s]'); if (!d) return; ORD = { k: d.dataset.s, d: ORD.k === d.dataset.s ? -ORD.d : -1 }; cab(); filtrar(); render(); });
+
+  /* ---------- filtros ---------- */
+  const F = { q: '', st: new Set(), al: new Set(), camp: -1, ed: false, exc: false };
+  let VIS = [], SEL = -1;
+  const busca = new Array(N); for (let i = 0; i < N; i++) busca[i] = (D.prod[i] + ' ' + D.desc[i] + ' ' + D.filn[i] + ' ' + D.fil[i] + ' ' + D.campanhas[D.ci[i]]).toLowerCase();
+  function filtrar(){ const q = F.q.trim().toLowerCase(), out = [];
+    for (let i = 0; i < N; i++) { if (F.camp >= 0 && D.ci[i] !== F.camp) continue; if (F.st.size && !F.st.has(S[i])) continue;
+      if (F.al.size && ![...F.al].every(b => AL[i] & b)) continue; if (F.ed && !EDT[i]) continue; if (F.exc && !EXC[i]) continue; if (q && !busca[i].includes(q)) continue; out.push(i); }
+    const g = COLS.find(c => c[0] === ORD.k)[4], ch = new Map(out.map(i => [i, g(i)]));
+    out.sort((a, b) => { const x = ch.get(a), y = ch.get(b); return (x > y ? 1 : x < y ? -1 : 0) * ORD.d || a - b; });
+    VIS = out; $('cnt').textContent = nf0.format(out.length) + ' de ' + nf0.format(N) + ' linhas'; }
+  const H = 34, sc = $('scroll'), body = $('body');
+  function render(){ body.style.height = (VIS.length * H) + 'px';
+    const ini = Math.max(0, Math.floor(sc.scrollTop / H) - 6), fim = Math.min(VIS.length, ini + Math.ceil(sc.clientHeight / H) + 14); let h = '';
+    for (let k = ini; k < fim; k++) { const i = VIS[k]; h += `<div class="row${i === SEL ? ' sel' : ''}${EXC[i] ? ' exc' : ''}" data-i="${i}" style="top:${k * H}px">` + COLS.map((c, j) => `<div class="${cls(c, j)}"${sty(j)}>${c[3](i)}</div>`).join('') + '</div>'; }
+    body.innerHTML = h; }
+  let raf = 0; on(sc, 'scroll', () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; render(); }); });
+
+  /* ---------- indicadores ---------- */
+  function kpis(){
+    const cs = [0, 0, 0, 0], ac = new Map(ALN.map(([b]) => [b, 0])); let inv = 0, dsum = 0, dn_ = 0, fil = new Set(), prod = new Set();
+    for (let i = 0; i < N; i++) { cs[S[i]]++; for (const [b] of ALN) if (AL[i] & b) ac.set(b, ac.get(b) + 1); inv += invest(i); const d = desc_(i); if (d != null) { dsum += d; dn_++; } fil.add(D.fil[i]); prod.add(D.prod[i]); }
+    const K = [['Linhas', nf0.format(N), `${D.campanhas.length} campanhas, ${fil.size} filiais, ${nf0.format(prod.size)} produtos`, 'var(--primary)', 'gantt'],
+      ['Válidas', nf0.format(cs[0]), pct(cs[0] / N) + ' das linhas', 'var(--up)', 'check'],
+      ['Erro de preço', nf0.format(cs[1]), 'mesmo produto, filial e período com preços diferentes', 'var(--down)', 'moeda'],
+      ['Conflito de datas', nf0.format(cs[2]), 'períodos que se cruzam para o mesmo produto e filial', 'var(--amber)', 'cal'],
+      ['Sem desconto', nf0.format(ac.get(1)), 'oferta igual ou acima do varejo atual', 'var(--down)', 'alerta'],
+      ['Abaixo do custo', nf0.format(ac.get(2)), 'oferta abaixo do custo médio', 'var(--amber)', 'tdDn'],
+      ['Desconto médio', dn_ ? pct(dsum / dn_) : '–', 'sobre o varejo atual', 'var(--up)', 'promo'],
+      ['Investimento', 'R$ ' + nf0.format(inv), 'desconto x volume médio diário x dias da oferta', 'var(--down)', 'cash']];
+    $('kpis').innerHTML = K.map(([t, v, sub, c, n]) => `<div class="kc" data-tip="${t}: ${sub}">${ic(n, c)}<span>${t}</span><b>${v}</b></div>`).join('');
+    $('cntSt').innerHTML = STN.map((t, k) => `<button class="chip${F.st.has(k) ? ' on' : ''}" data-st="${k}" style="--c:${STC[k]}">${ic(STI[k], STC[k])}${t}<em>${nf0.format(cs[k])}</em></button>`).join('')
+      + '<span class="csep"></span>' + ALN.map(([b, t, d, c]) => `<button class="chip${F.al.has(b) ? ' on' : ''}" data-al="${b}" data-tip="${d}"><span class="ald" style="background:${c}"></span>${t}<em>${nf0.format(ac.get(b))}</em></button>`).join('')
+      + `<span class="csep"></span><button class="chip${F.ed ? ' on' : ''}" data-x="ed">${ic('mao')}Editados</button><button class="chip${F.exc ? ' on' : ''}" data-x="exc">${ic('ban')}Fora da importação</button>`;
+  }
+  on($('cntSt'), 'click', e => { const b = e.target.closest('.chip'); if (!b) return;
+    if (b.dataset.st) { const k = +b.dataset.st; F.st.has(k) ? F.st.delete(k) : F.st.add(k); }
+    if (b.dataset.al) { const k = +b.dataset.al; F.al.has(k) ? F.al.delete(k) : F.al.add(k); }
+    if (b.dataset.x) F[b.dataset.x] = !F[b.dataset.x];
+    kpis(); filtrar(); sc.scrollTop = 0; render(); });
+
+  /* ---------- linha do tempo das campanhas ---------- */
+  function gantt(){
+    const cp = D.campanhas.map((nome, c) => ({ nome, c, ini: Infinity, fim: -Infinity, n: 0, crit: 0, inv: 0 }));
+    for (let i = 0; i < N; i++) { const o = cp[D.ci[i]]; if (isFinite(INI[i])) o.ini = Math.min(o.ini, INI[i]); if (isFinite(FIM[i])) o.fim = Math.max(o.fim, FIM[i]); o.n++; if (S[i] === 1 || S[i] === 2) o.crit++; o.inv += invest(i); }
+    const l = cp.filter(o => isFinite(o.ini)).sort((a, b) => a.ini - b.ini); if (!l.length) { $('gantt').innerHTML = ''; return; }
+    const t0 = Math.min(...l.map(o => o.ini), HOJE) - 1, t1 = Math.max(...l.map(o => o.fim), HOJE) + 1, tot = t1 - t0 + 1, X = d => 100 * (d - t0) / tot;
+    let h = `<div class="gax"><span>${brc(ds(t0))}</span><span>${brc(ds(t0 + tot / 2))}</span><span>${brc(ds(t1))}</span></div>`;
+    for (const o of l) { const on_ = F.camp === o.c;
+      h += `<div class="grow${on_ ? ' on' : ''}" data-c="${o.c}"><span class="gnome" title="${esc(o.nome)}">${esc(o.nome)}</span><div class="glane"><div class="ghoje" style="left:${X(HOJE)}%"></div>
+        <div class="gbar ${o.crit ? 'crit' : o.fim < HOJE ? 'venc' : ''}" style="left:${X(o.ini)}%;width:${Math.max(1.5, X(o.fim + 1) - X(o.ini))}%" data-tip="${esc(o.nome)}: ${br(ds(o.ini))} a ${br(ds(o.fim))}, ${nf0.format(o.n)} linhas${o.crit ? ', ' + nf0.format(o.crit) + ' críticas' : ''}${o.inv ? ', investimento R$ ' + nf0.format(o.inv) : ''}">
+        <b>${brc(ds(o.ini))}–${brc(ds(o.fim))}</b> ${nf0.format(o.n)}${o.crit ? ` <i>${nf0.format(o.crit)} críticas</i>` : ''}</div></div></div>`; }
+    $('gantt').innerHTML = h;
+  }
+  on($('gantt'), 'click', e => { const r = e.target.closest('[data-c]'); if (!r) return; const c = +r.dataset.c; F.camp = F.camp === c ? -1 : c; gantt(); filtrar(); sc.scrollTop = 0; render(); toast(F.camp >= 0 ? 'Filtro: ' + D.campanhas[c] : 'Todas as campanhas'); });
+
+  /* ---------- painel do item: o produto em todas as ofertas ---------- */
+  function painel(i){
+    if (i < 0) { $('det').innerHTML = '<div class="hvazio">Clique em uma linha para ver o produto em todas as filiais e campanhas, com a régua de preço e os conflitos.</div>'; return; }
+    const r = D.ref[i], irmaos = []; for (let j = 0; j < N; j++) if (D.prod[j] === D.prod[i] && (D.fil[j] === D.fil[i] || D.ci[j] === D.ci[i])) irmaos.push(j);
+    const mesmaFil = irmaos.filter(j => D.fil[j] === D.fil[i]).sort((a, b) => INI[a] - INI[b]);
+    const t0 = Math.min(...mesmaFil.map(j => INI[j])), t1 = Math.max(...mesmaFil.map(j => FIM[j])), tot = Math.max(1, t1 - t0 + 1), X = d => 100 * (d - t0) / tot;
+    const precosCamp = irmaos.filter(j => D.ci[j] === D.ci[i]).map(j => PR[j]), pmin = Math.min(...precosCamp), pmax = Math.max(...precosCamp);
+    let reg = '';
+    if (r) { const pts = [['Custo', r[0], 'var(--faint)'], ['Oferta', PR[i], 'var(--primary)'], ['Atual', r[1], 'var(--ink)'], ['Mercado', r[3], 'var(--down)']].filter(p => p[1] > 0).sort((a, b) => a[1] - b[1]);
+      const lo = pts[0][1] * 0.97, hi = pts[pts.length - 1][1] * 1.03, Xr = v => 12 + (v - lo) / (hi - lo || 1) * 276;
+      reg = `<svg class="lad" viewBox="0 0 300 54"><line x1="12" y1="27" x2="288" y2="27" stroke="var(--line)" stroke-width="4" stroke-linecap="round"/>` +
+        pts.map(([t, v, c], k) => `<circle cx="${Xr(v)}" cy="27" r="${t === 'Oferta' ? 5 : 3.5}" fill="${c}"/><text x="${Math.min(280, Math.max(20, Xr(v)))}" y="${k % 2 ? 50 : 12}" text-anchor="middle" font-size="9" fill="${c}" font-family="Geist Mono" font-weight="${t === 'Oferta' ? 700 : 500}">${t} ${nf2.format(v)}</text>`).join('') + '</svg>'; }
+    $('det').innerHTML = `<div class="rtop"><div class="rnome" title="${esc(D.desc[i])}"><b class="num">${esc(D.prod[i])}</b> ${esc(curto(D.desc[i]))}</div><span class="tag" style="color:${STC[S[i]]}" data-tip="${esc(explica(i))}">${ic(STI[S[i]])}${STN[S[i]]}</span></div>
+      <div class="rsub">${esc(D.filn[i])}${r ? `, ${esc(r[4])}, ${esc(r[5])}` : ''}</div>${reg}
+      <div class="mgrid">${[['Oferta', R$(PR[i])], ['Desconto', pct(desc_(i))], ['Margem', pct(marg(i))], ['Na campanha', pmin === pmax ? R$(pmin) : R$(pmin) + ' a ' + nf2.format(pmax)], ['Período', `${brc(ds(INI[i]))} a ${brc(ds(FIM[i]))}`], ['Investimento', invest(i) > 0 ? 'R$ ' + nf0.format(invest(i)) : '–']]
+        .map(([t, v]) => `<div class="ms"><span>${t}</span><b>${v}</b></div>`).join('')}</div>
+      <div class="mini"><div class="mtit">Ofertas deste produto em ${esc(D.filn[i])}</div>${mesmaFil.map(j => `<div class="mrow${j === i ? ' eu' : ''}" data-j="${j}"><span title="${esc(D.campanhas[D.ci[j]])}">${esc(D.campanhas[D.ci[j]])}</span>
+        <div class="mlane"><div class="mbar" style="left:${X(INI[j])}%;width:${Math.max(3, X(FIM[j] + 1) - X(INI[j]))}%;background:${STC[S[j]]}"></div></div><b>${nf2.format(PR[j])}</b></div>`).join('')}</div>`;
+  }
+  on($('det'), 'click', e => { const r = e.target.closest('[data-j]'); if (r) selecionar(+r.dataset.j, true); });
+  function selecionar(i, rolar){ SEL = i; if (rolar) { const k = VIS.indexOf(i); if (k >= 0) sc.scrollTop = Math.max(0, k * H - sc.clientHeight / 3); } render(); painel(i); }
+
+  /* ---------- edição ---------- */
+  const num = s => parseFloat(String(s).replace(/\s|R\$/g, '').replace(/\./g, '').replace(',', '.'));
+  function atualizar(){ validar(); kpis(); gantt(); filtrar(); render(); if (SEL >= 0) painel(SEL); salvar(); }
+  on(body, 'change', async e => { const t = e.target; if (!t.dataset.e) return; const i = +t.dataset.i;
+    if (t.dataset.e === 'p') { const v = num(t.value); if (!(v > 0)) { render(); return; }
+      const r = D.ref[i]; if (r && r[0] > 0 && v < r[0] && (await confirmar('Oferta abaixo do custo', `R$ ${nf2.format(v)} fica abaixo do custo médio de R$ ${nf2.format(r[0])}. Deseja seguir?`)) !== '1') { render(); return; }
+      PR[i] = Math.round(v * 100) / 100; marcarEd(i); atualizar(); return; }
+    const novo = dn(t.value); if (!isFinite(novo)) { render(); return; }
+    const ini = t.dataset.e === 'i' ? novo : INI[i], fim = t.dataset.e === 'f' ? novo : FIM[i];
+    if (fim < ini) { toast('O fim não pode ser antes do início'); render(); return; }
+    const r = await confirmar('Período alterado', `Novo período ${br(ds(ini))} a ${br(ds(fim))}. Aplicar à campanha ${D.campanhas[D.ci[i]]} inteira ou só a este item?`, [['0', 'Cancelar'], ['1', 'Só este item'], ['2', 'Campanha inteira', 'pri']]);
+    if (r === '0') { render(); return; }
+    const alvo = r === '2' ? [...Array(N).keys()].filter(j => D.ci[j] === D.ci[i] && INI[j] === INI[i] && FIM[j] === FIM[i]) : [i];
+    for (const j of alvo) { INI[j] = ini; FIM[j] = fim; marcarEd(j); } atualizar(); toast(`${nf0.format(alvo.length)} linha(s) com novo período`); });
+  on(body, 'keydown', e => { if (e.key === 'Enter' && e.target.dataset.e) { e.preventDefault(); e.target.blur(); } });
+  on(body, 'click', e => { if (e.target.tagName === 'INPUT') return; const r = e.target.closest('.row'); if (r) { selecionar(+r.dataset.i); sc.focus({ preventScroll: true }); } });
+  on(document, 'keydown', e => { if (e.target.tagName === 'INPUT' || !VIS.length) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); let k = VIS.indexOf(SEL); k = k < 0 ? 0 : Math.max(0, Math.min(VIS.length - 1, k + (e.key === 'ArrowDown' ? 1 : -1)));
+      const y = k * H; if (y < sc.scrollTop + H) sc.scrollTop = Math.max(0, y - H); else if (y > sc.scrollTop + sc.clientHeight - 2 * H) sc.scrollTop = y - sc.clientHeight + 2 * H; selecionar(VIS[k]); } });
+
+  /* ---------- correções inteligentes ---------- */
+  function precoMaioria(i){ const c = new Map(); for (let j = 0; j < N; j++) if (D.ci[j] === D.ci[i] && D.prod[j] === D.prod[i] && INI[j] === INI[i] && FIM[j] === FIM[i]) c.set(PR[j], (c.get(PR[j]) || 0) + 1);
+    let best = null, n = 0; for (const [p, q] of c) if (q > n || (q === n && p < best)) { best = p; n = q; } return best; }
+  function corrigirPreco(lista){ let n = 0; for (const i of lista) if (S[i] === ST_PRECO) { const p = precoMaioria(i); if (p != null && p !== PR[i]) { PR[i] = p; marcarEd(i); n++; } } return n; }
+  function corrigirDatas(lista){ let n = 0; const alvo = new Set(lista);
+    const por = new Map(); for (let i = 0; i < N; i++) { const k = D.fil[i] + '|' + D.prod[i]; let l = por.get(k); if (!l) por.set(k, l = []); l.push(i); }
+    for (const l of por.values()) { if (l.length < 2 || !l.some(i => alvo.has(i))) continue; l.sort((a, b) => INI[a] - INI[b] || FIM[a] - FIM[b]);
+      for (let k = 1; k < l.length; k++) { const a = l[k - 1], b = l[k]; if (INI[b] <= FIM[a] && INI[b] > INI[a]) { FIM[a] = INI[b] - 1; marcarEd(a); n++; } } }
+    return n; }
+  $('bPreco').onclick = () => { const n = corrigirPreco(VIS); atualizar(); toast(n ? `${nf0.format(n)} preços unificados pelo preço da maioria` : 'Nenhum erro de preço no filtro'); };
+  $('bDatas').onclick = () => { const n = corrigirDatas(VIS); atualizar(); toast(n ? `${nf0.format(n)} períodos encerrados na véspera da oferta seguinte` : 'Nenhum conflito resolvível no filtro'); };
+  $('bReset').onclick = async () => { if ((await confirmar('Desfazer edições', 'Preços, períodos e exclusões voltam ao que veio nas planilhas. Deseja seguir?')) !== '1') return;
+    for (let i = 0; i < N; i++) { PR[i] = D.preco[i]; INI[i] = dn(D.ini[i]); FIM[i] = dn(D.fim[i]); EXC[i] = 0; EDT[i] = 0; } atualizar(); toast('Edições desfeitas'); };
+
+  /* ---------- menu do botão direito ---------- */
+  document.querySelectorAll('.ctx').forEach(x => x.remove());
+  const cm = document.createElement('div'); cm.className = 'ctx glass'; document.body.appendChild(cm); const fecha = () => cm.classList.remove('on');
+  on(body, 'contextmenu', e => { const r = e.target.closest('.row'); if (!r) return; e.preventDefault(); const i = +r.dataset.i; selecionar(i);
+    const it = (a, n, t, d) => `<button data-ctx="${a}" ${d ? 'disabled' : ''}>${ic(n)}${t}</button>`;
+    cm.innerHTML = `<div class="ctx-t">${esc(D.prod[i])} ${esc(curto(D.desc[i]))}<small>${esc(D.filn[i])}, ${esc(D.campanhas[D.ci[i]])}</small></div>`
+      + it('preco', 'moeda', `Usar preço da maioria (${R$(precoMaioria(i))})`, S[i] !== ST_PRECO) + it('data', 'cal', 'Encerrar na véspera da oferta seguinte', S[i] !== ST_DATA)
+      + '<span class="ctx-s"></span>' + it('campanha', 'gantt', 'Filtrar esta campanha') + it('produto', 'olho', 'Ver este produto em tudo')
+      + '<span class="ctx-s"></span>' + it('exc', 'ban', EXC[i] ? 'Voltar para a importação' : 'Tirar da importação') + it('reset', 'undo', 'Restaurar a linha', !EDT[i] && !EXC[i]);
+    cm.classList.add('on'); cm.style.left = Math.min(e.clientX, innerWidth - cm.offsetWidth - 8) + 'px'; cm.style.top = Math.min(e.clientY, innerHeight - cm.offsetHeight - 8) + 'px'; cm.dataset.i = i; });
+  on(cm, 'click', e => { const b = e.target.closest('[data-ctx]'); if (!b || b.disabled) return; const i = +cm.dataset.i, a = b.dataset.ctx; fecha();
+    if (a === 'preco') corrigirPreco([i]); if (a === 'data') corrigirDatas([i]);
+    if (a === 'campanha') { F.camp = D.ci[i]; gantt(); }
+    if (a === 'produto') { F.q = D.prod[i]; $('q').value = D.prod[i]; F.camp = -1; gantt(); }
+    if (a === 'exc') { EXC[i] = EXC[i] ? 0 : 1; }
+    if (a === 'reset') { PR[i] = D.preco[i]; INI[i] = dn(D.ini[i]); FIM[i] = dn(D.fim[i]); EXC[i] = 0; EDT[i] = 0; }
+    atualizar(); });
+  on(document, 'click', e => { if (!e.target.closest('.ctx')) fecha(); });
+  on(document, 'keydown', e => { if (e.key === 'Escape') { fecha(); $('pExp').classList.remove('on'); } });
+  on(sc, 'scroll', fecha);
+
+  /* ---------- importação: padrão (mídia calculada) e antigo (tipo de oferta) ---------- */
+  function montaExp(){
+    const crit = VIS.filter(i => !EXC[i] && (S[i] === 1 || S[i] === 2)).length, tipos = (A.tipos || []).map(t => `<option>${esc(t)}</option>`).join('');
+    $('pExp').innerHTML = `<h4>${ic('up', 'var(--primary)')} Importação do encarte</h4><p>Usa as linhas do filtro atual que não foram tiradas da importação. Varejo (tipo 1) e atacado (tipo 2) com o mesmo preço.</p>
+      <div class="opt" id="xFmt"><label class="on"><input type="radio" name="fmt" value="p" checked><b>Padrão</b><small>tipo de mídia calculado: 2 com 4 dias ou mais, 1 abaixo</small></label>
+        <label><input type="radio" name="fmt" value="a"><b>Antigo</b><small>tipo de oferta informado, motivo 7</small></label></div>
+      <div class="opt" id="xOp"><label class="on"><input type="radio" name="op" value="1" checked><b>Aplicar preço</b></label><label><input type="radio" name="op" value="2"><b>Cancelar preço</b></label></div>
+      <div class="grid2"><div><span>Tipo de oferta (formato antigo)</span><input list="xTipos" id="xTipo" placeholder="${D.oferta.some(Boolean) ? 'usa a coluna da planilha' : 'ex.: 1'}"><datalist id="xTipos">${tipos}</datalist></div>
+        <div><span>Linhas críticas no filtro</span><label class="chk"><input type="checkbox" id="xCrit"> incluir ${nf0.format(crit)} críticas</label></div></div>
+      <div id="xPrev" class="prev"></div>
+      <div style="display:flex;gap:8px"><button class="tx pri" id="xXls">${ic('up')}Baixar Excel</button><button class="tx" id="xCopy">${ic('copy')}Copiar importação</button></div>`;
+    preview(); }
+  const opt = n => $('pExp').querySelector(`input[name=${n}]:checked`).value;
+  function linhasImp(){ const fmt = opt('fmt'), op = opt('op'), crit = $('xCrit').checked, tipoIn = $('xTipo').value.trim(), l = [], vistos = new Set();
+    const f2 = v => nf2.format(v).replace(/\./g, '');
+    for (const i of VIS) { if (EXC[i] || (!crit && (S[i] === 1 || S[i] === 2))) continue;
+      const k = [D.fil[i], D.prod[i], PR[i], INI[i], FIM[i]].join('|'); if (vistos.has(k)) continue; vistos.add(k);
+      const t3 = fmt === 'p' ? String(midia(i)) : (D.oferta[i] || tipoIn || '');
+      for (const tp of ['1', '2']) l.push(op === '1' ? [D.fil[i], tp, t3, '7', D.prod[i], f2(PR[i]), br(ds(INI[i])), br(ds(FIM[i]))] : [D.fil[i], tp, t3, D.prod[i]]); }
+    const pi = op === '1' ? 4 : 3, dt = r => op === '1' ? r[6].split('/').reverse().join('') : '';
+    return l.sort((a, b) => (+a[0] - +b[0]) || (+a[pi] - +b[pi]) || dt(a).localeCompare(dt(b)) || (+a[1] - +b[1])); }
+  function preview(){ const l = linhasImp(); const fmt = opt('fmt'), op = opt('op');
+    const cab = op === '1' ? ['Filial', 'Tipo de Preço', fmt === 'p' ? 'Tipo de Mídia' : 'Tipo de Oferta', 'Motivo', 'Produto', 'Preço', 'Início', 'Fim'] : ['Filial', 'Tipo de Preço', fmt === 'p' ? 'Tipo de Mídia' : 'Tipo de Oferta', 'Produto'];
+    const semTipo = fmt === 'a' && l.some(r => !r[2]);
+    $('xPrev').innerHTML = `<table><tr>${cab.map(c => `<th>${c}</th>`).join('')}</tr>${l.slice(0, 4).map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table>
+      <small>${nf0.format(l.length)} linhas de importação${semTipo ? ', <b class="neg">informe o tipo de oferta</b>' : ''}</small>`; }
+  on($('pExp'), 'change', e => { $('pExp').querySelectorAll('.opt label').forEach(x => x.classList.toggle('on', x.querySelector('input').checked)); preview(); });
+  on($('pExp'), 'input', e => { if (e.target.id === 'xTipo') preview(); });
+  on($('pExp'), 'click', async e => { const b = e.target.closest('button'); if (!b) return; const l = linhasImp(); if (!l.length) { toast('Nada para importar no filtro'); return; }
+    if (opt('fmt') === 'a' && l.some(r => !r[2])) { toast('Informe o tipo de oferta para o formato antigo'); return; }
+    if (b.id === 'xCopy') { try { await navigator.clipboard.writeText(l.map(r => r.join('\t')).join('\n')); toast(nf0.format(l.length) + ' linhas copiadas'); } catch (err) { toast('Não foi possível copiar; use o Excel'); } }
+    if (b.id === 'xXls') { const an = [['Status', 'Campanha', 'ID Filial', 'Filial', 'ID Produto', 'Produto', 'Comprador', 'Categoria', 'Preço oferta', 'Início', 'Fim', 'Dias', 'Mídia',
+        'Varejo atual', 'Desconto', 'Custo', 'Margem oferta', 'Menor mercado', 'IP oferta', 'Investimento estimado', 'Alertas', 'Editado', 'Na importação']];
+      for (const i of VIS) { const r = D.ref[i] || []; an.push([STN[S[i]], D.campanhas[D.ci[i]], +D.fil[i] || D.fil[i], D.filn[i], +D.prod[i] || D.prod[i], curto(D.desc[i]), r[4] || '', r[5] || '', PR[i], br(ds(INI[i])), br(ds(FIM[i])), dias(i), midia(i),
+        r[1] || null, desc_(i) == null ? null : +desc_(i).toFixed(4), r[0] || null, marg(i) == null ? null : +marg(i).toFixed(4), r[3] || null, ipP(i) == null ? null : +ipP(i).toFixed(4), Math.round(invest(i)) || null,
+        ALN.filter(([bb]) => AL[i] & bb).map(x => x[1]).join(', '), EDT[i] ? 'Sim' : 'Não', EXC[i] ? 'Não' : 'Sim']); }
+      const cab = opt('op') === '1' ? ['Filial', 'Tipo de Preço', opt('fmt') === 'p' ? 'Tipo de Mídia' : 'Tipo de Oferta', 'Motivo', 'Produto', 'Preço', 'Início', 'Fim'] : ['Filial', 'Tipo de Preço', opt('fmt') === 'p' ? 'Tipo de Mídia' : 'Tipo de Oferta', 'Produto'];
+      const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(an), 'Analise'); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([cab, ...l]), 'Importacao');
+      XLSX.writeFile(wb, `PromoMetrics_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`); toast('Excel com a análise e a importação'); } });
+  $('bExp').onclick = e => { montaExp(); const p = $('pExp'); p.classList.toggle('on'); const r = e.currentTarget.getBoundingClientRect(); p.style.top = Math.max(8, Math.min(innerHeight - p.offsetHeight - 8, r.top - 10)) + 'px'; };
+  on(document, 'click', e => { if (!e.target.closest('#pExp') && !e.target.closest('#bExp') && !e.target.closest('.modal')) $('pExp').classList.remove('on'); });
+  $('bFoco').onclick = () => { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {}); };
+  on(document, 'fullscreenchange', () => { const fs = !!document.fullscreenElement; document.body.classList.toggle('fs', fs); $('root').style.height = fs ? '100vh' : ALT + 'px'; if (!fs) ajustar(); render(); });
+  on($('q'), 'input', e => { F.q = e.target.value; clearTimeout(e.target._t); e.target._t = setTimeout(() => { filtrar(); sc.scrollTop = 0; render(); }, 150); });
+
+  const vencidas = new Set(); for (let i = 0; i < N; i++) if (FIM[i] < HOJE) vencidas.add(D.campanhas[D.ci[i]]);
+  $('escopo').textContent = `${D.campanhas.length} campanha${D.campanhas.length > 1 ? 's' : ''}${D.tem_ref ? ', cruzadas com a base de preços' : ', sem base de preços para cruzar'}`;
+  if (vencidas.size) setTimeout(() => toast('Campanhas com data de fim no passado: ' + [...vencidas].join(', ')), 400);
+  validar(); kpis(); gantt(); filtrar(); render(); if (VIS.length) selecionar(VIS[0]); else painel(-1);
+}
+
+
+return montar;
+})();
+(() => {
+  const enviar = (type, extra) => window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type }, extra || {}), '*');
+  let chave = null, app = null;
+  window.addEventListener('message', ev => {
+    const d = ev.data; if (!d || d.type !== 'streamlit:render') return; const a = d.args || {};
+    if (a.chave === chave && a.app === app) { document.getElementById('estilo-tema').textContent = `@import url('${a.fonte}');:root{${a.tokens}}`; return; }
+    chave = a.chave; app = a.app || 'price';
+    document.getElementById('css-price').media = app === 'price' ? 'all' : 'not all';
+    document.getElementById('css-promo').media = app === 'promo' ? 'all' : 'not all';
+    (app === 'promo' ? APP_PROMO : APP_PRICE)(a);
+  });
+  enviar('streamlit:componentReady', { apiVersion: 1 });
+})();
+</script></body></html>
