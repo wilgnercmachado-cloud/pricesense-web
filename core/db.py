@@ -196,3 +196,13 @@ def salvar_visao(usuario: str, tela: str, visao: dict) -> None:
     sb().table("visoes_usuario").upsert({"usuario": usuario, "tela": tela, "visao": visao,
                                          "atualizado_em": datetime.now(timezone.utc).isoformat()},
                                         on_conflict="usuario,tela").execute()
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def lojas_completas() -> list[list[str]]:
+    """[estado, diretor, filial] de todas as lojas (para o Preço Bot filtrar no navegador)."""
+    try:
+        dados = sb().table("lojas").select("estado, diretor, filial").execute().data or []
+        return sorted({(str(r.get("estado") or ""), str(r.get("diretor") or ""), str(r.get("filial") or "")) for r in dados if r.get("filial")})
+    except Exception:
+        return []
