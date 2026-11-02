@@ -206,3 +206,29 @@ def lojas_completas() -> list[list[str]]:
         return sorted({(str(r.get("estado") or ""), str(r.get("diretor") or ""), str(r.get("filial") or "")) for r in dados if r.get("filial")})
     except Exception:
         return []
+
+
+# ---------------------------------------------------------------- histórico de encartes (Pricing Promo)
+def campanhas_historico() -> list[dict]:
+    try:
+        return sb().table("encartes_campanhas").select("*").order("inicio", desc=True).execute().data or []
+    except Exception:
+        return []
+
+
+def salvar_campanhas(campanhas: list[dict], itens: list[list], status: str, usuario: str) -> None:
+    from datetime import datetime, timezone
+    agora = datetime.now(timezone.utc).isoformat()
+    linhas = [{"campanha": c["campanha"], "inicio": c.get("inicio") or None, "fim": c.get("fim") or None, "itens": int(c.get("itens") or 0),
+               "filiais": int(c.get("filiais") or 0), "status": status, "atualizado_em": agora, "atualizado_por": usuario} for c in campanhas]
+    if linhas:
+        sb().table("encartes_campanhas").upsert(linhas, on_conflict="campanha").execute()
+    regs = [{"campanha": c, "filial": str(f), "produto": str(p), "preco": float(pr), "inicio": ini or None, "fim": fim or None}
+            for c, f, p, pr, ini, fim in itens]
+    vistos, unicos = set(), []
+    for r in regs:
+        k = (r["campanha"], r["filial"], r["produto"], r["inicio"])
+        if k not in vistos:
+            vistos.add(k); unicos.append(r)
+    for i in range(0, len(unicos), 1000):
+        sb().table("encartes_itens").upsert(unicos[i:i + 1000], on_conflict="campanha,filial,produto,inicio").execute()
