@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 
 import numpy as np
@@ -140,6 +141,23 @@ def _tokens_css() -> str:
     return "".join(f"--{k.replace('_', '-')}:{t[k]};" for k in nomes) + f"--shadow:{t['shadow']};"
 
 
+@st.cache_resource(show_spinner=False, max_entries=8)
+def _dados_mesa(filtros: str, versao: str, _df_all, _meta, _regras, _props) -> tuple[str | None, int, str]:
+    """Pacote da mesa guardado por filtro + versão da base e das regras: reabrir a página não refaz o cálculo."""
+    f = json.loads(filtros)
+    mask = np.ones(len(_df_all), dtype=bool)
+    for col in FILTROS:
+        if f.get(col):
+            mask &= _df_all[col].isin(f[col]).to_numpy()
+    b = pr.base(_df_all[mask], so_cesta=f["cesta"], ignorar_acoes=f["sem_acoes"], regras=_regras, com_pesquisa=f["pesquisa"] == "Com pesquisa")
+    if b.empty:
+        return None, 0, ""
+    if len(b) > LIMITE:
+        return None, len(b), ""
+    dados = pr.payload(b, _meta.get("hist"), _props)
+    return dados, len(b), hashlib.md5((dados[:4000] + dados[-4000:] + str(len(dados))).encode()).hexdigest()[:12]
+
+
 def render() -> None:
     st.html("<style>[data-testid='stMainBlockContainer']{max-width:none !important;padding:4.1rem 1rem 0 1rem !important}"
             # filtros e regras ficam na barra do topo, ao lado dos botões de tela cheia e tema
@@ -159,24 +177,22 @@ def render() -> None:
     info = (f"{rel.get('titulo')}: base de {meta.get('atualizado')}, pesquisa de {' a '.join(meta.get('periodo') or [])}. "
             + (f"Data fim (DTFIM) em {ui.numero(dtfim)} itens." if dtfim else "DTFIM vazia nesta base."))
 
-    mask = np.ones(len(df_all), dtype=bool)
-    for col in FILTROS:
-        if f[col]:
-            mask &= df_all[col].isin(f[col]).to_numpy()
-    b = pr.base(df_all[mask], so_cesta=f["cesta"], ignorar_acoes=f["sem_acoes"], regras=regras,
-                com_pesquisa=f["pesquisa"] == "Com pesquisa")
-    if b.empty:
+    props = pp.carregar()
+    _, pf_meta = pf.carregar()
+    versao = "|".join([str(rel.get("id")), str(rel.get("atualizado_em")), gr.VERSAO, str(pf_meta.get("atualizado_em")), str(pf_meta.get("linhas")),
+                       str(len(props)), str(float(props["proporcao"].sum()) if len(props) else 0)])
+    filtros = json.dumps({k: (sorted(v) if isinstance(v, list) else v) for k, v in f.items()}, sort_keys=True, ensure_ascii=False)
+    dados, n, chave = _dados_mesa(filtros, versao, df_all, meta, regras, props)
+    if n == 0:
         ui.vazio("Nada para precificar com esses filtros", "Abra os filtros e amplie a seleção.")
         return
-    if len(b) > LIMITE:
-        st.warning(f"A seleção tem {ui.numero(len(b))} itens. Abra os filtros e escolha estado, diretor ou filiais "
+    if dados is None:
+        st.warning(f"A seleção tem {ui.numero(n)} itens. Abra os filtros e escolha estado, diretor ou filiais "
                    f"para ficar abaixo de {ui.numero(LIMITE)} e a mesa responder na hora.", icon=":material/filter_alt:")
         return
-    dados = pr.payload(b, meta.get("hist"), pp.carregar())
     usuario = st.session_state.get("usuario_login", "")
     if "reg_visao" not in st.session_state:
         st.session_state.reg_visao = db.carregar_visao(usuario, TELA)
-    chave = hashlib.md5((dados[:4000] + dados[-4000:] + str(len(dados))).encode()).hexdigest()[:12]   # o tema não reinicia a mesa
     retorno = _MESA(app="price", dados=dados, chave=chave, tokens=_tokens_css(), fonte=theme.FONTE_URL, visao=st.session_state.reg_visao,
                     altura=900, info=info, usuario=usuario, base=f"{rel.get('id')}:{rel.get('atualizado_em')}",
                     key="mesa_regular", default=None)
