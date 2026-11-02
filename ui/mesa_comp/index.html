@@ -388,6 +388,28 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
     if (mn && v / 100 < mn - 1e-9) { const m = Math.round(mn * 100), l = ciaCands(m).filter(x => x >= m); v = l.length ? Math.min(...l) : Math.round(roundVarejo(mn) * 100); }
     return v / 100;
   }
+  /* Moda exibida: a do concorrente vencedor da linha; sem referência, a menor moda entre os concorrentes da
+     filial; por último, a moda de maior frequência do relatório. */
+  const MOV = new Float64Array(N).fill(NaN), MOA = new Float64Array(N).fill(NaN), MOF = new Uint8Array(N);
+  function modaItem(i){
+    if (!isNaN(MOV[i])) return [MOV[i], MOA[i], MOF[i]];
+    let mv = null, ma = null, f = 3;
+    if (!semPesq(i)) {
+      const rows = HD.get(D.pi[i] * 64 + D.ui[i]) || [], fil = new Set(D.fk[D.fi[i]] || []), wk = KPOS.get(D.concs[D.ki[i]]);
+      const pv = new Map(), pa = new Map();
+      for (const j of rows) { if (!TIPO_OK.has(D.dtp[j])) continue; const k = D.dk[j];
+        if (D.dv[j] > 0) { if (!pv.has(k)) pv.set(k, []); pv.get(k).push(D.dv[j] / 100); }
+        if (D.da[j] > 0) { if (!pa.has(k)) pa.set(k, []); pa.get(k).push(D.da[j] / 100); } }
+      const daFil = [...pv.keys()].some(k => fil.has(k));
+      const menor = mp => { const l = [...mp.entries()].filter(([k, v]) => (!daFil || fil.has(k)) && v.length >= 3).map(([, v]) => modaDe(v)); return l.length ? Math.min(...l) : null; };
+      if (wk != null && (pv.get(wk) || []).length >= 3) { mv = modaDe(pv.get(wk)); ma = (pa.get(wk) || []).length >= 3 ? modaDe(pa.get(wk)) : null; f = 1; }
+      else { mv = menor(pv); ma = menor(pa); if (mv != null) f = 2; }
+    }
+    if (mv == null) { mv = D.mo[i] > 0 ? D.mo[i] : 0; f = 3; }
+    if (ma == null) ma = D.ma[i] > 0 ? D.ma[i] : 0;
+    MOV[i] = mv; MOA[i] = ma; MOF[i] = f; return [mv, ma, f];
+  }
+  const FONTE_MODA = ['', 'moda do concorrente vencedor', 'menor moda entre os concorrentes da filial', 'moda de maior frequência do relatório'];
   function calc(i){
     const c = D.cu[i], vmk = D.vmk[i], amk = D.amk[i] || 0, merch = D.merch[i] || 0;
     const mobj = D.pobj[i] ?? MOBJ, mmax = (D.pmax[i] > 0 ? D.pmax[i] : MMAX), ps = PISO[D.ui[i]] || { cesta: -15, sem: 0 };
@@ -453,6 +475,13 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
     if (RG[i] === 3) L.push('APLICADO MÍNIMA', `Seguir o mercado (${R$(D.vmk[i])} − 0,01) deixaria a margem em ${P1((D.vmk[i] - CENT - D.cu[i]) / (D.vmk[i] - CENT))}, abaixo do mínimo.`, `O preço vai para o mínimo de ${R$(MN[i])} (${origemMin(i)}).`);
     if (RG[i] === 4) L.push('APLICADO OBJETIVA', 'Item sem pesquisa direta do concorrente.', `Varejo pela margem objetiva de ${nf1.format(UOBJ[i])}% sobre o custo de ${R$(D.cu[i])}; atacado com a base de redução de ${nf1.format(D.merch[i] || 0)}%.`);
     if (RG[i] === 5) L.push('AJUSTE MANUAL', `Preço definido na mesa. A sugestão do motor seria seguir o mercado de ${R$(D.vmk[i])}.`, faixa(i));
+    if (RG[i] !== 6 && !semPesq(i)) { const a = analisar(i);
+      if (a) { L.push('', 'DIAGNÓSTICO DA PESQUISA');
+        L.push(`Vencedor: ${a.nomeV} a ${R$(a.venc)}${a.tpV ? ' (' + a.tpV.toLowerCase() + ')' : ''}${a.diaV ? ' em ' + a.diaV : ''}.`);
+        if (a.moda != null) {
+          L.push(`Comparado com a ${a.fonte}: ${R$(a.moda)}. Diferença de ${(a.delta > 0 ? '+' : '') + P1(a.delta)}; limite de ±${nf0.format(a.lim * 100)}% (vencedor ${a.abaixoCusto ? 'abaixo' : 'acima'} do custo).`);
+          L.push(a.tipo === 'erro' ? `Possível erro de pesquisa: o Optimus usaria ${R$(a.alvo)} (${a.decisao.replace('fora do limite: ', '')}). Clique com o botão direito para aplicar.` : 'Pesquisa consistente: o preço vencedor é confiável.');
+        } else L.push('Sem moda confiável do concorrente para comparar.'); } }
     if (RG[i] === 6) { const o = optInfo(i);
       L.push(`OPTIMUS: ${(o.t === 'erro' ? 'POSSÍVEL ERRO DE PESQUISA' : o.t === 'custo' ? 'PESQUISA ABAIXO DO CUSTO, CONSISTENTE' : 'PESQUISA CONSISTENTE')}`);
       if (o.v != null) L.push(`1. Preço vencedor da linha: ${o.n} a ${R$(o.v)}${o.tp ? ' (' + o.tp.toLowerCase() + ')' : ''}${o.dia ? ' em ' + o.dia : ''}, o mesmo menor preço do mercado usado na mesa.`);
@@ -508,9 +537,9 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
   col('df', 'Data fim PDV', 'Preço atual', 92, i => D.dfim[i] > 0 ? dfTxt(D.dfim[i]) : '–', i => D.dfim[i]);
   col('vmk', 'Varejo mercado', 'Mercado', 90, i => D.vmk[i] > 0 ? `${nf2.format(D.vmk[i])}${D.orig[i] ? '*' : ''}` : '–', i => D.vmk[i] || 0, 'r num');
   col('amk', 'Atacado mercado', 'Mercado', 90, i => num_(D.amk[i] > 0 ? D.amk[i] : null), i => D.amk[i] || 0, 'r num');
-  col('mo', 'Moda varejo', 'Mercado', 84, i => num_(D.mo[i] > 0 ? D.mo[i] : null), i => D.mo[i] || 0, 'r num');
-  col('mav', 'Moda atacado', 'Mercado', 86, i => num_(D.ma[i] > 0 ? D.ma[i] : null), i => D.ma[i] || 0, 'r num');
-  col('dm', 'Menor ÷ moda', 'Mercado', 84, i => D.mo[i] > 0 && D.vmk[i] > 0 && !D.orig[i] ? (v => vneg(v, (v > 0 ? '+' : '') + pct(v)))(D.vmk[i] / D.mo[i] - 1) : '–', i => D.mo[i] > 0 ? D.vmk[i] / D.mo[i] : 0, 'r num');
+  col('mo', 'Moda varejo', 'Mercado', 84, i => num_(modaItem(i)[0] || null), i => modaItem(i)[0], 'r num');
+  col('mav', 'Moda atacado', 'Mercado', 86, i => num_(modaItem(i)[1] || null), i => modaItem(i)[1], 'r num');
+  col('dm', 'Menor ÷ moda', 'Mercado', 84, i => modaItem(i)[0] > 0 && D.vmk[i] > 0 && !D.orig[i] ? (v => vneg(v, (v > 0 ? '+' : '') + pct(v)))(D.vmk[i] / modaItem(i)[0] - 1) : '–', i => modaItem(i)[0] > 0 ? D.vmk[i] / modaItem(i)[0] : 0, 'r num');
   col('conc', 'Concorrente', 'Mercado', 220, i => D.orig[i] ? '<span style="color:var(--faint)">moda</span>' : esc(curto(D.concs[D.ki[i]])), i => D.concs[D.ki[i]], '', () => D.concs.map(curto));
   const TPC = [null, ['Regular', 'tpReg', 'var(--primary)'], ['Promoção', 'tpPro', 'var(--down)'], ['Ponto extra', 'tpExt', 'var(--amber)']];
   col('tp', 'tp', 'Mercado', 46, i => { if (D.orig[i]) return `<span class="tpi" style="color:#B794FF" data-tip="Moda: sem pesquisa direta">${ic('moda')}</span>`;
@@ -767,7 +796,7 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
   function resumo(i){
     if (i < 0) { $('resumo').innerHTML = `<div class="hvazio">Clique em um item. <span class="kbd">↑</span><span class="kbd">↓</span> navegam, <span class="kbd">espaço</span> aceita, <span class="kbd">N</span> vai ao próximo pendente.</div>`; return; }
     const c = D.cu[i], pts = [['Custo', c, 'var(--faint)'], ['Mín', MN[i], 'var(--up)'], ['Obj', OB[i], 'var(--amber)'], ['Merc', D.vmk[i] || null, 'var(--primary)'],
-      ['Moda', D.mo[i] || null, '#B794FF'], ['Máx', MX[i], 'var(--down)'], ['Atual', D.vm[i], 'var(--ink)'], ['Novo', NV[i], 'var(--primary)']].filter(p => p[1] > 0).sort((a, b) => a[1] - b[1]);
+      ['Moda', modaItem(i)[0] || null, '#B794FF'], ['Máx', MX[i], 'var(--down)'], ['Atual', D.vm[i], 'var(--ink)'], ['Novo', NV[i], 'var(--primary)']].filter(p => p[1] > 0).sort((a, b) => a[1] - b[1]);
     const vs = pts.map(p => p[1]), lo = Math.min(...vs) * 0.98, hi = Math.max(...vs) * 1.02, X = v => 10 + (v - lo) / (hi - lo) * 280;
     let svg = `<svg class="lad" viewBox="0 0 300 74"><line x1="10" y1="37" x2="290" y2="37" stroke="var(--line)" stroke-width="4" stroke-linecap="round"/><line x1="${X(MN[i])}" y1="37" x2="${X(MX[i])}" y2="37" stroke="var(--up)" stroke-opacity=".35" stroke-width="4" stroke-linecap="round"/>`;
     const rot = pts.filter(p => ['Atual', 'Novo', 'Merc', 'Mín', 'Máx', 'Moda'].includes(p[0]));
@@ -775,12 +804,12 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
     rot.forEach(([t, v, cor], k) => { const nivel = k % 4, y = [10, 70, 22, 58][nivel], x = Math.min(276, Math.max(24, X(v))), novo = t === 'Novo';
       svg += `<line x1="${X(v)}" y1="37" x2="${x}" y2="${nivel % 2 === 0 ? y + 2 : y - 9}" stroke="${cor}" stroke-opacity=".45"/><text x="${x}" y="${y}" text-anchor="middle" font-size="9" fill="${cor}" font-family="Geist Mono" font-weight="${novo ? 700 : 500}">${t} ${nf2.format(v)}</text>`; });
     svg += '</svg>';
-    const dm = D.mo[i] && D.vmk[i] > 0 && !D.orig[i] ? D.vmk[i] / D.mo[i] - 1 : null, m1 = (NV[i] - c) / NV[i];
+    const [mV, mA, mF] = modaItem(i), dm = mV > 0 && D.vmk[i] > 0 && !D.orig[i] ? D.vmk[i] / mV - 1 : null, m1 = (NV[i] - c) / NV[i];
     const st = (t, v, k) => `<div class="ms"><span>${t}</span><b class="${k || ''}">${v}</b></div>`;
     $('resumo').innerHTML = `<div class="rtop"><div class="rnome" title="${esc(D.produtos[D.pi[i]])}">${esc(curto(D.produtos[D.pi[i]]))}</div>${tagRegra(i)}</div>
       <div class="rsub">${esc(curto(D.filiais[D.fi[i]]))}, curva ${'ABC'[D.curva[i]]}${D.cesta[i] ? ', cesta' : ''}. ${esc(D.orig[i] ? 'Moda (sem pesquisa direta)' : titulo_(curto(D.concs[D.ki[i]]).split(' - ')[0]))}${D.orig[i] ? '' : ', ' + esc(D.datas[D.dti[i]] || '')}. ${esc(titulo_(D.tipos[D.ti[i]] || ''))}${D.dfim[i] > 0 ? ' até ' + dfTxt(D.dfim[i]) : ''}.</div>
       ${svg}
-      <div class="mgrid">${st('Moda var.', brl(D.mo[i]))}${st('Moda atac.', brl(D.ma[i]))}${st('Menor ÷ moda', dm == null ? '–' : (dm > 0 ? '+' : '') + pct(dm), dm < 0 ? 'neg' : '')}
+      <div class="mgrid" data-tip="Moda: ${FONTE_MODA[mF]}">${st('Moda var.', brl(mV))}${st('Moda atac.', brl(mA))}${st('Menor ÷ moda', dm == null ? '–' : (dm > 0 ? '+' : '') + pct(dm), dm < 0 ? 'neg' : '')}
         ${st('Menor var.', brl(D.vmk[i]))}${st('Menor atac.', brl(D.amk[i]))}${st('Margem nova', pct(m1), m1 < 0 ? 'neg' : 'pos')}</div>
       <div class="ralts"><button class="ib2" data-alt="m" data-tip="Usar mercado − 0,01">${ic('merc')}</button><button class="ib2" data-alt="o" data-tip="Usar moda − 0,01">${ic('moda')}</button>
         <button class="ib2" data-alt="b" data-tip="Usar objetivo">${ic('obj')}</button><button class="ib2" data-alt="r" data-tip="Voltar à sugestão do motor">${ic('undo')}</button>
@@ -856,7 +885,13 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
     return l; }
   const CAB = ['Código da Filial', 'Tipo de Preço', 'ID Classificação', 'Código do Produto', 'Preço', 'Data Início', 'Data Fim', 'Similar', 'Tipo Operação'];
   on($('pExp'), 'click', async e => { const b = e.target.closest('button'); if (!b) return; const l = linhasImportacao(); if (!l.length) { toast('Nenhum preço aceito para importar'); return; }
-    if (b.id === 'eXls') { if (!window.XLSX) { toast('Biblioteca de Excel indisponível'); return; } const ws = XLSX.utils.aoa_to_sheet([CAB, ...l]), wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Importacao');
+    if (b.id === 'eXls') { if (!window.XLSX) { toast('Biblioteca de Excel indisponível'); return; }
+      const ini = br($('eIni').value), fimd = br($('eFim').value), an = [['Código da Filial', 'Filial', 'Código do Produto', 'Produto', 'Comprador', 'Categoria', 'Curva', 'Custo', 'Varejo atual', 'Atacado atual',
+        'Varejo mercado', 'Novo varejo', 'Novo atacado', 'Margem nova', 'IP novo', 'Delta preço', 'Regra de negócio', 'Regra de alteração', 'Data início', 'Data fim']];
+      for (let i = 0; i < N; i++) if (aceito(i)) an.push([+D.filial_cod[D.fi[i]], curto(D.filiais[D.fi[i]]), +D.produto_cod[D.pi[i]], curto(D.produtos[D.pi[i]]), D.compradores[D.bi[i]], D.cats[D.gi[i]], 'ABC'[D.curva[i]],
+        D.cu[i], D.vm[i], D.am[i] || null, D.vmk[i] || null, NV[i], NA[i] || null, +((NV[i] - D.cu[i]) / NV[i]).toFixed(4), D.vmk[i] > 0 ? +(NV[i] / D.vmk[i]).toFixed(4) : null, +(NV[i] / D.vm[i] - 1).toFixed(4),
+        rotRegra(i), MUD[i] ? (CT[i] ? CORTES.filter((_, k) => CT[i] & (1 << k)).map(x => x[0]).join(' / ') : 'Dentro da regra') : 'Reaplicar', ini, fimd]);
+      const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(an), 'Analise'); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([CAB, ...l]), 'Importacao');
       XLSX.writeFile(wb, `PriceSense_Regular_PRICE_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`); toast(nf0.format(l.length) + ' linhas no Excel'); }
     if (b.id === 'eCopy') { try { await navigator.clipboard.writeText(l.map(r => r.join('\t')).join('\n')); b.classList.add('ok'); setTimeout(() => b.classList.remove('ok'), 1800); toast(nf0.format(l.length) + ' linhas copiadas'); } catch (err) { toast('Não foi possível copiar; use o Excel'); } } });
   $('bRegras').onclick = e => abrir('pRegras', e.currentTarget);
@@ -954,7 +989,7 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
   $('bOpt').onclick = () => rodarOptimus();
 
   /* ===================== proporcionais (filhos do PAI) ===================== */
-  const FILHOS = new Map(); for (const [pai, filho, prop] of (D.props || [])) { const k = String(pai); if (!FILHOS.has(k)) FILHOS.set(k, []); FILHOS.get(k).push([filho, prop]); }
+  const FILHOS = new Map(); for (const [pai, filho, prop, nome] of (D.props || [])) { const k = String(pai); if (!FILHOS.has(k)) FILHOS.set(k, []); FILHOS.get(k).push([filho, prop, nome]); }
   function montaProp(){
     const [h, f] = datasImportacao(); let pais = 0, filhos = 0, estranhos = 0;
     for (let i = 0; i < N; i++) { const l = FILHOS.get(String(D.produto_cod[D.pi[i]])); if (!l || !aceito(i)) continue; pais++; filhos += l.length; estranhos += l.filter(x => x[1] > 1000).length; }
@@ -964,20 +999,32 @@ function roundAtacado(pa, vf){ const vc = Math.round(vf*100), ud = vc % 10, pc =
         <div><span>Proporção acima de 1.000%</span><b class="${estranhos ? 'neg' : ''}">${nf0.format(estranhos)}</b></div></div>
       ${(D.props || []).length ? '' : '<p class="neg">Nenhuma proporção cadastrada para os produtos desta mesa. Suba a base PROP% em Regras de margem.</p>'}
       <div class="grid2"><div><span>Data início</span><input type="date" id="pIni" value="${iso(h)}"></div><div><span>Data fim</span><input type="date" id="pFim" value="${iso(f)}"></div>
-        <div><span>Tipo de oferta</span><input type="number" id="pTipo" value="21"></div></div>
+        <div><span>Tipo de oferta</span><input type="number" id="pTipo" value="21"></div>
+        <div><span>Operação</span><select id="pOp"><option value="1">Aplicar preço</option><option value="2">Cancelar preço</option></select></div></div>
       <div style="display:flex;gap:8px"><button class="tx pri" id="pXls">${ic('up')}Baixar Excel</button><button class="tx" id="pCopy">${ic('copy')}Copiar</button></div>`;
   }
-  const CAB_P = ['ID_PAI', 'PRODUTO', 'PREÇO REF PAI', 'PROP% APLICADA', 'Código da Filial', 'Tipo de Preço', 'ID Classificação', 'ID_PRODUTO', 'PreçoVarejo', 'PreçoAtacado', 'Data Início', 'Data Fim'];
-  function linhasProp(){ const ini = br($('pIni').value), fimd = br($('pFim').value), tipo = String($('pTipo').value || '21'), l = [], vistos = new Set();
+  /* aplicar: Filial | Tipo de Preço | Tipo de Oferta | 1 | Produto | Preço | Início | Fim (varejo = 1, atacado = 2)
+     cancelar: Filial | Tipo de Preço | Tipo de Oferta | Produto */
+  function filhosAceitos(){ const out = [], vistos = new Set();
     for (let i = 0; i < N; i++) { if (!aceito(i)) continue; const pai = D.produto_cod[D.pi[i]], fs = FILHOS.get(String(pai)); if (!fs) continue; const fil = D.filial_cod[D.fi[i]];
-      for (const [filho, prop] of fs) { const ch = fil + '|' + filho; if (vistos.has(ch)) continue; vistos.add(ch);
-        const pv = roundVarejo(NV[i] * prop / 100), pa = NA[i] > 0 ? Math.min(pv, roundAtacado(NA[i] * prop / 100, pv)) : '';
-        l.push([pai, curto(D.produtos[D.pi[i]]), NV[i], prop, fil, 1, tipo, filho, pv, pa, ini, fimd]); } }
+      for (const [filho, prop, nome] of fs) { const ch = fil + '|' + filho; if (vistos.has(ch)) continue; vistos.add(ch);
+        const pv = roundVarejo(NV[i] * prop / 100), pa = NA[i] > 0 ? Math.min(pv, roundAtacado(NA[i] * prop / 100, pv)) : pv;
+        out.push({ i, fil, pai, filho, prop, nome: nome || '', pv, pa }); } }
+    return out; }
+  function linhasProp(){ const ini = br($('pIni').value), fimd = br($('pFim').value), tipo = String($('pTipo').value || '21'), op = $('pOp').value, l = [];
+    const f2 = v => nf2.format(v).replace(/\./g, '');
+    for (const x of filhosAceitos()) {
+      if (op === '1') { l.push([x.fil, '1', tipo, '1', x.filho, f2(x.pv), ini, fimd]); l.push([x.fil, '2', tipo, '1', x.filho, f2(x.pa), ini, fimd]); }
+      else { l.push([x.fil, '1', tipo, x.filho]); l.push([x.fil, '2', tipo, x.filho]); } }
     return l; }
   on($('pProp'), 'click', async e => { const b = e.target.closest('button'); if (!b) return; const l = linhasProp(); if (!l.length) { toast('Nenhum PAI aceito com proporcionais'); return; }
-    if (b.id === 'pXls') { const ws = XLSX.utils.aoa_to_sheet([CAB_P, ...l]), wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Proporcionais');
-      XLSX.writeFile(wb, `PriceMetrics_Proporcionais_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`); toast(nf0.format(l.length) + ' linhas de proporcionais'); }
-    if (b.id === 'pCopy') { try { await navigator.clipboard.writeText(l.map(r => r.map(x => typeof x === 'number' ? nf2.format(x).replace(/\./g, '') : x).join('\t')).join('\n')); toast(nf0.format(l.length) + ' linhas copiadas'); } catch (err) { toast('Não foi possível copiar; use o Excel'); } } });
+    if (b.id === 'pXls') { const ini = br($('pIni').value), fimd = br($('pFim').value);
+      const an = [['Código da Filial', 'Filial', 'Comprador', 'Categoria', 'ID PAI', 'Produto PAI', 'Varejo PAI', 'Atacado PAI', 'Proporção %', 'ID Produto', 'Produto', 'Preço varejo', 'Preço atacado', 'Data início', 'Data fim']];
+      for (const x of filhosAceitos()) an.push([+x.fil, curto(D.filiais[D.fi[x.i]]), D.compradores[D.bi[x.i]], D.cats[D.gi[x.i]], +x.pai, curto(D.produtos[D.pi[x.i]]), NV[x.i], NA[x.i] || null, x.prop, x.filho, x.nome, x.pv, x.pa, ini, fimd]);
+      const cab = $('pOp').value === '1' ? ['ID Filial', 'Tipo de Preço', 'Tipo de Oferta', 'Tipo Operação', 'ID Produto', 'Preço', 'Data Início', 'Data Fim'] : ['ID Filial', 'Tipo de Preço', 'Tipo de Oferta', 'ID Produto'];
+      const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(an), 'Analise'); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([cab, ...l]), 'Importacao');
+      XLSX.writeFile(wb, `PriceMetrics_Proporcionais_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`); toast(nf0.format(an.length - 1) + ' produtos proporcionais no Excel'); }
+    if (b.id === 'pCopy') { try { await navigator.clipboard.writeText(l.map(r => r.join('\t')).join('\n')); toast(nf0.format(l.length) + ' linhas de importação copiadas'); } catch (err) { toast('Não foi possível copiar; use o Excel'); } } });
   $('bProp').onclick = e => { montaProp(); abrir('pProp', e.currentTarget); };
 
   /* ---------- ações ---------- */
