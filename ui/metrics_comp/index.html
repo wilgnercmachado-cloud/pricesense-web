@@ -2540,7 +2540,8 @@ const ic = (n, cor) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="$
   const NOS = Array.from({ length: NP }, () => new Float64Array(T)), NN = Array.from({ length: NP }, () => new Int32Array(T));
   const porK = Array.from({ length: NK }, () => ({ n: 0, rel: 0, nr: 0, menor: 0, prods: new Set() }));
   const colDia = new Int32Array(T);
-  for (let j = 0; j < D.dp.length; j++) { const p = D.dp[j], t = D.dt[j], v = D.dv[j] / 100; if (!(v > 0)) continue;
+  const VALIDO = j => !D.dtp.length || D.dtp[j] === 0 || D.dtp[j] === 1 || D.dtp[j] === 4;   // regular, promoção e ponto extra
+  for (let j = 0; j < D.dp.length; j++) { const p = D.dp[j], t = D.dt[j], v = D.dv[j] / 100; if (!(v > 0) || !VALIDO(j)) continue;
     COL[p]++; KS[p].add(D.dk[j]); VALS[p].push(v); colDia[t]++; if (v < MIN[p][t]) { MIN[p][t] = v; QUEM[p][t] = j; } porK[D.dk[j]].n++; porK[D.dk[j]].prods.add(p); }
   for (let j = 0; j < D.op.length; j++) { const p = D.op[j], t = D.ot[j], v = D.ov[j] / 100; if (v > 0 && t < T) { NOS[p][t] += v; NN[p][t]++; } }
   const MODA = new Float64Array(NP), ULT = new Float64Array(NP).fill(NaN), ULTJ = new Int32Array(NP).fill(-1), HMIN = new Float64Array(NP).fill(Infinity), HMINJ = new Int32Array(NP).fill(-1), NOSSO = new Float64Array(NP);
@@ -2549,7 +2550,7 @@ const ic = (n, cor) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="$
     for (let t = 0; t < T; t++) if (MIN[p][t] < HMIN[p]) { HMIN[p] = MIN[p][t]; HMINJ[p] = QUEM[p][t]; }
     let u = NaN; for (let t = T - 1; t >= 0; t--) if (NN[p][t]) { u = NOS[p][t] / NN[p][t]; break; } NOSSO[p] = isFinite(u) ? u : D.vm[p]; }
   // concorrentes: preço ÷ moda do produto e quantas vezes foram o menor do dia
-  for (let j = 0; j < D.dp.length; j++) { const p = D.dp[j], v = D.dv[j] / 100; if (!(v > 0) || !(MODA[p] > 0)) continue; const o = porK[D.dk[j]]; o.rel += v / MODA[p]; o.nr++; if (QUEM[p][D.dt[j]] === j) o.menor++; }
+  for (let j = 0; j < D.dp.length; j++) { const p = D.dp[j], v = D.dv[j] / 100; if (!(v > 0) || !(MODA[p] > 0) || !VALIDO(j)) continue; const o = porK[D.dk[j]]; o.rel += v / MODA[p]; o.nr++; if (QUEM[p][D.dt[j]] === j) o.menor++; }
   const IPP = p => isFinite(ULT[p]) && ULT[p] > 0 ? NOSSO[p] / ULT[p] : NaN, DM = p => isFinite(ULT[p]) && MODA[p] > 0 ? ULT[p] / MODA[p] - 1 : NaN;
   const ipCor = v => v > 1.009 ? 'var(--down)' : v >= 0.99 ? 'var(--primary)' : 'var(--amber)';
 
@@ -2649,7 +2650,7 @@ const ic = (n, cor) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="$
     if (MODA[p] > 0) g += `<line x1="${pl}" x2="${W - pr}" y1="${Y(MODA[p])}" y2="${Y(MODA[p])}" stroke="#B794FF" stroke-dasharray="5 4"/><text x="${W - pr + 4}" y="${Y(MODA[p]) + 3}" font-size="9" fill="#B794FF" font-family="Geist Mono">moda</text>`;
     g += linha(nos, 'var(--primary)') + linha(mer, 'var(--down)');
     [0, dias.length - 1].forEach(n => { if (dias[n] != null) g += `<text x="${X(n)}" y="${Hh - 4}" text-anchor="${n ? 'end' : 'start'}" font-size="9" fill="var(--faint)" font-family="Geist Mono">${D.T[dias[n]]}</text>`; }); g += '</svg>';
-    const ult = new Map(); for (let j = 0; j < D.dp.length; j++) if (D.dp[j] === p && D.dv[j] > 0) { const k = D.dk[j], o = ult.get(k); if (!o || D.dt[j] > D.dt[o]) ult.set(k, j); }
+    const ult = new Map(); for (let j = 0; j < D.dp.length; j++) if (D.dp[j] === p && D.dv[j] > 0 && VALIDO(j)) { const k = D.dk[j], o = ult.get(k); if (!o || D.dt[j] > D.dt[o]) ult.set(k, j); }
     const tab = [...ult.values()].sort((a, b) => D.dv[a] - D.dv[b]).slice(0, 8).map(j => `<tr><td>${esc(empresa(D.dk[j]))}<small>${esc(curto(D.K[D.dk[j]]).split(' - ').slice(1, 2).join(''))}</small></td><td>${D.T[D.dt[j]]}</td><td>${TPN[D.dtp[j]] || ''}</td><td class="r"><b>${nf2.format(D.dv[j] / 100)}</b></td><td class="r">${D.da[j] > 0 ? nf2.format(D.da[j] / 100) : '–'}</td></tr>`).join('');
     box.innerHTML = `<div class="rtop"><div class="rnome" title="${esc(D.prod[p])}">${esc(curto(D.prod[p]))}</div>${isFinite(IPP(p)) ? `<span class="tag" style="color:${ipCor(IPP(p))}">IP ${nf1.format(IPP(p) * 100)}</span>` : ''}</div>
       <div class="rsub">${esc(curto(D.dep[p]))}, ${esc(curto(D.cat[p]))}. ${D.fil[p]} filiais, venda de R$ ${nf0.format(D.venda[p])} no mês.</div>${g}
