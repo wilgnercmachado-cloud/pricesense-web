@@ -175,7 +175,9 @@ def render() -> None:
         regras = _profimetrics()
     dtfim = meta.get("com_data_fim", 0)
     info = (f"{rel.get('titulo')}: base de {meta.get('atualizado')}, pesquisa de {' a '.join(meta.get('periodo') or [])}. "
-            + (f"Data fim (DTFIM) em {ui.numero(dtfim)} itens." if dtfim else "DTFIM vazia nesta base."))
+            + (f"Data fim (DTFIM) em {ui.numero(dtfim)} itens." if dtfim else "DTFIM vazia nesta base.")
+            + (f" Preço vencedor: coleta mais recente de cada concorrente entre {meta['recorte'][0]} e {meta['recorte'][-1]}, "
+               "só regular, promoção e ponto extra." if meta.get("recorte") else ""))
 
     props = pp.carregar()
     _, pf_meta = pf.carregar()
