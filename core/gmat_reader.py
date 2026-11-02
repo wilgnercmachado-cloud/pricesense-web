@@ -24,7 +24,7 @@ _DICIONARIOS = {"F": "Filial", "C": "Classificação", "B": "Comprador", "D": "D
 _BLOQUEIO = re.compile(r"VENCIMENTO|ENCARTE|MIDIA")
 
 
-VERSAO = "2026-11-02"   # muda quando o formato lido muda: invalida a base guardada em cache no servidor
+VERSAO = "2026-11-02b"   # muda quando o formato lido muda: invalida a base guardada em cache no servidor
 
 
 class ErroLeitura(ValueError):
@@ -96,6 +96,49 @@ def _estoque(html: bytes, n: int) -> dict:
     if "eMC" in col: out["meta_cobertura"] = conv_u2(col["eMC"])
     if "eEX" in col: out["baixo_giro"] = conv_i4(col["eEX"].astype(np.int64))
     return out
+
+
+TIPOS_VALIDOS = {0: "1-PRECO REGULAR", 1: "5-PROMOCAO", 4: "6-PONTO EXTRA"}   # encarte (2), mídia (3) e demais ficam fora
+
+
+def _vencedor_3_dias(df: pd.DataFrame, html: bytes) -> list[str]:
+    """Recalcula o preço vencedor de cada filial x produto.
+
+    Regra: para cada concorrente da filial, a coleta mais recente dentro dos últimos 3 dias de pesquisa da base,
+    só dos tipos REGULAR, PROMOÇÃO e PONTO EXTRA; o vencedor é o menor desses preços. Encarte, mídia, validade e
+    outros tipos ficam fora. Sem coleta válida no recorte, o item fica sem pesquisa.
+    """
+    try:
+        cab, corpo = _bloco(html, "data4")
+    except Exception:
+        return []
+    a = {n: np.frombuffer(corpo, dtype=_DTYPE[t], count=q, offset=o) for n, t, o, q in cab["layout"] if t in _DTYPE}
+    if not {"mP", "mF", "mK", "mT", "mD", "mV"}.issubset(a) or "_p" not in df:
+        return []
+    d = pd.DataFrame({"p": a["mP"].astype(np.int32), "f": a["mF"].astype(np.int32), "k": a["mK"].astype(np.int32), "t": a["mT"].astype(np.int16),
+                      "d": a["mD"].astype(np.int16), "v": a["mV"].astype(np.int64), "a": a.get("mA", a["mV"]).astype(np.int64)})
+    dias = np.sort(np.unique(d["d"]))
+    janela = dias[-3:]
+    d = d[d["t"].isin(list(TIPOS_VALIDOS)) & d["d"].isin(janela) & (d["v"] > 0)]
+    d = d.sort_values(["p", "f", "k", "d", "v"], ascending=[True, True, True, False, True]).drop_duplicates(["p", "f", "k"])   # mais recente de cada concorrente
+    w = d.sort_values(["p", "f", "v", "d"], ascending=[True, True, True, False]).drop_duplicates(["p", "f"])                   # menor entre eles
+    chave = pd.MultiIndex.from_arrays([df["_p"].astype(np.int32).to_numpy(), df["_f"].astype(np.int32).to_numpy()])
+    w = w.set_index(["p", "f"]).reindex(chave)
+    tem = w["v"].notna().to_numpy()
+    nomes, datas = cab.get("K", []), cab.get("T", [])
+    v = np.where(tem, w["v"].to_numpy(dtype=float) / 100, 0.0)
+    at = w["a"].to_numpy(dtype=float) / 100
+    at = np.where(tem, np.where(at > 0, at, v), 0.0)
+    for col in ("mk", "amk", "Concorrente menor", "Data pesquisa", "Tipo de preço"):
+        if col in df:
+            df[col + " (relatório)"] = df[col]
+    df["mk"] = v.astype(df["mk"].dtype if df["mk"].dtype.kind == "f" else np.float64)
+    df["amk"] = at
+    ks, ds_, ts = w["k"].to_numpy(), w["d"].to_numpy(), w["t"].to_numpy()
+    df["Concorrente menor"] = pd.Categorical([str(nomes[int(k)]) if ok and int(k) < len(nomes) else "(sem pesquisa no recorte)" for ok, k in zip(tem, ks)])
+    df["Data pesquisa"] = pd.Categorical([str(datas[int(x)]) if ok and int(x) < len(datas) else "" for ok, x in zip(tem, ds_)])
+    df["Tipo de preço"] = pd.Categorical([TIPOS_VALIDOS.get(int(t), "") if ok else "" for ok, t in zip(tem, ts)])
+    return [str(datas[int(x)]) for x in janela if int(x) < len(datas)]
 
 
 def _array_js(js: str, inicio_padrao: str) -> bytes | None:
@@ -172,7 +215,8 @@ def ler_relatorio(html: bytes) -> tuple[pd.DataFrame, dict]:
     pdv_bloq = df["Tipo de preço PDV"].astype(str).str.contains(_BLOQUEIO)
     df["em_acao"] = (motivo_bloq | pdv_bloq).to_numpy()
 
-    meta = {"atualizado": cab.get("upd"), "periodo": cab.get("hist"), "linhas": n,
+    recorte = _vencedor_3_dias(df, html)
+    meta = {"recorte": recorte, "atualizado": cab.get("upd"), "periodo": cab.get("hist"), "linhas": n,
             "filiais": len(dic.get("F", [])), "produtos": len(dic.get("P", [])), "hist": _historico(html, dic.get("hU")),
             "com_data_fim": int((df["data_fim"] > 0).sum())}
     return df, meta
