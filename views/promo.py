@@ -122,8 +122,10 @@ def _payload(df: pd.DataFrame) -> tuple[str, str]:
         rel_versao = f"{r.get('id')}:{r.get('atualizado_em')}" if r else ""
     except Exception:
         pass
-    with st.spinner("Cruzando a campanha com custo, preço atual e mercado"):
-        ref = _referencias(chaves, rel_versao)
+    ref = {}
+    if len(df):
+        with st.spinner("Cruzando a campanha com custo, preço atual e mercado"):
+            ref = _referencias(chaves, rel_versao)
     iso = lambda s: pd.to_datetime(s, format="%d/%m/%Y", errors="coerce").dt.strftime("%Y-%m-%d").fillna("")
     filn = df["FILIAL ABREV"].astype(str)
     desc = df[c_desc].astype(str) if c_desc and c_desc != "SEQPRODUTO" else pd.Series([""] * len(df), index=df.index)
@@ -150,6 +152,22 @@ def _tipos_oferta() -> list[str]:
         return []
 
 
+def _vazio():
+    """Sem planilhas: mostra o envio e, abaixo, o calendário com o histórico salvo."""
+    ui.cabecalho("Pricing Promo", "Envie as planilhas do encarte: o PromoMetrics abre os clusters, valida preço e período "
+                                  "e cruza cada item com custo, preço atual e mercado.")
+    arquivos = st.file_uploader("Planilhas de encarte (XLSX, XLS ou CSV com ponto e vírgula)", accept_multiple_files=True,
+                                type=["xlsx", "xls", "csv"], key=f"promo_up_inicial_{st.session_state.get('promo_up_ver', 0)}")
+    if arquivos:
+        _carregar(arquivos)
+        st.rerun()
+    hist = db.campanhas_historico()
+    if hist:
+        st.caption(f"{len(hist)} campanhas no histórico. Abra o calendário (ícone de calendário no menu lateral) para ver e atualizar o status.")
+        return pd.DataFrame(columns=["ARQUIVO ORIGEM", "ID FILIAL", "FILIAL ABREV", "SEQPRODUTO", "PRECO_NUM", "INICIO", "FIM"])
+    return None
+
+
 def render() -> None:
     st.html("<style>[data-testid='stMainBlockContainer']{max-width:none !important;padding:4.1rem 1rem 0 1rem !important}"
             ".st-key-promo_topo{position:fixed !important;top:11px;right:122px;z-index:1000002;width:auto !important;gap:6px}"
@@ -158,24 +176,26 @@ def render() -> None:
             "[data-testid='stMainBlockContainer'] [data-testid='stVerticalBlock']{gap:.4rem}</style>")
     df = st.session_state.get("df_promo_processado")
     if df is None:
-        ui.cabecalho("Pricing Promo", "Envie as planilhas do encarte: o PromoMetrics abre os clusters, valida preço e período "
-                                      "e cruza cada item com custo, preço atual e mercado.")
-        arquivos = st.file_uploader("Planilhas de encarte (XLSX, XLS ou CSV com ponto e vírgula)", accept_multiple_files=True,
-                                    type=["xlsx", "xls", "csv"], key="promo_up_inicial")
-        if arquivos:
-            _carregar(arquivos)
-            st.rerun()
+        df = _vazio()
+    if df is None:
         return
 
     with st.container(horizontal=True, vertical_alignment="center", gap="small", key="promo_topo"):
         with st.popover(str(len(st.session_state.get("promo_arquivos", []))), icon=":material/upload_file:", help="Planilhas da campanha"):
             st.caption("Planilhas carregadas: " + ", ".join(st.session_state.get("promo_arquivos", [])))
-            arquivos = st.file_uploader("Trocar ou somar planilhas", accept_multiple_files=True, type=["xlsx", "xls", "csv"], key="promo_up")
+            arquivos = st.file_uploader("Trocar ou somar planilhas", accept_multiple_files=True, type=["xlsx", "xls", "csv"], key=f"promo_up_{st.session_state.get('promo_up_ver', 0)}")
             if arquivos and st.button("Carregar estas planilhas", type="primary", width="stretch", icon=":material/upload:"):
                 st.session_state.pop("promo_arquivos", None)
                 _carregar(arquivos)
                 st.rerun()
         _clusters_fora()
+        with st.popover("", icon=":material/delete_sweep:", help="Limpar todas as bases carregadas"):
+            st.caption("Tira da tela todas as planilhas carregadas e as edições desta sessão. O histórico de campanhas programadas continua salvo.")
+            if st.button("Limpar todas as bases", type="primary", width="stretch", icon=":material/delete_sweep:", key="promo_limpar"):
+                for k in ("df_promo_processado", "promo_arquivos", "clusters_desconhecidos", "campanhas_vencidas", "promo_up", "promo_up_inicial"):
+                    st.session_state.pop(k, None)
+                st.session_state.promo_up_ver = st.session_state.get("promo_up_ver", 0) + 1
+                st.rerun()
 
     if "SEQPRODUTO" not in df.columns:
         st.error("As planilhas não têm a coluna SEQPRODUTO.", icon=":material/error:")
@@ -185,5 +205,13 @@ def render() -> None:
     nomes = ["canvas", "surface", "surface_solid", "field", "raised", "ink", "muted", "faint", "line", "line_strong", "primary", "primary_hover",
              "primary_soft", "up", "up_soft", "down", "amber", "amber_soft"]
     tokens = "".join(f"--{k.replace('_', '-')}:{t[k]};" for k in nomes) + f"--shadow:{t['shadow']};"
-    _PROMO(app="promo", dados=dados, chave=chave, tokens=tokens, fonte=theme.FONTE_URL, usuario=st.session_state.get("usuario_login", ""),
+    ret = _PROMO(app="promo", historico=db.campanhas_historico(), dados=dados, chave=chave, tokens=tokens, fonte=theme.FONTE_URL, usuario=st.session_state.get("usuario_login", ""),
            tipos=_tipos_oferta(), altura=900, key="promo_metrics", default=None)
+    if isinstance(ret, dict) and ret.get("acao") == "campanhas" and ret.get("ts") != st.session_state.get("_promo_ts"):
+        st.session_state._promo_ts = ret.get("ts")
+        try:
+            db.salvar_campanhas(ret.get("campanhas") or [], ret.get("itens") or [], ret.get("status") or "pendente",
+                                st.session_state.get("usuario_login", ""))
+            st.toast("Status das campanhas salvo no histórico.", icon=":material/event_available:")
+        except Exception:
+            st.toast("Não foi possível salvar: crie as tabelas encartes_campanhas e encartes_itens (supabase/migrations.sql).", icon=":material/error:")

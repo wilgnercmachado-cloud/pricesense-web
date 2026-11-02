@@ -1,93 +1,59 @@
-"""Página inicial: atalhos para as ferramentas e últimos relatórios."""
+"""Início: painel de inteligência de mercado (cara de bolsa) com atalhos para as ferramentas e os relatórios."""
 from __future__ import annotations
 
-import streamlit as st
+import hashlib
+from pathlib import Path
 
-from core import auth, db, reports, state
-from ui import components as ui
+import streamlit as st
+import streamlit.components.v1 as components
+
+from core import auth, mercado as mc, profimetrics as pf, reports, state
 from ui import theme
 
-FERRAMENTAS = [
-    ("pesquisa", "Pesquisa de Mercado", "Moda, menor preço e histórico da concorrência a partir da rotina 1067.", "query_stats"),
-    ("promo", "Pricing Promo", "Valida encartes, abre clusters em filiais e aponta conflitos de preço e de data.", "campaign"),
-    ("preco_bot", "Preço Bot", "Arredonda preços pelas regras de gôndola e monta o arquivo de importação do ERP.", "sell"),
-    ("regular", "Pricing Regular", "Análises competitivas de preço regular. Em migração para a nova plataforma.", "price_change"),
-]
+RAIZ = Path(__file__).resolve().parent.parent
+_HOME = components.declare_component("home_metrics", path=str(RAIZ / "ui" / "metrics_comp"))
+DESCR = {"preco_bot": ("Preço Bot", "sell", "Cole preços, aplique a régua e gere a importação"),
+         "promo": ("Pricing Promo", "campaign", "Valide encartes, conflitos e o calendário de campanhas"),
+         "pesquisa": ("Pesquisa de Mercado", "query_stats", "30 dias de coletas, ranking e tendência por estado"),
+         "regular": ("Pricing Regular", "price_change", "PriceMetrics com Optimus, aceite e importação"),
+         "biblioteca": ("Relatórios", "library_books", "Biblioteca de relatórios de mercado")}
 
 
-def _resumo_pesquisa() -> None:
-    """Se uma pesquisa foi carregada nesta sessão, mostra o retrato do mercado logo no início."""
-    df = st.session_state.get("df_pesq_master")
-    if df is None or df.empty:
-        return
-    from core import market_engine as me
-    base = me.filtro_qualidade(df)
-    if base.empty:
-        return
-    k = me.indicadores(base)
-    serie = base.groupby("PESQUISADATA_DT")[me.VAR].min().sort_index().tolist()
-    ui.secao("Mercado na última pesquisa", st.session_state.get("arquivo_pesquisa_nome", ""))
-    ui.etiquetas([
-        ui.etiqueta("Moda varejo", k["moda_var"], tom="primary", serie=serie),
-        ui.etiqueta("Moda atacado", k["moda_atac"], tom="alert"),
-        ui.etiqueta("Menor varejo", k["min"], tom="ok"),
-        ui.etiqueta("Coletas", len(base), tipo="numero"),
-    ])
+def _tokens() -> str:
+    t = theme.tokens()
+    nomes = ["canvas", "surface", "surface_solid", "field", "raised", "ink", "muted", "faint", "line", "line_strong", "primary", "primary_hover",
+             "primary_soft", "up", "up_soft", "down", "amber", "amber_soft"]
+    return "".join(f"--{k.replace('_', '-')}:{t[k]};" for k in nomes) + f"--shadow:{t['shadow']};"
 
 
 def render() -> None:
-    ui.cabecalho(f"Olá, {state.primeiro_nome()}",
-                 extra_html=f"<p class='ps-clock'><i class='ps-live'></i>{ui.data_extenso()}</p>")
-    _resumo_pesquisa()
-    paginas = state.paginas()
-
-    disponiveis = [f for f in FERRAMENTAS if f[0] in paginas]
-    ui.secao("Ferramentas")
-    if not disponiveis:
-        ui.vazio("Nenhuma ferramenta liberada", "Peça a um administrador para liberar as ferramentas que você usa no dia a dia.")
-    else:
-        colunas = st.columns(min(len(disponiveis), 4))
-        for col, (chave, nome, desc, icone) in zip(colunas, disponiveis):
-            with col, st.container(border=True, key=f"psc_tool_{chave}"):
-                st.html(f"<div class='ps-tool'><div class='ic'><span class='ms'>{icone}</span></div>"
-                        f"<h3>{ui.esc(nome)}</h3><p>{ui.esc(desc)}</p></div>")
-                st.page_link(paginas[chave], label="Abrir", icon=":material/arrow_outward:")
-
-    esq, dir_ = st.columns([1.6, 1], gap="large")
-    with esq:
-        ui.secao("Relatórios recentes", "Os últimos publicados para você.")
-        lista = reports.visiveis(st.session_state.usuario_login, auth.eh_admin())[:6]
-        if not lista:
-            texto = ("Publique o primeiro relatório em Relatórios > Publicar."
-                     if auth.pode_publicar() else "Quando a equipe publicar um relatório, ele aparece aqui.")
-            ui.vazio("Nenhum relatório ainda", texto)
-        else:
-            with st.container(border=True, key="psc_recentes"):
-                for rel in lista:
-                    c1, c2 = st.columns([1, 0.22], vertical_alignment="center")
-                    cor = theme.cor_categoria(rel.get("categoria") or "Geral")
-                    c1.html(f"<div class='ps-list-row'><i style='background:{cor}'></i>"
-                            f"<div><b>{ui.esc(rel.get('titulo', ''))}</b><br><span>{ui.esc(rel.get('categoria') or 'Geral')}, "
-                            f"publicado em {ui.data_curta(rel.get('criado_em'))}</span></div><span></span></div>")
-                    if c2.button("Abrir", key=f"home_rel_{rel['id']}", width="stretch", type="tertiary", icon=":material/open_in_new:"):
-                        st.switch_page(paginas["biblioteca"], query_params={"r": rel["id"]})
-
-    with dir_:
-        if auth.eh_admin():
-            ui.secao("Administração")
-            try:
-                pendentes = sum(1 for u in db.listar_usuarios() if u.get("status") == "Pendente")
-            except Exception:
-                pendentes = 0
-            clusters = len(db.listar_solicitacoes_cluster())
-            ui.etiquetas([
-                ui.etiqueta("Acessos aguardando aprovação", pendentes, tipo="numero", tom="promo" if pendentes else "neutro"),
-                ui.etiqueta("Clusters para mapear", clusters, tipo="numero", tom="alert" if clusters else "neutro"),
-            ])
-            st.page_link(paginas["admin"], label="Ir para Administração", icon=":material/admin_panel_settings:")
-        else:
-            ui.secao("Seu acesso")
-            perms = st.session_state.get("permissoes", [])
-            chips = "".join(f"<span class='ps-chip'>{ui.esc(p)}</span> " for p in perms) or "<span class='ps-chip'>Somente relatórios</span>"
-            st.html(f"<div style='display:flex;flex-wrap:wrap;gap:8px'>{chips}</div>")
-            st.caption("Precisa de outra ferramenta? Fale com um administrador.")
+    st.html("<style>[data-testid='stMainBlockContainer']{max-width:1500px !important;padding:3.6rem 1rem 1rem 1rem !important}</style>")
+    paginas = st.session_state.get("_pages", {})
+    painel, base = None, ""
+    try:
+        with st.spinner("Atualizando o painel de mercado"):
+            fonte = mc.base_padrao()
+            if fonte:
+                df, meta, rel = fonte
+                regras, pf_meta = pf.carregar()
+                versao = f"{rel.get('id')}:{rel.get('atualizado_em')}:{pf_meta.get('atualizado_em')}:{pf_meta.get('linhas')}"
+                painel = mc.painel_estados(versao, df, meta, regras)
+                base = f"Base {rel.get('titulo')} de {meta.get('atualizado')}, pesquisa de {' a '.join(meta.get('periodo') or [])}."
+    except Exception:
+        painel = None
+    ferramentas = [[k, *DESCR[k][:1], DESCR[k][1], DESCR[k][2]] for k in ("regular", "promo", "pesquisa", "preco_bot", "biblioteca") if k in paginas]
+    ferramentas = [[k, t, i, d] for k, t, i, d in ferramentas]
+    try:
+        rels = reports.visiveis(st.session_state.usuario_login, auth.eh_admin())[:6]
+    except Exception:
+        rels = []
+    relatorios = [[r["id"], r.get("titulo") or "", str(r.get("categoria") or "")] for r in rels]
+    chave = hashlib.md5(f"{base}|{len(relatorios)}|{len(ferramentas)}".encode()).hexdigest()[:10]
+    ret = _HOME(app="home", chave=chave, tokens=_tokens(), fonte=theme.FONTE_URL, painel=painel or {"estados": [], "serie": {}, "dias": []},
+                ferramentas=ferramentas, relatorios=relatorios, base=base, saudacao=f"Olá, {state.primeiro_nome()}", key="home_metrics", default=None)
+    if isinstance(ret, dict) and ret.get("ts") != st.session_state.get("_home_ts"):
+        st.session_state._home_ts = ret.get("ts")
+        if ret.get("acao") == "ir" and ret.get("pagina") in paginas:
+            st.switch_page(paginas[ret["pagina"]])
+        if ret.get("acao") == "relatorio" and "biblioteca" in paginas:
+            st.switch_page(paginas["biblioteca"], query_params={"r": ret.get("id")})
