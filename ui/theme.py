@@ -173,6 +173,47 @@ html, body, .stApp, button, input, textarea, select, [data-testid="stMarkdownCon
 [data-testid="stTopNavSection"]:hover, [data-testid="stTopNavLink"]:hover {{ background: var(--ps-raised) !important; }}
 @keyframes ps-drop {{ from {{ opacity: 0; transform: translateY(-6px) scale(.98); }} to {{ opacity: 1; transform: none; }} }}
 
+/* ---------- ilha dinâmica: menu das ferramentas centralizado no topo ---------- */
+[data-testid="stTopNav"] {{
+  position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%);
+  max-width: calc(100vw - 560px); flex: none !important; gap: 2px; justify-content: center;
+  padding: 5px 8px !important; border-radius: 999px !important;
+  background: color-mix(in srgb, var(--ps-surface-solid) 72%, transparent) !important;
+  border: 1px solid var(--ps-line); backdrop-filter: blur(18px) saturate(170%); -webkit-backdrop-filter: blur(18px) saturate(170%);
+  box-shadow: 0 10px 30px -16px rgba(15,23,42,.38), inset 0 1px 0 rgba(255,255,255,.28);
+  transition: padding .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s ease, transform .35s cubic-bezier(.2,.8,.2,1);
+}}
+[data-testid="stTopNav"]::before {{
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1.2px; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, transparent 0%, var(--ps-primary) 30%, var(--ps-up) 50%, var(--ps-primary) 70%, transparent 100%) 0 0 / 200% 100%;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+  transition: opacity .35s ease; animation: ps-gira 3.2s linear infinite paused;
+}}
+[data-testid="stTopNav"]:hover {{
+  padding: 7px 12px !important; transform: translate(-50%, -50%) scale(1.03);
+  box-shadow: 0 18px 44px -18px color-mix(in srgb, var(--ps-primary) 60%, transparent), inset 0 1px 0 rgba(255,255,255,.3);
+}}
+[data-testid="stTopNav"]:hover::before {{ opacity: 1; animation-play-state: running; }}
+@keyframes ps-gira {{ from {{ background-position: 0% 0; }} to {{ background-position: 200% 0; }} }}
+[data-testid="stTopNav"] [data-testid="stTopNavLink"], [data-testid="stTopNav"] [data-testid="stTopNavSection"] {{
+  border-radius: 999px !important; transition: background-color .2s ease, color .2s ease, transform .2s cubic-bezier(.2,.8,.2,1) !important;
+}}
+[data-testid="stTopNav"] [data-testid="stTopNavLink"]:hover, [data-testid="stTopNav"] [data-testid="stTopNavSection"]:hover {{
+  transform: translateY(-1px); background: var(--ps-primary-soft) !important; color: var(--ps-primary) !important;
+}}
+[data-testid="stTopNavPopover"] {{ transform-origin: top center; }}
+
+/* ---------- toques modernos e leves ---------- */
+[data-testid="stMainBlockContainer"] > div {{ animation: ps-entra .35s ease-out; }}
+@keyframes ps-entra {{ from {{ opacity: 0; }} to {{ opacity: 1; }} }}   /* só opacidade: transform quebraria os botões fixos do topo */
+::selection {{ background: var(--ps-primary-soft); color: var(--ps-primary); }}
+* {{ scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--ps-ink) 22%, transparent) transparent; }}
+::-webkit-scrollbar {{ width: 9px; height: 9px; }}
+::-webkit-scrollbar-thumb {{ background: color-mix(in srgb, var(--ps-ink) 20%, transparent); border-radius: 9px; border: 2px solid transparent; background-clip: padding-box; }}
+::-webkit-scrollbar-thumb:hover {{ background-color: color-mix(in srgb, var(--ps-primary) 55%, transparent); }}
+@media (prefers-reduced-motion: reduce) {{ *, *::before {{ animation: none !important; transition: none !important; }} }}
+@media (max-width: 900px) {{ [data-testid="stTopNav"] {{ position: static !important; transform: none; max-width: none; }} }}
+
 header[data-testid="stHeader"] {{
   background: color-mix(in srgb, var(--ps-canvas) 62%, transparent);
   backdrop-filter: var(--ps-glass); -webkit-backdrop-filter: var(--ps-glass);
