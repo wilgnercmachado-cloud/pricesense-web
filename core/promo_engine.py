@@ -90,7 +90,9 @@ def processar(dfs: list[pd.DataFrame], df_clusters: pd.DataFrame, mapa_lojas: di
         ids = pd.Series([_normalizar_id(v) for v in df_explodido['ID FILIAL']], index=df_explodido.index, dtype=object)
         df_explodido['ID FILIAL'] = pd.Series(
             [i if i is not None else c for i, c in zip(ids, df_explodido['CLUSTER/LOJA'])], index=df_explodido.index, dtype=object)
-        clusters_fora = df_explodido[df_explodido['ID FILIAL'] == df_explodido['CLUSTER/LOJA']]['CLUSTER/LOJA'].unique().tolist()
+        sem_mapa = df_explodido[df_explodido['ID FILIAL'] == df_explodido['CLUSTER/LOJA']]['CLUSTER/LOJA'].unique().tolist()
+        # código numérico é a própria filial (loja), não um cluster sem mapeamento
+        clusters_fora = [c for c in sem_mapa if not str(c).strip().split('.')[0].isdigit()]
     else:
         df_explodido = df_bruto.copy()
         df_explodido['ID FILIAL'] = df_explodido['CLUSTER/LOJA'] if 'CLUSTER/LOJA' in df_explodido.columns else 'DESCONHECIDO'

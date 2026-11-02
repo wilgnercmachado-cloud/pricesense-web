@@ -96,7 +96,7 @@ def _proporcionais(b: pd.DataFrame, props: pd.DataFrame | None) -> list:
         return []
     pais = set(pd.to_numeric(_codigo(b["Produto"]), errors="coerce").dropna().astype("int64"))
     p = props[props["id_pai"].isin(pais)]
-    return [[int(r.id_pai), int(r.id_produto), float(r.proporcao)] for r in p.itertuples()]
+    return [[int(r.id_pai), int(r.id_produto), float(r.proporcao), str(getattr(r, "nome", "") or "")] for r in p.itertuples()]
 
 
 def payload(b: pd.DataFrame, hist: dict | None = None, props: pd.DataFrame | None = None) -> str:

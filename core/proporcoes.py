@@ -86,7 +86,7 @@ def carregar() -> pd.DataFrame:
     linhas, pagina = [], 0
     try:
         while True:
-            resp = (db.sb().table("dim_produto").select("id_produto, id_pai, proporcao").gt("proporcao", 0)
+            resp = (db.sb().table("dim_produto").select("*").gt("proporcao", 0)
                     .range(pagina * 1000, pagina * 1000 + 999).execute())
             lote = resp.data or []
             linhas.extend(lote)
@@ -95,6 +95,13 @@ def carregar() -> pd.DataFrame:
             pagina += 1
     except Exception:
         return pd.DataFrame(columns=["id_produto", "id_pai", "proporcao"])
-    df = pd.DataFrame(linhas, columns=["id_produto", "id_pai", "proporcao"]).dropna()
+    bruto = pd.DataFrame(linhas)
+    if bruto.empty:
+        return pd.DataFrame(columns=["id_produto", "id_pai", "proporcao", "nome"])
+    # descrição do produto filho, se a dim_produto tiver (descricao, produto, nome...)
+    cand = [c for c in bruto.columns if c not in ("id_produto", "id_pai", "proporcao") and bruto[c].dtype == object
+            and any(t in _norm(c) for t in ("descri", "produto", "nome"))]
+    df = pd.DataFrame({"id_produto": bruto["id_produto"], "id_pai": bruto.get("id_pai"), "proporcao": bruto.get("proporcao"),
+                       "nome": bruto[cand[0]].astype(str) if cand else ""}).dropna(subset=["id_produto", "id_pai", "proporcao"])
     df = df[df["proporcao"] != 100]
     return df.astype({"id_produto": "int64", "id_pai": "int64", "proporcao": "float64"})
