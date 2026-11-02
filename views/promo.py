@@ -18,7 +18,7 @@ from ui import components as ui
 from ui import theme
 
 RAIZ = Path(__file__).resolve().parent.parent
-_PROMO = components.declare_component("promo_metrics", path=str(RAIZ / "ui" / "promo_comp"))
+_PROMO = components.declare_component("promo_metrics", path=str(RAIZ / "ui" / "metrics_comp"))
 
 
 def _carregar(arquivos) -> None:
@@ -185,5 +185,5 @@ def render() -> None:
     nomes = ["canvas", "surface", "surface_solid", "field", "raised", "ink", "muted", "faint", "line", "line_strong", "primary", "primary_hover",
              "primary_soft", "up", "up_soft", "down", "amber", "amber_soft"]
     tokens = "".join(f"--{k.replace('_', '-')}:{t[k]};" for k in nomes) + f"--shadow:{t['shadow']};"
-    _PROMO(dados=dados, chave=chave, tokens=tokens, fonte=theme.FONTE_URL, usuario=st.session_state.get("usuario_login", ""),
+    _PROMO(app="promo", dados=dados, chave=chave, tokens=tokens, fonte=theme.FONTE_URL, usuario=st.session_state.get("usuario_login", ""),
            tipos=_tipos_oferta(), altura=900, key="promo_metrics", default=None)

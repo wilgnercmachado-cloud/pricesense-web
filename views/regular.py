@@ -20,7 +20,7 @@ from ui import theme
 
 RAIZ = Path(__file__).resolve().parent.parent
 # Componente bidirecional: a mesa roda no navegador e devolve ao Python só a visão que o usuário salvar.
-_MESA = components.declare_component("mesa_precificacao", path=str(RAIZ / "ui" / "mesa_comp"))
+_MESA = components.declare_component("mesa_precificacao", path=str(RAIZ / "ui" / "metrics_comp"))
 TELA = "pricing_regular"
 FILTROS = ["Estado", "Diretor regional", "Filial", "Departamento", "Comprador", "Categoria"]
 PADRAO = {"cesta": True, "sem_acoes": False, "pesquisa": "Com pesquisa", **{f: [] for f in FILTROS}}
@@ -177,7 +177,7 @@ def render() -> None:
     if "reg_visao" not in st.session_state:
         st.session_state.reg_visao = db.carregar_visao(usuario, TELA)
     chave = hashlib.md5((dados[:4000] + dados[-4000:] + str(len(dados))).encode()).hexdigest()[:12]   # o tema não reinicia a mesa
-    retorno = _MESA(dados=dados, chave=chave, tokens=_tokens_css(), fonte=theme.FONTE_URL, visao=st.session_state.reg_visao,
+    retorno = _MESA(app="price", dados=dados, chave=chave, tokens=_tokens_css(), fonte=theme.FONTE_URL, visao=st.session_state.reg_visao,
                     altura=900, info=info, usuario=usuario, base=f"{rel.get('id')}:{rel.get('atualizado_em')}",
                     key="mesa_regular", default=None)
     if isinstance(retorno, dict) and retorno.get("acao") == "salvar_visao" and retorno.get("ts") != st.session_state.get("_reg_ts"):
