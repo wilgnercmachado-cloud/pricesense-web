@@ -24,7 +24,7 @@ _DICIONARIOS = {"F": "Filial", "C": "Classificação", "B": "Comprador", "D": "D
 _BLOQUEIO = re.compile(r"VENCIMENTO|ENCARTE|MIDIA")
 
 
-VERSAO = "2026-11-03b"   # muda quando o formato lido muda: invalida a base guardada em cache no servidor
+VERSAO = "2026-11-03c"   # muda quando o formato lido muda: invalida a base guardada em cache no servidor
 
 
 class ErroLeitura(ValueError):
@@ -120,7 +120,7 @@ def _ordinais(labels: list, upd: str) -> np.ndarray:
 
 
 def coletas_html(html: bytes, upd: str) -> dict | None:
-    """Coletas por filial x produto x concorrente x dia (bloco data4), com o dia em ordinal."""
+    """Coletas por filial x produto x concorrente x dia (bloco data4), em tipos compactos (pouca memória)."""
     try:
         cab, corpo = _bloco(html, "data4")
     except Exception:
@@ -128,55 +128,68 @@ def coletas_html(html: bytes, upd: str) -> dict | None:
     a = {n: np.frombuffer(corpo, dtype=_DTYPE[t], count=q, offset=o) for n, t, o, q in cab["layout"] if t in _DTYPE}
     if not {"mP", "mF", "mK", "mT", "mD", "mV"}.issubset(a):
         return None
-    dias = _ordinais(cab.get("T", []), upd)
-    return {"p": a["mP"].astype(np.int32), "f": a["mF"].astype(np.int32), "k": a["mK"].astype(np.int32), "t": a["mT"].astype(np.int16),
-            "dia": dias[a["mD"].astype(np.int64)], "v": a["mV"].astype(np.int64), "a": a.get("mA", a["mV"]).astype(np.int64),
+    dias = _ordinais(cab.get("T", []), upd).astype(np.int32)
+    return {"p": a["mP"].astype(np.int32), "f": a["mF"].astype(np.int16), "k": a["mK"].astype(np.int16), "t": a["mT"].astype(np.int8),
+            "dia": dias[a["mD"].astype(np.int32)], "v": a["mV"].astype(np.int32), "a": a.get("mA", a["mV"]).astype(np.int32),
             "K": [str(x) for x in cab.get("K", [])]}
 
 
-def aplicar_vencedor(df: pd.DataFrame, col: dict, extra: dict | None = None) -> list[str]:
-    """Recalcula o preço vencedor de cada filial x produto (altera df).
+def _chave(p, f, k) -> np.ndarray:
+    return (p.astype(np.int64) << 26) | (f.astype(np.int64) << 13) | k.astype(np.int64)
 
-    1. Recorte: os últimos 3 dias de pesquisa da base (HTML somado à 1067, quando houver).
-    2. Para cada concorrente da filial, o dia mais recente de coleta dentro do recorte, de qualquer tipo.
-    3. Se nesse dia houver coleta de tipo fora de REGULAR, PROMOÇÃO e PONTO EXTRA (encarte, mídia, validade...),
-       o concorrente sai: vale o tipo excluído, mesmo que no mesmo dia exista uma regular.
-    4. O vencedor é o menor preço entre os concorrentes que ficaram. Sem nenhum, o item fica sem pesquisa.
+
+def aplicar_vencedor(df: pd.DataFrame, col: dict, extra: dict | None = None) -> list[str]:
+    """Recalcula o preço vencedor de cada filial x produto (altera df). Feito em numpy, para gastar pouca memória.
+
+    1. Recorte: os últimos 3 dias de pesquisa de cada filial (HTML somado à 1067, quando houver).
+    2. Para cada concorrente associado à filial, o dia mais recente de coleta no recorte, de qualquer tipo.
+    3. Se nesse dia houver coleta de tipo fora de REGULAR, PROMOÇÃO e PONTO EXTRA, o concorrente sai.
+    4. O vencedor é o menor preço entre os que sobraram; a moda é a do concorrente vencedor no período.
     A 1067 substitui o HTML na mesma filial + produto + concorrente + data.
     """
     import datetime as _dt
-    d = pd.DataFrame({k: col[k] for k in ("p", "f", "k", "t", "dia", "v", "a")})
+    cols = ("p", "f", "k", "t", "dia", "v", "a")
+    A = {c: col[c] for c in cols}
     nomes = list(col["K"])
     if extra is not None and len(extra.get("p", [])):
-        e = pd.DataFrame({k: extra[k] for k in ("p", "f", "k", "t", "dia", "v", "a")})
         nomes = nomes + list(extra.get("K_novos", []))
-        chave = lambda x: ((x["p"].astype(np.int64) * 1000 + x["f"]) * 100000 + x["k"]) * 1000000 + x["dia"] % 1000000
-        d = pd.concat([d[~chave(d).isin(set(chave(e)))], e], ignore_index=True)
-    d = d[(d["v"] > 0) & (d["dia"] > 0)]
-    todas = d                                                                                # período inteiro (para a moda)
-    # recorte por filial: os últimos 3 dias de pesquisa de cada filial
-    df_dias = d[["f", "dia"]].drop_duplicates()
-    df_dias["rk"] = df_dias.groupby("f")["dia"].rank(method="dense", ascending=False)
-    corte = df_dias[df_dias["rk"] <= 3].groupby("f")["dia"].min()
-    d = d[d["dia"].to_numpy() >= corte.reindex(d["f"]).to_numpy()]
-    janela = np.sort(np.unique(np.concatenate([[corte.min()], [d["dia"].max()]]))) if len(d) else np.array([], dtype=np.int64)
-    ult = d.groupby(["p", "f", "k"])["dia"].transform("max")
-    d = d[d["dia"] == ult]                                                                   # dia mais recente de cada concorrente
-    fora = ~d["t"].isin(list(TIPOS_VALIDOS))
-    ruins = d[fora].groupby(["p", "f", "k"]).size()
-    if len(ruins):
-        idx = pd.MultiIndex.from_frame(d[["p", "f", "k"]])
-        d = d[~idx.isin(ruins.index)]                                                        # tipo excluído no último dia: concorrente fora
-    d = d.sort_values(["p", "f", "k", "v"]).drop_duplicates(["p", "f", "k"])
-    w = d.sort_values(["p", "f", "v", "dia"], ascending=[True, True, True, False]).drop_duplicates(["p", "f"])
-    # moda do concorrente vencedor no período (coletas regulares, promoção e ponto extra; empate fica com o menor preço)
-    mv = todas[todas["t"].isin(list(TIPOS_VALIDOS))].merge(w[["p", "f", "k"]], on=["p", "f", "k"])
-    def _moda(col):
-        x = mv[mv[col] > 0].groupby(["p", "f", col]).size().reset_index(name="n")
-        x = x.sort_values(["p", "f", "n", col], ascending=[True, True, False, True]).drop_duplicates(["p", "f"])
-        return x.set_index(["p", "f"])[col]
+        kh = _chave(A["p"], A["f"], A["k"]) * 100000 + (A["dia"] % 100000)
+        ke = _chave(extra["p"], extra["f"], extra["k"]) * 100000 + (np.asarray(extra["dia"]) % 100000)
+        manter = ~np.isin(kh, ke)
+        del kh, ke
+        A = {c: np.concatenate([A[c][manter], np.asarray(extra[c]).astype(A[c].dtype)]) for c in cols}
+    ok = (A["v"] > 0) & (A["dia"] > 0)
+    A = {c: A[c][ok] for c in cols}
+    # recorte por filial
+    fd = np.unique((A["f"].astype(np.int64) << 32) | A["dia"].astype(np.int64))
+    ff, dd = (fd >> 32).astype(np.int64), (fd & 0xFFFFFFFF).astype(np.int64)
+    corte = {}
+    for f in np.unique(ff):
+        dias_f = dd[ff == f]
+        corte[int(f)] = int(dias_f[-3]) if len(dias_f) >= 3 else int(dias_f[0])
+    lim = np.zeros(int(ff.max()) + 1 if len(ff) else 1, dtype=np.int64)
+    for f, c in corte.items():
+        lim[f] = c
+    jan = A["dia"] >= lim[A["f"].astype(np.int64)]
+    W = {c: A[c][jan] for c in cols}
+    # dia mais recente de cada concorrente e concorrentes com tipo excluído nesse dia
+    w = pd.DataFrame(W)
+    w["ch"] = _chave(w["p"].to_numpy(), w["f"].to_numpy(), w["k"].to_numpy())
+    w = w[w["dia"].to_numpy() == w.groupby("ch")["dia"].transform("max").to_numpy()]
+    ruins = w.loc[~w["t"].isin(list(TIPOS_VALIDOS)), "ch"].unique()
+    w = w[~w["ch"].isin(ruins)]
+    w = w.sort_values(["ch", "v"]).drop_duplicates("ch")
+    w = w.sort_values(["p", "f", "v", "dia"], ascending=[True, True, True, False]).drop_duplicates(["p", "f"])
+    # moda do concorrente vencedor no período inteiro (regular, promoção e ponto extra; empate: menor preço)
+    valid = np.isin(A["t"], list(TIPOS_VALIDOS)) & np.isin(_chave(A["p"], A["f"], A["k"]), w["ch"].to_numpy())
+    m = pd.DataFrame({"p": A["p"][valid], "f": A["f"][valid], "v": A["v"][valid], "a": A["a"][valid]})
+    def _moda(c):
+        x = m[m[c] > 0].groupby(["p", "f", c]).size().reset_index(name="n")
+        x = x.sort_values(["p", "f", "n", c], ascending=[True, True, False, True]).drop_duplicates(["p", "f"])
+        return x.set_index(["p", "f"])[c]
     moda_v, moda_a = _moda("v"), _moda("a")
-    chave_df = pd.MultiIndex.from_arrays([df["_p"].astype(np.int32).to_numpy(), df["_f"].astype(np.int32).to_numpy()])
+    del m, A, W
+    chave_df = pd.MultiIndex.from_arrays([df["_p"].astype(np.int32).to_numpy(), df["_f"].astype(np.int16).to_numpy()])
     w = w.set_index(["p", "f"]).reindex(chave_df)
     tem = w["v"].notna().to_numpy()
     v = np.where(tem, w["v"].to_numpy(dtype=float) / 100, 0.0)
@@ -191,14 +204,17 @@ def aplicar_vencedor(df: pd.DataFrame, col: dict, extra: dict | None = None) -> 
         mo_v = moda_v.reindex(chave_df).to_numpy(dtype=float) / 100
         mo_a = moda_a.reindex(chave_df).to_numpy(dtype=float) / 100
         df["moda_venc"] = np.where(np.isnan(mo_v), 0, 1).astype(np.int8)
-        df["mo"] = np.where(np.isnan(mo_v), df["mo (relatório)"] if "mo (relatório)" in df else df["mo"], mo_v)
-        df["ma"] = np.where(np.isnan(mo_a), df["ma (relatório)"] if "ma (relatório)" in df else df["ma"], mo_a)
+        df["mo"] = np.where(np.isnan(mo_v), df["mo (relatório)"], mo_v)
+        df["ma"] = np.where(np.isnan(mo_a), df["ma (relatório)"], mo_a)
     ks, ds_, ts = w["k"].to_numpy(), w["dia"].to_numpy(), w["t"].to_numpy()
-    rot = lambda o: _dt.date.fromordinal(int(o)).strftime("%d/%m")
-    df["Concorrente menor"] = pd.Categorical([nomes[int(k)] if ok and int(k) < len(nomes) else "(sem pesquisa no recorte)" for ok, k in zip(tem, ks)])
-    df["Data pesquisa"] = pd.Categorical([rot(x) if ok else "" for ok, x in zip(tem, ds_)])
-    df["Tipo de preço"] = pd.Categorical([TIPOS_VALIDOS.get(int(t), "") if ok else "" for ok, t in zip(tem, ts)])
-    return [rot(x) for x in janela]
+    rotulos = {}
+    rot = lambda o: rotulos.setdefault(int(o), _dt.date.fromordinal(int(o)).strftime("%d/%m"))
+    df["Concorrente menor"] = pd.Categorical([nomes[int(k)] if ok_ and int(k) < len(nomes) else "(sem pesquisa no recorte)" for ok_, k in zip(tem, np.nan_to_num(ks))])
+    dsn = np.nan_to_num(ds_).astype(np.int64)
+    rotulos = {int(u): rot(u) for u in np.unique(dsn[tem])} if tem.any() else {}           # um strftime por dia, não por linha
+    df["Data pesquisa"] = pd.Categorical([rotulos[int(x)] if ok_ else "" for ok_, x in zip(tem, dsn)])
+    df["Tipo de preço"] = pd.Categorical([TIPOS_VALIDOS.get(int(t), "") if ok_ else "" for ok_, t in zip(tem, np.nan_to_num(ts))])
+    return [rot(min(corte.values())), rot(int(dd.max()))] if corte else []
 
 
 def _array_js(js: str, inicio_padrao: str) -> bytes | None:

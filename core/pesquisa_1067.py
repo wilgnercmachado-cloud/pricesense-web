@@ -171,17 +171,21 @@ def ler(arquivos) -> dict:
 
 
 def _caminho(usuario: str) -> str:
-    return f"{PASTA}/{re.sub(r'[^a-z0-9_.-]', '_', (usuario or 'anon').lower())}.json.gz"
+    return f"{PASTA}/{re.sub(r'[^a-z0-9_.-]', '_', (usuario or 'anon').lower())}.npz"
 
 
 def salvar(lido: dict, base: str, usuario: str) -> dict:
+    """Grava em formato binário compacto (numpy): leve para guardar e rápido para ler a cada abertura."""
     t = lido["tab"]
     meta = {"base": base, "usuario": usuario, "em": dt.datetime.now(dt.timezone.utc).isoformat(), "linhas": int(len(t)),
             "dias": lido["dias"], "arquivos": lido["arquivos"], "concorrentes": int(t["k"].nunique()), "filiais": int(t["f"].nunique())}
-    pacote = {"meta": meta, "nomes": {str(k): v for k, v in lido["nomes"].items()}, **{c: t[c].astype(int).tolist() for c in t.columns}}
-    db.sb().storage.from_(BUCKET).upload(_caminho(usuario), gzip.compress(json.dumps(pacote, separators=(",", ":")).encode(), 6),
-                                         {"content-type": "application/gzip", "upsert": "true", "cache-control": "60"})
-    carregar.clear()
+    buf = io.BytesIO()
+    np.savez_compressed(buf, f=t["f"].to_numpy(np.int32), p=t["p"].to_numpy(np.int32), k=t["k"].to_numpy(np.int32), dia=t["dia"].to_numpy(np.int32),
+                        t=t["t"].to_numpy(np.int8), v=t["v"].to_numpy(np.int32), a=t["a"].to_numpy(np.int32),
+                        meta=np.frombuffer(json.dumps(meta).encode(), dtype=np.uint8),
+                        nomes=np.frombuffer(json.dumps({str(k): v for k, v in lido["nomes"].items()}).encode(), dtype=np.uint8))
+    db.sb().storage.from_(BUCKET).upload(_caminho(usuario), buf.getvalue(), {"content-type": "application/octet-stream", "upsert": "true"})
+    _lista.clear(); _somar.clear()
     return meta
 
 
@@ -189,58 +193,72 @@ def remover(usuario: str) -> None:
     try:
         db.sb().storage.from_(BUCKET).remove([_caminho(usuario)])
     finally:
-        carregar.clear()
+        _lista.clear(); _somar.clear()
 
 
-@st.cache_data(ttl=120, show_spinner=False)
-def carregar(base: str) -> dict | None:
-    """Soma as 1067 de todos os usuários enviadas para este HTML. Na mesma filial + produto + concorrente + data,
-    vale o envio mais recente. Envios feitos para um HTML anterior são ignorados."""
+@st.cache_data(ttl=60, show_spinner=False)
+def _lista() -> tuple:
+    """Arquivos enviados (nome + data de atualização): muda só quando alguém envia ou remove."""
     try:
-        nomes = [x["name"] for x in (db.sb().storage.from_(BUCKET).list(PASTA) or []) if str(x.get("name", "")).endswith(".json.gz")]
+        itens = db.sb().storage.from_(BUCKET).list(PASTA) or []
     except Exception:
-        return None
+        return ()
+    return tuple(sorted((x["name"], str(x.get("updated_at") or x.get("created_at") or "")) for x in itens if str(x.get("name", "")).endswith(".npz")))
+
+
+def carregar(base: str) -> dict | None:
+    lista = _lista()
+    return _somar(base, lista) if lista else None
+
+
+@st.cache_resource(show_spinner=False, max_entries=1)
+def _somar(base: str, lista: tuple) -> dict | None:
+    """Soma as 1067 de todos os usuários enviadas para este HTML (guardado em memória sem cópia a cada execução).
+    Na mesma filial + produto + concorrente + data, vale o envio mais recente; envios para outro HTML são ignorados."""
     pacotes = []
-    for n in nomes:
+    for nome, _ in lista:
         try:
-            pc = json.loads(gzip.decompress(db.sb().storage.from_(BUCKET).download(f"{PASTA}/{n}")))
-            if pc.get("meta", {}).get("base") == base:
-                pacotes.append(pc)
+            z = np.load(io.BytesIO(db.sb().storage.from_(BUCKET).download(f"{PASTA}/{nome}")))
+            meta = json.loads(z["meta"].tobytes())
+            if meta.get("base") != base:
+                continue
+            pacotes.append((meta, json.loads(z["nomes"].tobytes()), {c: z[c] for c in ("f", "p", "k", "dia", "t", "v", "a")}))
         except Exception:
             continue
     if not pacotes:
         return None
-    pacotes.sort(key=lambda pc: pc["meta"]["em"])
-    tab = pd.concat([pd.DataFrame({c: pc[c] for c in ("f", "p", "k", "dia", "t", "v", "a")}).assign(_o=n) for n, pc in enumerate(pacotes)], ignore_index=True)
-    ult = tab.groupby(["f", "p", "k", "dia"])["_o"].transform("max")
-    tab = tab[tab["_o"] == ult].drop(columns="_o")                                   # envio mais recente vence no confronto
+    pacotes.sort(key=lambda x: x[0]["em"])
+    tab = pd.concat([pd.DataFrame(arr).assign(_o=np.int8(n)) for n, (_, _, arr) in enumerate(pacotes)], ignore_index=True)
+    if len(pacotes) > 1:
+        ult = tab.groupby(["f", "p", "k", "dia"])["_o"].transform("max")
+        tab = tab[tab["_o"] == ult]
     nomes_k = {}
-    for pc in pacotes:
-        nomes_k.update(pc.get("nomes", {}))
-    envios = [pc["meta"] for pc in pacotes]
+    for _, nm, _ in pacotes:
+        nomes_k.update(nm)
+    envios = [m for m, _, _ in pacotes]
     dias = sorted({d for m in envios for d in m["dias"]}, key=lambda d: dt.datetime.strptime(d, "%d/%m/%Y"))
     meta = {"base": base, "em": max(m["em"] for m in envios), "envios": envios, "dias": dias, "linhas": int(len(tab)),
             "filiais": int(tab["f"].nunique()), "concorrentes": int(tab["k"].nunique())}
-    return {"meta": meta, "nomes": nomes_k, **{c: tab[c].astype(int).tolist() for c in tab.columns}}
+    return {"meta": meta, "nomes": nomes_k, **{c: tab[c].to_numpy() for c in ("f", "p", "k", "dia", "t", "v", "a")}}
 
 
 def para_indices(pacote: dict, df: pd.DataFrame, nomes_k: list[str]) -> dict:
     """Converte códigos da 1067 nos índices da base (produto, filial, concorrente). Concorrente novo ganha índice próprio."""
-    cod = lambda cats: {_codigo(c): i for i, c in enumerate(cats) if _codigo(c) is not None}
-    mp, mf = cod(df["Produto"].cat.categories), cod(df["Filial"].cat.categories)
-    mk = {}
-    for i, nome in enumerate(nomes_k):
-        c = _codigo(nome)
-        if c is not None and c not in mk:
-            mk[c] = i
-    novos = []
-    for c in sorted(set(pacote["k"])):
-        if c not in mk:
-            mk[c] = len(nomes_k) + len(novos)
-            novos.append(pacote["nomes"].get(str(c), str(c)))
-    p = np.array([mp.get(x, -1) for x in pacote["p"]]); f = np.array([mf.get(x, -1) for x in pacote["f"]])
-    ok = (p >= 0) & (f >= 0)
-    k = np.array([mk[x] for x in pacote["k"]])
+    def mapa(cats):
+        cod = pd.Series([_codigo(c) for c in cats], dtype="float")
+        s = pd.Series(np.arange(len(cats)), index=cod.to_numpy())
+        return s[~s.index.duplicated() & ~np.isnan(s.index.to_numpy())]
+    mp, mf = mapa(df["Produto"].cat.categories), mapa(df["Filial"].cat.categories)
+    mk = mapa(nomes_k)
+    pk = np.asarray(pacote["k"])
+    novos_cod = [c for c in np.unique(pk) if float(c) not in mk.index]
+    novos = [pacote["nomes"].get(str(int(c)), str(int(c))) for c in novos_cod]
+    if novos_cod:
+        mk = pd.concat([mk, pd.Series(np.arange(len(nomes_k), len(nomes_k) + len(novos_cod)), index=np.asarray(novos_cod, dtype=float))])
+    p = mp.reindex(np.asarray(pacote["p"], dtype=float)).to_numpy()
+    f = mf.reindex(np.asarray(pacote["f"], dtype=float)).to_numpy()
+    k = mk.reindex(pk.astype(float)).to_numpy()
+    ok = ~np.isnan(p) & ~np.isnan(f) & ~np.isnan(k)
     arr = lambda c: np.asarray(pacote[c])[ok]
     return {"p": p[ok].astype(np.int32), "f": f[ok].astype(np.int32), "k": k[ok].astype(np.int32), "t": arr("t").astype(np.int16),
             "dia": arr("dia").astype(np.int64), "v": arr("v").astype(np.int64), "a": arr("a").astype(np.int64), "K_novos": novos,
