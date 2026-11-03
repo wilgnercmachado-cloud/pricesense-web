@@ -1,6 +1,7 @@
 """Pricing Regular: mesa de precificação sobre a base do relatório Competitividade Pricing GMAT."""
 from __future__ import annotations
 
+import gzip
 import hashlib
 import json
 from pathlib import Path
@@ -151,6 +152,11 @@ def _dados_mesa(filtros: str, versao: str, _df_all, _meta, _regras, _props) -> t
     return dados, len(b), hashlib.md5((dados[:4000] + dados[-4000:] + str(len(dados))).encode()).hexdigest()[:12]
 
 
+@st.cache_data(show_spinner=False, max_entries=3)
+def _abrir_backup(caminho: str, versao: str) -> dict:
+    return json.loads(gzip.decompress(db.ler_backup(caminho)))
+
+
 def render() -> None:
     st.html("<style>[data-testid='stMainBlockContainer']{max-width:none !important;padding:4.1rem 1rem 0 1rem !important}"
             # filtros e regras ficam na barra do topo, ao lado dos botões de tela cheia e tema
@@ -188,9 +194,45 @@ def render() -> None:
     usuario = st.session_state.get("usuario_login", "")
     if "reg_visao" not in st.session_state:
         st.session_state.reg_visao = db.carregar_visao(usuario, TELA)
+    base_id = f"{rel.get('id')}:{rel.get('atualizado_em')}"
+    backups = db.listar_backups(usuario)
+    historico, estado = None, None
+    aberto = st.session_state.get("reg_backup")
+    if aberto:
+        try:
+            with st.spinner(f"Abrindo o backup de {aberto['dia']}"):
+                pacote = _abrir_backup(aberto["caminho"], aberto.get("criado_em", ""))
+            dados, chave, estado = pacote["dados"], "bkp-" + aberto["dia"] + "-" + pacote.get("chave", ""), pacote.get("estado") or {}
+            historico = {"dia": aberto["dia"], "criado_em": aberto.get("criado_em", ""), "resumo": aberto.get("resumo") or {},
+                         "info": pacote.get("info", ""), "filtros": pacote.get("filtros") or {}}
+            info = pacote.get("info", info)
+        except Exception as exc:
+            st.session_state.pop("reg_backup", None)
+            st.error(f"Não foi possível abrir o backup: {exc}", icon=":material/error:")
     retorno = _MESA(app="price", dados=dados, chave=chave, tokens=_tokens_css(), fonte=theme.FONTE_URL, visao=st.session_state.reg_visao,
-                    altura=900, info=info, usuario=usuario, base=f"{rel.get('id')}:{rel.get('atualizado_em')}",
+                    altura=900, info=info, usuario=usuario, base=base_id, backups=backups, historico=historico, estado=estado,
                     key="mesa_regular", default=None)
+    if isinstance(retorno, dict) and retorno.get("ts") != st.session_state.get("_reg_ts") and retorno.get("acao") in ("backup", "abrir_backup", "sair_backup"):
+        st.session_state._reg_ts = retorno.get("ts")
+        acao = retorno["acao"]
+        if acao == "backup" and not historico:
+            try:
+                dia = retorno.get("dia") or str(pd.Timestamp.now(tz="America/Bahia").date())
+                pacote = {"dados": dados, "chave": chave, "estado": retorno.get("estado") or {}, "info": info, "filtros": f, "base": base_id}
+                conteudo = gzip.compress(json.dumps(pacote, ensure_ascii=False, separators=(",", ":")).encode(), 6)
+                db.salvar_backup(usuario, dia, conteudo, retorno.get("resumo") or {})
+                if not retorno.get("silencioso"):
+                    st.toast(f"Backup de {dia} salvo. Ficam guardados os últimos 3 dias.", icon=":material/history:")
+            except Exception:
+                st.toast("Não foi possível salvar o backup: crie a tabela backups_precificacao (supabase/migrations.sql).", icon=":material/error:")
+        elif acao == "abrir_backup":
+            alvo = next((b for b in backups if str(b.get("dia")) == str(retorno.get("dia"))), None)
+            if alvo:
+                st.session_state.reg_backup = alvo
+                st.rerun()
+        elif acao == "sair_backup":
+            st.session_state.pop("reg_backup", None)
+            st.rerun()
     if isinstance(retorno, dict) and retorno.get("acao") == "salvar_visao" and retorno.get("ts") != st.session_state.get("_reg_ts"):
         st.session_state._reg_ts = retorno.get("ts")
         try:
