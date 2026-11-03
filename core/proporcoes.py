@@ -45,7 +45,7 @@ def ler_planilha(arquivo) -> pd.DataFrame:
                        "id_pai": pd.to_numeric(bruto[mapa["idpai"]], errors="coerce"),
                        "proporcao": pd.to_numeric(bruto[mapa["proporcao"]], errors="coerce")})
     df = df.dropna()
-    df = df[(df["proporcao"] != 100) & (df["proporcao"] > 0) & (df["id_produto"] != df["id_pai"])]
+    df = df[(df["proporcao"] > 0) & (df["id_produto"] != df["id_pai"])]   # 100% (similares) também: definem quem é PAI
     df = df.astype({"id_produto": "int64", "id_pai": "int64"})
     return df.drop_duplicates("id_produto", keep="last").reset_index(drop=True)
 
@@ -103,5 +103,4 @@ def carregar() -> pd.DataFrame:
             and any(t in _norm(c) for t in ("descri", "produto", "nome"))]
     df = pd.DataFrame({"id_produto": bruto["id_produto"], "id_pai": bruto.get("id_pai"), "proporcao": bruto.get("proporcao"),
                        "nome": bruto[cand[0]].astype(str) if cand else ""}).dropna(subset=["id_produto", "id_pai", "proporcao"])
-    df = df[df["proporcao"] != 100]
     return df.astype({"id_produto": "int64", "id_pai": "int64", "proporcao": "float64"})

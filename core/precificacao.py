@@ -23,10 +23,49 @@ def curva_abc(df: pd.DataFrame) -> pd.Series:
     return pd.Series(curva, index=ordem.index).reindex(df.index)
 
 
+def so_pais(b: pd.DataFrame, props: pd.DataFrame | None) -> pd.DataFrame:
+    """Deixa só o produto PAI de cada família (base PROP%).
+
+    Filhos (similares 100% e proporcionais) saem da mesa. Se o PAI estiver sem estoque na filial (ou nem estiver nela),
+    entra no lugar dele o filho de proporção 100% com maior venda naquela filial. A coluna pai_subst guarda o PAI substituído.
+    """
+    if props is None or not len(props) or not len(b):
+        return b.assign(pai_subst=0)
+    rel = props[props["id_produto"] != props["id_pai"]].drop_duplicates("id_produto", keep="last")
+    pai_de = pd.Series(rel["id_pai"].to_numpy(), index=rel["id_produto"].to_numpy())
+    prop_de = pd.Series(rel["proporcao"].to_numpy(), index=rel["id_produto"].to_numpy())
+    pc = pd.to_numeric(_codigo(b["Produto"]), errors="coerce").fillna(-1).astype("int64").to_numpy()
+    fc = _codigo(b["Filial"]).to_numpy()
+    filho = np.isin(pc, pai_de.index.to_numpy())
+    qtd = b["qtd"].to_numpy(dtype=float) if "qtd" in b else np.ones(len(b))
+    com_est = ~filho & (np.nan_to_num(qtd) > 0)
+    pais_ok = set(zip(fc[com_est], pc[com_est]))
+    c = pd.DataFrame({"pos": np.nonzero(filho)[0], "f": fc[filho], "pai": pai_de.reindex(pc[filho]).to_numpy(),
+                      "prop": prop_de.reindex(pc[filho]).to_numpy(), "venda": b["venda"].to_numpy(dtype=float)[filho]})
+    c = c[(c["prop"] == 100).to_numpy() & np.array([(f, p) not in pais_ok for f, p in zip(c["f"], c["pai"])], dtype=bool)]
+    escolhidos = c.sort_values("venda", ascending=False).drop_duplicates(["f", "pai"])
+    trocados = set(zip(escolhidos["f"], escolhidos["pai"]))
+    manter = ~filho & np.array([(f, p) not in trocados for f, p in zip(fc, pc)], dtype=bool)
+    pos = np.sort(np.concatenate([np.nonzero(manter)[0], escolhidos["pos"].to_numpy()]))
+    subst = np.zeros(len(b), dtype=np.int64)
+    subst[escolhidos["pos"].to_numpy()] = escolhidos["pai"].astype(np.int64).to_numpy()
+    # o substituto herda a marcação de cesta do PAI, para não sumir do filtro "Só cesta"
+    out = b.iloc[pos].assign(pai_subst=subst[pos])
+    if "Cesta" in b and len(escolhidos):
+        cesta_pai = {(f, p): str(x) for f, p, x in zip(fc[~filho], pc[~filho], b["Cesta"].astype(str).to_numpy()[~filho])}
+        cesta = out["Cesta"].astype(str).to_numpy().copy()
+        fo = _codigo(out["Filial"]).to_numpy()
+        for k in np.nonzero(out["pai_subst"].to_numpy())[0]:
+            cesta[k] = cesta_pai.get((fo[k], out["pai_subst"].to_numpy()[k]), cesta[k])
+        out = out.assign(Cesta=cesta)
+    return out
+
+
 def base(df: pd.DataFrame, so_cesta: bool = True, ignorar_acoes: bool = False, regras: pd.DataFrame | None = None,
-         com_pesquisa: bool = True) -> pd.DataFrame:
+         com_pesquisa: bool = True, props: pd.DataFrame | None = None) -> pd.DataFrame:
     """com_pesquisa=True: só itens com pesquisa direta (menor preço). False: os sem pesquisa, que vão para o objetivo."""
     b = df[df["cu"] > 0.09]
+    b = so_pais(b, props)
     if so_cesta and "Cesta" in b:
         b = b[b["Cesta"].astype(str) == "CESTA"]
     b = b.assign(Curva=curva_abc(b))
@@ -95,7 +134,7 @@ def _proporcionais(b: pd.DataFrame, props: pd.DataFrame | None) -> list:
     if props is None or props.empty:
         return []
     pais = set(pd.to_numeric(_codigo(b["Produto"]), errors="coerce").dropna().astype("int64"))
-    p = props[props["id_pai"].isin(pais)]
+    p = props[props["id_pai"].isin(pais) & (props["proporcao"] != 100)]   # 100% são similares: não entram na importação de proporcionais
     return [[int(r.id_pai), int(r.id_produto), float(r.proporcao), str(getattr(r, "nome", "") or "")] for r in p.itertuples()]
 
 
@@ -133,6 +172,7 @@ def payload(b: pd.DataFrame, hist: dict | None = None, props: pd.DataFrame | Non
         "dfim": [int(x) for x in col("data_fim").fillna(0)],
         "un": [round(float(x), 1) for x in un], "venda": [round(float(x)) for x in venda],
         "tcol": _tipo_coleta(col("Tipo de preço").astype(str)),
+        "subst": [int(x) for x in col("pai_subst").fillna(0)],
         "props": _proporcionais(b, props),
         **_historico(b, hist, filiais, produtos, ufs),
     }
