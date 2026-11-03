@@ -29,7 +29,7 @@ PADRAO = {"cesta": True, "sem_acoes": False, "pesquisa": "Com pesquisa", **{f: [
 LIMITE = 400_000
 
 
-@st.cache_resource(show_spinner=False, max_entries=2)
+@st.cache_resource(show_spinner=False, max_entries=1)
 def _base_publicada(caminho: str, partes: int, versao: str, leitor: str = "") -> tuple[pd.DataFrame, dict]:
     return gr.ler_de_gzip_ou_html(reports.baixar_conteudo({"arquivo_path": caminho, "partes": partes}))
 
@@ -42,7 +42,7 @@ def _relatorio_padrao() -> dict | None:
             or next((r for r in todos if "gmat" in titulo(r)), None))
 
 
-@st.cache_resource(show_spinner=False, max_entries=2)
+@st.cache_resource(show_spinner=False, max_entries=1)
 def _com_1067(base_id: str, em_1067: str, _df: pd.DataFrame, _meta: dict, _pacote: dict) -> tuple[pd.DataFrame, dict]:
     """Base do HTML somada à 1067 (sem mexer na cópia em cache do HTML)."""
     from core import pesquisa_1067 as p67
@@ -194,7 +194,7 @@ def _tokens_css() -> str:
     return "".join(f"--{k.replace('_', '-')}:{t[k]};" for k in nomes) + f"--shadow:{t['shadow']};"
 
 
-@st.cache_resource(show_spinner=False, max_entries=8)
+@st.cache_resource(show_spinner=False, max_entries=4)
 def _dados_mesa(filtros: str, versao: str, _df_all, _meta, _regras, _props) -> tuple[str | None, int, str]:
     """Pacote da mesa guardado por filtro + versão da base e das regras: reabrir a página não refaz o cálculo."""
     f = json.loads(filtros)
@@ -211,7 +211,7 @@ def _dados_mesa(filtros: str, versao: str, _df_all, _meta, _regras, _props) -> t
     return dados, len(b), hashlib.md5((dados[:4000] + dados[-4000:] + str(len(dados))).encode()).hexdigest()[:12]
 
 
-@st.cache_data(show_spinner=False, max_entries=3)
+@st.cache_resource(show_spinner=False, max_entries=1)
 def _abrir_backup(caminho: str, versao: str) -> dict:
     return json.loads(gzip.decompress(db.ler_backup(caminho)))
 
