@@ -85,7 +85,7 @@ def _referencias(chaves: tuple[str, ...], versao: str) -> dict:
         rel = regular._relatorio_padrao()
         if rel is None:
             return {}
-        df, _ = regular._base_publicada(rel["arquivo_path"], int(rel.get("partes") or 1), str(rel.get("atualizado_em")), regular.gr.VERSAO)
+        df, _, _ = regular.base_atual()
     except Exception:
         return {}
     prods = {k.split("|")[1] for k in chaves}
@@ -119,7 +119,8 @@ def _payload(df: pd.DataFrame) -> tuple[str, str]:
     try:
         from views import regular
         r = regular._relatorio_padrao()
-        rel_versao = f"{r.get('id')}:{r.get('atualizado_em')}" if r else ""
+        from core import pesquisa_1067 as p67
+        rel_versao = (f"{r.get('id')}:{r.get('atualizado_em')}:{((p67.carregar(str(r.get('id')) + ':' + str(r.get('atualizado_em'))) or {}).get('meta') or {}).get('em')}") if r else ""
     except Exception:
         pass
     ref = {}
@@ -154,7 +155,7 @@ def _tipos_oferta() -> list[str]:
 
 def _vazio():
     """Sem planilhas: mostra o envio e, abaixo, o calendário com o histórico salvo."""
-    ui.cabecalho("Pricing Promo", "Envie as planilhas do encarte: o PromoMetrics abre os clusters, valida preço e período "
+    ui.cabecalho("Metrics Promo", "Envie as planilhas do encarte: o Metrics Promo abre os clusters, valida preço e período "
                                   "e cruza cada item com custo, preço atual e mercado.")
     arquivos = st.file_uploader("Planilhas de encarte (XLSX, XLS ou CSV com ponto e vírgula)", accept_multiple_files=True,
                                 type=["xlsx", "xls", "csv"], key=f"promo_up_inicial_{st.session_state.get('promo_up_ver', 0)}")

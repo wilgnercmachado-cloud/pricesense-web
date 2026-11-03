@@ -36,7 +36,7 @@ def render() -> None:
             if fonte:
                 df, meta, rel = fonte
                 regras, pf_meta = pf.carregar()
-                versao = f"{rel.get('id')}:{rel.get('atualizado_em')}:{pf_meta.get('atualizado_em')}:{pf_meta.get('linhas')}"
+                versao = f"{rel.get('id')}:{rel.get('atualizado_em')}:{pf_meta.get('atualizado_em')}:{pf_meta.get('linhas')}:{(meta.get('p1067') or {}).get('em')}"
                 painel = mc.painel_estados(versao, df, meta, regras)
                 base = f"Base {rel.get('titulo')} de {meta.get('atualizado')}, pesquisa de {' a '.join(meta.get('periodo') or [])}."
     except Exception:

@@ -42,6 +42,30 @@ def _relatorio_padrao() -> dict | None:
             or next((r for r in todos if "gmat" in titulo(r)), None))
 
 
+@st.cache_resource(show_spinner=False, max_entries=2)
+def _com_1067(base_id: str, em_1067: str, _df: pd.DataFrame, _meta: dict, _pacote: dict) -> tuple[pd.DataFrame, dict]:
+    """Base do HTML somada à 1067 (sem mexer na cópia em cache do HTML)."""
+    from core import pesquisa_1067 as p67
+    ext = p67.para_indices(_pacote, _df, _meta["coletas"]["K"])
+    df = _df.assign()                                     # cópia rasa: só as colunas do vencedor são trocadas
+    recorte = gr.aplicar_vencedor(df, _meta["coletas"], ext)
+    return df, dict(_meta, recorte=recorte, p1067={**_pacote["meta"], "na_base": int(len(ext["p"])), "fora_da_base": ext["fora_da_base"]})
+
+
+def base_atual() -> tuple[pd.DataFrame, dict, dict] | None:
+    """Base do Competitividade Pricing GMAT + a 1067 enviada para este mesmo HTML (se houver). Sem interface."""
+    from core import pesquisa_1067 as p67
+    rel = _relatorio_padrao()
+    if rel is None:
+        return None
+    df, meta = _base_publicada(rel["arquivo_path"], int(rel.get("partes") or 1), str(rel.get("atualizado_em")), gr.VERSAO)
+    base_id = f"{rel.get('id')}:{rel.get('atualizado_em')}"
+    pacote = p67.carregar(base_id)
+    if pacote and meta.get("coletas"):
+        df, meta = _com_1067(base_id, pacote["meta"]["em"], df, meta, pacote)
+    return df, meta, rel
+
+
 def _fonte() -> tuple[pd.DataFrame, dict, dict] | None:
     rel = _relatorio_padrao()
     if rel is None:
@@ -50,8 +74,7 @@ def _fonte() -> tuple[pd.DataFrame, dict, dict] | None:
         return None
     try:
         with st.spinner("Lendo a base do Competitividade Pricing GMAT (alguns segundos na primeira vez)"):
-            df, meta = _base_publicada(rel["arquivo_path"], int(rel.get("partes") or 1), str(rel.get("atualizado_em")), gr.VERSAO)
-        return df, meta, rel
+            return base_atual()
     except gr.ErroLeitura as exc:
         st.error(str(exc), icon=":material/error:")
     except Exception as exc:
@@ -81,6 +104,42 @@ def _filtros(df: pd.DataFrame) -> dict:
                 ss[f"rf_{k}"] = list(v) if isinstance(v, list) else v
             st.rerun()
     return {k: (list(ss[f"rf_{k}"]) if isinstance(PADRAO[k], list) else ss[f"rf_{k}"]) for k in PADRAO}
+
+
+def _pesquisa_1067(rel: dict, meta: dict) -> None:
+    """Upload da 1067: a pesquisa mais recente somada ao HTML (que chega em D+1)."""
+    from core import pesquisa_1067 as p67
+    base_id = f"{rel.get('id')}:{rel.get('atualizado_em')}"
+    atual = meta.get("p1067")
+    eu = st.session_state.get("usuario_login", "")
+    with st.popover(atual["dias"][-1][:5] if atual else "", icon=":material/add_chart:", help="Pesquisa mais recente (1067)"):
+        st.markdown("**Pesquisa mais recente (1067)**")
+        st.caption("O HTML chega no dia seguinte à pesquisa. Cada usuário envia a sua 1067: todas são somadas ao histórico deste HTML, "
+                   "e na mesma filial + produto + concorrente + data vale a coleta mais recente enviada. Com HTML novo, os envios são descartados.")
+        if atual:
+            st.caption(f"Na base agora: {ui.numero(atual['na_base'])} coletas de {', '.join(d[:5] for d in atual['dias'])}, "
+                       f"{atual['filiais']} filiais e {atual['concorrentes']} concorrentes"
+                       + (f"; {ui.numero(atual['fora_da_base'])} coletas de filiais ou produtos fora do HTML ficaram de fora." if atual.get("fora_da_base") else "."))
+            for e in atual.get("envios", []):
+                st.caption(f"• {e['usuario']}: {ui.numero(e['linhas'])} coletas de {', '.join(d[:5] for d in e['dias'])}, "
+                           f"{e['filiais']} filiais, em {str(e['em'])[:16].replace('T', ' ')}")
+        st.caption("Colunas obrigatórias: " + ", ".join(p67.OBRIGATORIAS.values()) + ". Aceita CSV, XLSX ou ZIP.")
+        arqs = st.file_uploader("1067", type=["csv", "txt", "xlsx", "xls", "zip"], accept_multiple_files=True, key="reg_1067", label_visibility="collapsed")
+        c1, c2 = st.columns(2)
+        if c1.button("Somar à base", type="primary", width="stretch", icon=":material/add_chart:", disabled=not arqs, key="reg_1067_ok"):
+            try:
+                with st.spinner("Lendo a 1067 e somando à base"):
+                    lido = p67.ler(arqs)
+                    m = p67.salvar(lido, base_id, eu)
+                st.toast(f"1067 somada: {ui.numero(m['linhas'])} coletas de {', '.join(d[:5] for d in m['dias'])}.", icon=":material/check_circle:")
+                st.rerun()
+            except p67.Erro1067 as exc:
+                st.error(str(exc), icon=":material/error:")
+            except Exception as exc:
+                st.error(f"Não foi possível gravar a 1067: {exc}", icon=":material/error:")
+        meu = any(e.get("usuario") == eu for e in (atual or {}).get("envios", []))
+        if meu and c2.button("Remover a minha 1067", width="stretch", icon=":material/delete:", key="reg_1067_rm"):
+            p67.remover(eu); st.rerun()
 
 
 def _profimetrics() -> pd.DataFrame:
@@ -171,16 +230,18 @@ def render() -> None:
 
     with st.container(horizontal=True, vertical_alignment="center", gap="small", key="reg_topo"):
         f = _filtros(df_all)
+        _pesquisa_1067(rel, meta)
         regras = _profimetrics()
     dtfim = meta.get("com_data_fim", 0)
     info = (f"{rel.get('titulo')}: base de {meta.get('atualizado')}, pesquisa de {' a '.join(meta.get('periodo') or [])}. "
             + (f"Data fim (DTFIM) em {ui.numero(dtfim)} itens." if dtfim else "DTFIM vazia nesta base.")
-            + (f" Preço vencedor: coleta mais recente de cada concorrente entre {meta['recorte'][0]} e {meta['recorte'][-1]}, "
-               "só regular, promoção e ponto extra." if meta.get("recorte") else ""))
+            + (f" Preço vencedor: nos últimos 3 dias de pesquisa de cada filial (coletas de {meta['recorte'][0]} a {meta['recorte'][-1]}), a coleta mais recente de cada concorrente associado; "
+               "se nesse dia ela for encarte, mídia, validade ou outro tipo fora de regular, promoção e ponto extra, o concorrente sai." if meta.get("recorte") else "")
+            + (f" Pesquisa 1067 somada: {', '.join(d[:5] for d in meta['p1067']['dias'])}." if meta.get("p1067") else ""))
 
     props = pp.carregar()
     _, pf_meta = pf.carregar()
-    versao = "|".join([str(rel.get("id")), str(rel.get("atualizado_em")), gr.VERSAO, str(pf_meta.get("atualizado_em")), str(pf_meta.get("linhas")),
+    versao = "|".join([str(rel.get("id")), str(rel.get("atualizado_em")), gr.VERSAO, str((meta.get("p1067") or {}).get("em")), str(pf_meta.get("atualizado_em")), str(pf_meta.get("linhas")),
                        str(len(props)), str(float(props["proporcao"].sum()) if len(props) else 0)])
     filtros = json.dumps({k: (sorted(v) if isinstance(v, list) else v) for k, v in f.items()}, sort_keys=True, ensure_ascii=False)
     dados, n, chave = _dados_mesa(filtros, versao, df_all, meta, regras, props)
