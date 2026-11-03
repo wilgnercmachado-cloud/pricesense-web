@@ -53,14 +53,15 @@ admin_on = auth.eh_admin()
 p: dict[str, st.Page] = {"inicio": st.Page(home.render, title="Início", icon=":material/storefront:", url_path="inicio", default=True)}
 
 ferramentas = []
-for chave, permissao, render, icone, url in [
-    ("preco_bot", "Preço Bot", preco_bot.render, ":material/sell:", "preco-bot"),
-    ("promo", "Pricing Promo", promo.render, ":material/campaign:", "pricing-promo"),
-    ("pesquisa", "Pesquisa de Mercado", pesquisa.render, ":material/query_stats:", "pesquisa-de-mercado"),
-    ("regular", "Pricing Regular", regular.render, ":material/price_change:", "pricing-regular"),
+# (chave, permissão gravada no banco, nome exibido, ...): os nomes novos não mexem nas permissões já dadas
+for chave, permissao, titulo, render, icone, url in [
+    ("preco_bot", "Preço Bot", "Preço Bot", preco_bot.render, ":material/sell:", "preco-bot"),
+    ("promo", "Pricing Promo", "Metrics Promo", promo.render, ":material/campaign:", "pricing-promo"),
+    ("pesquisa", "Pesquisa de Mercado", "Pesquisa de Mercado", pesquisa.render, ":material/query_stats:", "pesquisa-de-mercado"),
+    ("regular", "Pricing Regular", "PriceMetrics", regular.render, ":material/price_change:", "pricing-regular"),
 ]:
     if auth.pode(permissao):
-        p[chave] = st.Page(render, title=permissao, icon=icone, url_path=url)
+        p[chave] = st.Page(render, title=titulo, icon=icone, url_path=url)
         ferramentas.append(p[chave])
 
 p["biblioteca"] = st.Page(biblioteca.render, title="Biblioteca", icon=":material/library_books:", url_path="relatorios")
