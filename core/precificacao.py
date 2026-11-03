@@ -52,11 +52,18 @@ def so_pais(b: pd.DataFrame, props: pd.DataFrame | None) -> pd.DataFrame:
     # o substituto herda a marcação de cesta do PAI, para não sumir do filtro "Só cesta"
     out = b.iloc[pos].assign(pai_subst=subst[pos])
     if "Cesta" in b and len(escolhidos):
-        cesta_pai = {(f, p): str(x) for f, p, x in zip(fc[~filho], pc[~filho], b["Cesta"].astype(str).to_numpy()[~filho])}
+        cx = b["Cesta"].astype(str).to_numpy()
+        cesta_pai = {(f, p): str(x) for f, p, x in zip(fc[~filho], pc[~filho], cx[~filho])}
+        # PAI ausente na filial: usa a marcação dele em qualquer outra filial (a cesta é do produto)
+        cesta_prod = {}
+        for p_, x in zip(pc[~filho], cx[~filho]):
+            if x == "CESTA" or p_ not in cesta_prod:
+                cesta_prod[p_] = x
         cesta = out["Cesta"].astype(str).to_numpy().copy()
         fo = _codigo(out["Filial"]).to_numpy()
-        for k in np.nonzero(out["pai_subst"].to_numpy())[0]:
-            cesta[k] = cesta_pai.get((fo[k], out["pai_subst"].to_numpy()[k]), cesta[k])
+        ps = out["pai_subst"].to_numpy()
+        for k in np.nonzero(ps)[0]:
+            cesta[k] = cesta_pai.get((fo[k], ps[k]), cesta_prod.get(ps[k], cesta[k]))
         out = out.assign(Cesta=cesta)
     return out
 
