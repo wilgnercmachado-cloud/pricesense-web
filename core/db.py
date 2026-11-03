@@ -232,3 +232,37 @@ def salvar_campanhas(campanhas: list[dict], itens: list[list], status: str, usua
             vistos.add(k); unicos.append(r)
     for i in range(0, len(unicos), 1000):
         sb().table("encartes_itens").upsert(unicos[i:i + 1000], on_conflict="campanha,filial,produto,inicio").execute()
+
+
+# ---------------------------------------------------------------- backup da precificação (PriceMetrics), 3 dias por usuário
+def _slug(usuario: str) -> str:
+    import re
+    return re.sub(r"[^a-z0-9_.-]", "_", (usuario or "anon").lower())
+
+
+def listar_backups(usuario: str) -> list[dict]:
+    try:
+        return (sb().table("backups_precificacao").select("dia, criado_em, resumo, caminho").eq("usuario", usuario)
+                .order("dia", desc=True).execute().data or [])
+    except Exception:
+        return []
+
+
+def salvar_backup(usuario: str, dia: str, conteudo: bytes, resumo: dict, manter: int = 3) -> None:
+    """Grava a precificação do dia (substitui a do mesmo dia) e mantém só os últimos `manter` dias do usuário."""
+    from datetime import datetime, timezone
+    caminho = f"backups/{_slug(usuario)}/{dia}.json.gz"
+    sb().storage.from_("relatorios").upload(caminho, conteudo, {"content-type": "application/gzip", "upsert": "true"})
+    sb().table("backups_precificacao").upsert({"usuario": usuario, "dia": dia, "criado_em": datetime.now(timezone.utc).isoformat(),
+                                               "resumo": resumo, "caminho": caminho}, on_conflict="usuario,dia").execute()
+    antigos = listar_backups(usuario)[manter:]
+    for b in antigos:
+        try:
+            sb().storage.from_("relatorios").remove([b["caminho"]])
+        except Exception:
+            pass
+        sb().table("backups_precificacao").delete().eq("usuario", usuario).eq("dia", b["dia"]).execute()
+
+
+def ler_backup(caminho: str) -> bytes:
+    return sb().storage.from_("relatorios").download(caminho)
