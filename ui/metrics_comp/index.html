@@ -1680,6 +1680,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   const MOV = new Float64Array(N).fill(NaN), MOA = new Float64Array(N).fill(NaN), MOF = new Uint8Array(N);
   function modaItem(i){
     if (!isNaN(MOV[i])) return [MOV[i], MOA[i], MOF[i]];
+    if (D.mf && D.mf[i]) { MOV[i] = D.mo[i] || 0; MOA[i] = D.ma[i] || 0; MOF[i] = 1; return [MOV[i], MOA[i], 1]; }   // moda do vencedor calculada na base (HTML + 1067)
     let mv = null, ma = null, f = 3;
     if (!semPesq(i)) {
       const rows = HD.get(D.pi[i] * 64 + D.ui[i]) || [], fil = new Set(D.fk[D.fi[i]] || []), wk = KPOS.get(D.concs[D.ki[i]]);
@@ -2228,7 +2229,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     for (const j of rows) { if (!TIPO_OK.has(D.dtp[j])) continue; const v = D.dv[j] / 100; if (!(v > 0)) continue;
       const k = D.dk[j]; let l = porK.get(k); if (!l) porK.set(k, l = []); l.push(v); }
     const propriaVals = wk != null ? porK.get(wk) : null;
-    const propria = propriaVals && propriaVals.length >= 3 ? modaDe(propriaVals) : null;
+    const propria = D.mf && D.mf[i] && D.mo[i] > 0 ? D.mo[i] : propriaVals && propriaVals.length >= 3 ? modaDe(propriaVals) : null;   // moda do vencedor na filial, já com a 1067
     const usaFil = [...porK.keys()].some(k => fil.has(k));
     const modasFil = [...porK.entries()].filter(([k, l]) => (!usaFil || fil.has(k)) && l.length >= 3).map(([, l]) => modaDe(l));
     const menorModa = modasFil.length ? Math.min(...modasFil) : (D.mo[i] > 0 ? D.mo[i] : null);
