@@ -16,11 +16,7 @@ import streamlit as st
 def base_padrao():
     """(df, meta, relatório) do Competitividade Pricing GMAT mais recente, ou None."""
     from views import regular
-    rel = regular._relatorio_padrao()
-    if rel is None:
-        return None
-    df, meta = regular._base_publicada(rel["arquivo_path"], int(rel.get("partes") or 1), str(rel.get("atualizado_em")), regular.gr.VERSAO)
-    return df, meta, rel
+    return regular.base_atual()          # HTML + 1067 do dia, quando houver
 
 
 def _gz(obj) -> str:

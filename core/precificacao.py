@@ -180,6 +180,7 @@ def payload(b: pd.DataFrame, hist: dict | None = None, props: pd.DataFrame | Non
         "un": [round(float(x), 1) for x in un], "venda": [round(float(x)) for x in venda],
         "tcol": _tipo_coleta(col("Tipo de preço").astype(str)),
         "subst": [int(x) for x in col("pai_subst").fillna(0)],
+        "mf": [int(x) for x in col("moda_venc").fillna(0)],
         "props": _proporcionais(b, props),
         **_historico(b, hist, filiais, produtos, ufs),
     }
