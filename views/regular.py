@@ -24,7 +24,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 _MESA = components.declare_component("mesa_precificacao", path=str(RAIZ / "ui" / "metrics_comp"))
 TELA = "pricing_regular"
 FILTROS = ["Estado", "Diretor regional", "Filial", "Departamento", "Comprador", "Categoria"]
-PADRAO = {"cesta": False, "sem_acoes": False, "pesquisa": "Com pesquisa", **{f: [] for f in FILTROS}}   # padrão: todos os estados e todos os itens
+PADRAO = {"cesta": True, "sem_acoes": False, "pesquisa": "Com pesquisa", **{f: [] for f in FILTROS}}   # padrão: com pesquisa e só cesta, todos os estados
 LIMITE = 400_000
 
 
@@ -63,7 +63,7 @@ def _filtros(df: pd.DataFrame) -> dict:
     ss = st.session_state
     for k, v in PADRAO.items():
         ss.setdefault(f"rf_{k}", list(v) if isinstance(v, list) else v)
-    ativos = sum(bool(ss[f"rf_{c}"]) for c in FILTROS) + (ss.rf_pesquisa != "Com pesquisa") + (ss.rf_cesta is True) + bool(ss.rf_sem_acoes)
+    ativos = sum(bool(ss[f"rf_{c}"]) for c in FILTROS) + sum(ss[f"rf_{k}"] != PADRAO[k] for k in ("pesquisa", "cesta", "sem_acoes"))
     with st.popover(f"{ativos}" if ativos else "", icon=":material/filter_list:", help="Filtros da análise"):
         st.segmented_control("Itens", ["Com pesquisa", "Sem pesquisa"], key="rf_pesquisa", required=True,
                              help="Sem pesquisa: o varejo vai para a margem objetiva e o atacado sai do objetivo com a base de redução.")
@@ -108,7 +108,8 @@ def _profimetrics() -> pd.DataFrame:
         props = pp.carregar()
         st.markdown("**Proporcionais (base PROP%)**")
         st.caption((f"{ui.numero(len(props))} produtos filhos com proporção na dim_produto. " if len(props) else "Nenhuma proporção cadastrada. ")
-                   + "Envie a base com ID_PRODUTO, ID_PAI e Proporcao: só as diferentes de 100 são gravadas, e cada envio substitui a proporção do mesmo produto.")
+                   + "Envie a base com ID_PRODUTO, ID_PAI e Proporcao. Ela define o PAI de cada família (a mesa precifica só o PAI) "
+                   "e os proporcionais; cada envio substitui a proporção do mesmo produto.")
         arq_p = st.file_uploader("Base PROP% (XLSX)", type=["xlsx", "xls"], key="reg_prop", label_visibility="collapsed")
         if st.button("Salvar proporções", width="stretch", icon=":material/cloud_upload:", disabled=arq_p is None, key="reg_prop_salvar"):
             try:
@@ -141,7 +142,7 @@ def _dados_mesa(filtros: str, versao: str, _df_all, _meta, _regras, _props) -> t
     for col in FILTROS:
         if f.get(col):
             mask &= _df_all[col].isin(f[col]).to_numpy()
-    b = pr.base(_df_all[mask], so_cesta=f["cesta"], ignorar_acoes=f["sem_acoes"], regras=_regras, com_pesquisa=f["pesquisa"] == "Com pesquisa")
+    b = pr.base(_df_all[mask], so_cesta=f["cesta"], ignorar_acoes=f["sem_acoes"], regras=_regras, com_pesquisa=f["pesquisa"] == "Com pesquisa", props=_props)
     if b.empty:
         return None, 0, ""
     if len(b) > LIMITE:
