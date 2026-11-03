@@ -280,6 +280,15 @@ small.subp{font:600 10px 'Geist Mono',monospace;color:var(--amber);background:va
 .an-faiscas{position:absolute;left:50%;top:56px;width:0;height:0;z-index:1}
 .an-faiscas i{position:absolute;width:6px;height:6px;border-radius:50%;background:linear-gradient(135deg,#7A3FD1,var(--up));opacity:0;animation:an-faisca 1.2s cubic-bezier(.2,.8,.2,1) var(--d) forwards}
 @keyframes an-faisca{0%{opacity:1;transform:rotate(var(--a)) translateY(0) scale(1)}100%{opacity:0;transform:rotate(var(--a)) translateY(-120px) scale(.3)}}
+.bk-lista{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.bk{display:grid;grid-template-columns:90px 1fr auto;gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--line);border-radius:12px;background:var(--field)}
+.bk.on{border-color:var(--primary);background:var(--primary-soft)}
+.bk-d b{display:block;font:600 13px 'Geist Mono',monospace}.bk-d small{color:var(--faint);font-size:11px}
+.bk-n{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--muted)}.bk-n b{color:var(--ink);font-family:'Geist Mono',monospace}
+.bkp-banner{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:12px;background:linear-gradient(90deg,#7A3FD1,var(--primary));color:#fff;font-size:12.5px;box-shadow:0 10px 24px -14px var(--primary)}
+.bkp-banner svg{width:16px;height:16px}.bkp-banner span{flex:1}
+.bkp-banner button{border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.14);color:#fff;border-radius:9px;height:30px;padding:0 12px;font:600 12px 'Geist',sans-serif;cursor:pointer}
+.bkp-banner button:hover{background:rgba(255,255,255,.26)}
 #chOpt em{font-style:normal;font-family:'Geist Mono',monospace;font-size:11px;opacity:.7;margin-left:2px}
 #root{display:block} #app{height:100%}
 </style>
@@ -1527,7 +1536,7 @@ body.foco .kpis,body.foco .linha2{display:grid}
 </head><body><div id="root"></div>
 <script>
 const APP_PRICE = (() => {
-const MARCACAO = "<div id=\"app\">\n  <div class=\"topo\">\n    <div class=\"marca\"><h1 id=\"titulo\"></h1><small id=\"escopo\"></small></div>\n    <div class=\"kstrip\" id=\"kpis\"></div>\n  </div>\n  <div class=\"linha2\">\n    <div class=\"glass histc\">\n      <div class=\"hhead\"><span class=\"htit\">Concorr\u00eancia <small id=\"histSub\"></small></span><div class=\"hchips\" id=\"hChips\"></div>\n        <span class=\"hseg\" id=\"hSeg\"><button data-hm=\"v\" class=\"on\">Varejo</button><button data-hm=\"a\">Atacado</button></span></div>\n      <div id=\"hist\"></div>\n    </div>\n    <div class=\"glass resumo\" id=\"resumo\"></div>\n  </div>\n  <div class=\"gridbox glass\">\n    <div class=\"tools\">\n      <input type=\"search\" id=\"q\" placeholder=\"Buscar produto, filial ou concorrente\">\n      <button class=\"chip\" data-rg=\"4\" data-ic=\"obj\" data-tip=\"Itens sem pesquisa que foram para a margem objetiva\">Aplicado objetiva</button>\n      <button class=\"chip\" data-rg=\"3\" data-ic=\"piso\" data-tip=\"Itens que pararam na margem m\u00ednima\">Aplicado m\u00ednima</button>\n      <button class=\"chip\" data-rg=\"2\" data-ic=\"teto\" data-tip=\"Itens que pararam na margem m\u00e1xima\">Aplicado m\u00e1xima</button>\n      <span class=\"csep\"></span>\n      <button class=\"chip\" data-fx=\"neg\" data-ic=\"tdDn\" data-tip=\"Novo varejo abaixo do custo\">Negativos</button>\n      <button class=\"chip\" data-fx=\"pos\" data-ic=\"tdUp\" data-tip=\"Novo varejo acima do custo\">Positivos</button>\n      <button class=\"chip\" data-fx=\"ipf\" data-ic=\"alerta\" data-tip=\"IP novo acima de 100,9%: mais caro que o mercado\">IP fora</button>\n      <button class=\"chip\" id=\"chAce\" data-fx=\"ace\" data-ic=\"check\" data-tip=\"S\u00f3 os pre\u00e7os com aceite: o que vai para a importa\u00e7\u00e3o\">Aceitos <em>0</em></button>\n      <button class=\"chip\" id=\"chOpt\" data-fx=\"opt\" data-ic=\"robo\" data-tip=\"S\u00f3 os itens ajustados pelo Optimus\" style=\"display:none\">Optimus <em>0</em></button>\n      <span class=\"cnt\" id=\"cnt\"></span>\n    </div>\n    <div id=\"scroll\" tabindex=\"0\"><div class=\"hdr\" id=\"hdr\"></div><div id=\"body\"></div></div>\n  </div>\n</div>\n<nav class=\"dock glass\" id=\"dock\">\n  <button class=\"ib robo\" id=\"bOpt\" data-tip=\"Optimus: an\u00e1lise inteligente dos itens filtrados\" data-ic=\"robo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib gr\" id=\"bAll\" data-tip=\"Aceitar todos os itens filtrados que est\u00e3o fora da regra de corte\" data-ic=\"check\"></button>\n  <button class=\"ib\" id=\"bProx\" data-tip=\"Pr\u00f3ximo pre\u00e7o pendente (N)\" data-ic=\"prox\"></button>\n  <button class=\"ib\" id=\"bNone\" data-tip=\"Retirar aceite dos itens filtrados\" data-ic=\"x\"></button>\n  <button class=\"ib\" id=\"bReset\" data-tip=\"Voltar pre\u00e7os e aceites para a sugest\u00e3o do motor\" data-ic=\"undo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib\" id=\"bRegras\" data-tip=\"Regra de neg\u00f3cio e regra de altera\u00e7\u00e3o\" data-ic=\"regra\"></button>\n  <button class=\"ib\" id=\"bCols\" data-tip=\"Colunas e vis\u00e3o salva no seu perfil\" data-ic=\"cols\"></button>\n  <button class=\"ib\" id=\"bRnd\" data-tip=\"Regra de arredondamento\" data-ic=\"rnd\"></button>\n  <button class=\"ib\" id=\"bPiso\" data-tip=\"Piso de margem por estado\" data-ic=\"piso\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib pri\" id=\"bExp\" data-tip=\"Importa\u00e7\u00e3o (layout PRICE do Pre\u00e7o Bot)\" data-ic=\"up\"></button>\n  <button class=\"ib\" id=\"bProp\" data-tip=\"Importa\u00e7\u00e3o de proporcionais (filhos do produto PAI)\" data-ic=\"prop\"></button>\n  <button class=\"ib\" id=\"bFoco\" data-tip=\"Modo foco em tela cheia\" data-ic=\"foco\"></button>\n</nav>\n<div class=\"pop glass\" id=\"pRegras\"></div>\n<div class=\"pop glass larga\" id=\"pCols\"></div>\n<div class=\"pop glass\" id=\"pRnd\"></div>\n<div class=\"pop glass\" id=\"pPiso\"></div>\n<div class=\"pop glass\" id=\"pExp\"></div>\n<div class=\"pop glass\" id=\"pProp\"></div>\n<div class=\"pop glass larga\" id=\"pOpt\"></div>\n<div class=\"modal\" id=\"modal\"></div>\n<div id=\"tip\"></div><div class=\"toast\" id=\"toast\"></div>\n";
+const MARCACAO = "<div id=\"app\">\n  <div class=\"topo\">\n    <div class=\"marca\"><h1 id=\"titulo\"></h1><small id=\"escopo\"></small></div>\n    <div class=\"kstrip\" id=\"kpis\"></div>\n  </div>\n  <div class=\"linha2\">\n    <div class=\"glass histc\">\n      <div class=\"hhead\"><span class=\"htit\">Concorr\u00eancia <small id=\"histSub\"></small></span><div class=\"hchips\" id=\"hChips\"></div>\n        <span class=\"hseg\" id=\"hSeg\"><button data-hm=\"v\" class=\"on\">Varejo</button><button data-hm=\"a\">Atacado</button></span></div>\n      <div id=\"hist\"></div>\n    </div>\n    <div class=\"glass resumo\" id=\"resumo\"></div>\n  </div>\n  <div class=\"gridbox glass\">\n    <div class=\"tools\">\n      <input type=\"search\" id=\"q\" placeholder=\"Buscar produto, filial ou concorrente\">\n      <button class=\"chip\" data-rg=\"4\" data-ic=\"obj\" data-tip=\"Itens sem pesquisa que foram para a margem objetiva\">Aplicado objetiva</button>\n      <button class=\"chip\" data-rg=\"3\" data-ic=\"piso\" data-tip=\"Itens que pararam na margem m\u00ednima\">Aplicado m\u00ednima</button>\n      <button class=\"chip\" data-rg=\"2\" data-ic=\"teto\" data-tip=\"Itens que pararam na margem m\u00e1xima\">Aplicado m\u00e1xima</button>\n      <span class=\"csep\"></span>\n      <button class=\"chip\" data-fx=\"neg\" data-ic=\"tdDn\" data-tip=\"Novo varejo abaixo do custo\">Negativos</button>\n      <button class=\"chip\" data-fx=\"pos\" data-ic=\"tdUp\" data-tip=\"Novo varejo acima do custo\">Positivos</button>\n      <button class=\"chip\" data-fx=\"ipf\" data-ic=\"alerta\" data-tip=\"IP novo acima de 100,9%: mais caro que o mercado\">IP fora</button>\n      <button class=\"chip\" id=\"chAce\" data-fx=\"ace\" data-ic=\"check\" data-tip=\"S\u00f3 os pre\u00e7os com aceite: o que vai para a importa\u00e7\u00e3o\">Aceitos <em>0</em></button>\n      <button class=\"chip\" id=\"chOpt\" data-fx=\"opt\" data-ic=\"robo\" data-tip=\"S\u00f3 os itens ajustados pelo Optimus\" style=\"display:none\">Optimus <em>0</em></button>\n      <span class=\"cnt\" id=\"cnt\"></span>\n    </div>\n    <div id=\"scroll\" tabindex=\"0\"><div class=\"hdr\" id=\"hdr\"></div><div id=\"body\"></div></div>\n  </div>\n</div>\n<nav class=\"dock glass\" id=\"dock\">\n  <button class=\"ib robo\" id=\"bOpt\" data-tip=\"Optimus: an\u00e1lise inteligente dos itens filtrados\" data-ic=\"robo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib gr\" id=\"bAll\" data-tip=\"Aceitar todos os itens filtrados que est\u00e3o fora da regra de corte\" data-ic=\"check\"></button>\n  <button class=\"ib\" id=\"bProx\" data-tip=\"Pr\u00f3ximo pre\u00e7o pendente (N)\" data-ic=\"prox\"></button>\n  <button class=\"ib\" id=\"bNone\" data-tip=\"Retirar aceite dos itens filtrados\" data-ic=\"x\"></button>\n  <button class=\"ib\" id=\"bReset\" data-tip=\"Voltar pre\u00e7os e aceites para a sugest\u00e3o do motor\" data-ic=\"undo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib\" id=\"bRegras\" data-tip=\"Regra de neg\u00f3cio e regra de altera\u00e7\u00e3o\" data-ic=\"regra\"></button>\n  <button class=\"ib\" id=\"bCols\" data-tip=\"Colunas e vis\u00e3o salva no seu perfil\" data-ic=\"cols\"></button>\n  <button class=\"ib\" id=\"bRnd\" data-tip=\"Regra de arredondamento\" data-ic=\"rnd\"></button>\n  <button class=\"ib\" id=\"bPiso\" data-tip=\"Piso de margem por estado\" data-ic=\"piso\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib pri\" id=\"bExp\" data-tip=\"Importa\u00e7\u00e3o (layout PRICE do Pre\u00e7o Bot)\" data-ic=\"up\"></button>\n  <button class=\"ib\" id=\"bProp\" data-tip=\"Importa\u00e7\u00e3o de proporcionais (filhos do produto PAI)\" data-ic=\"prop\"></button>\n  <button class=\"ib\" id=\"bBkp\" data-tip=\"Backup: a precifica\u00e7\u00e3o dos \u00faltimos 3 dias, como estava antes de importar\" data-ic=\"bkp\"></button>\n  <button class=\"ib\" id=\"bFoco\" data-tip=\"Modo foco em tela cheia\" data-ic=\"foco\"></button>\n</nav>\n<div class=\"pop glass\" id=\"pRegras\"></div>\n<div class=\"pop glass larga\" id=\"pCols\"></div>\n<div class=\"pop glass\" id=\"pRnd\"></div>\n<div class=\"pop glass\" id=\"pPiso\"></div>\n<div class=\"pop glass\" id=\"pExp\"></div>\n<div class=\"pop glass\" id=\"pProp\"></div>\n<div class=\"pop glass larga\" id=\"pOpt\"></div>\n<div class=\"pop glass larga\" id=\"pBkp\"></div>\n<div class=\"modal\" id=\"modal\"></div>\n<div id=\"tip\"></div><div class=\"toast\" id=\"toast\"></div>\n";
 /* ===================== protocolo de componente do Streamlit (sem biblioteca) ===================== */
 const ST = {
   send(type, extra){ window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type }, extra || {}), '*'); },
@@ -1569,7 +1578,7 @@ async function montar(A){
 const ic = (n, cor) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="${cor || 'currentColor'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${P_[n]}</svg>`;
 document.querySelectorAll('[data-ic2]').forEach(h => h.insertAdjacentHTML('afterbegin', ic(h.dataset.ic2, 'var(--primary)')));
 
-  Object.assign(P_, { cols: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>', save: '<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h8V3M8 21v-7h8v7"/>',
+  Object.assign(P_, { bkp: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>', cols: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>', save: '<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h8V3M8 21v-7h8v7"/>',
     seta_c: '<path d="m6 15 6-6 6 6"/>', prox: '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>',
     robo: '<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4"/><circle cx="12" cy="3" r="1"/><circle cx="9" cy="13.5" r="1.4"/><circle cx="15" cy="13.5" r="1.4"/><path d="M9.5 17h5M2 13v2M22 13v2"/>',
     prop: '<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/><path d="M11 7h4a2 2 0 0 1 2 2v4"/>',
@@ -1618,7 +1627,11 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   const IDX = new Map(); for (let i = 0; i < N; i++) IDX.set(KEY(i), i);
   const ARMAZ = 'pricemetrics:' + (A.usuario || 'anon') + ':' + (A.base || '');
   let GUARD = { ov: {}, ova: {}, ace: {}, opt: {}, piso: {} };
-  try { GUARD = Object.assign(GUARD, JSON.parse(localStorage.getItem(ARMAZ) || '{}')); } catch (e) {}
+  const HIST = A.historico || null;   // backup aberto: estado vem do arquivo e nada é gravado
+  if (HIST) GUARD = Object.assign(GUARD, A.estado || {}, { v: 3 });
+  else { try { GUARD = Object.assign(GUARD, JSON.parse(localStorage.getItem(ARMAZ) || '{}')); } catch (e) {}
+    /* base nova (HTML atualizado): ajustes e aceites da base anterior deste usuário são descartados */
+    try { const pref = 'pricemetrics:' + (A.usuario || 'anon') + ':'; Object.keys(localStorage).forEach(k => { if (k.startsWith(pref) && k !== ARMAZ) localStorage.removeItem(k); }); } catch (e) {} }
   for (const [k, v] of Object.entries(GUARD.ov)) if (IDX.has(k)) OV.set(IDX.get(k), v);
   for (const [k, v] of Object.entries(GUARD.ova)) if (IDX.has(k)) OVA.set(IDX.get(k), v);
   for (const [k, v] of Object.entries(GUARD.ace)) if (IDX.has(k)) ACE.set(IDX.get(k), v);
@@ -1626,10 +1639,11 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   D.ufs.forEach((u, k) => { if (GUARD.piso[u]) PISO[k] = GUARD.piso[u]; });
   const VIS0 = A.visao || {};
   if (VIS0.rnd && REGRA_RND[VIS0.rnd]) { RND = VIS0.rnd; VC = tabelaVC(REGRA_RND[RND]); }
+  if (A.historico && A.estado && REGRA_RND[A.estado.rnd]) { RND = A.estado.rnd; VC = tabelaVC(REGRA_RND[RND]); }
   /* grava só o que mudou neste recorte e preserva ajustes de outras filiais/estados já salvos */
   /* grava só o que mudou: salvar(i) para um item; salvar() varre tudo (ações em massa). A escrita no navegador é agrupada. */
   let gravarT = null;
-  const gravar = () => { clearTimeout(gravarT); gravarT = setTimeout(() => { try { D.ufs.forEach((u, k) => GUARD.piso[u] = PISO[k]); localStorage.setItem(ARMAZ, JSON.stringify(GUARD)); } catch (e) {} }, 400); };
+  const gravar = () => { if (HIST) return; clearTimeout(gravarT); gravarT = setTimeout(() => { try { D.ufs.forEach((u, k) => GUARD.piso[u] = PISO[k]); localStorage.setItem(ARMAZ, JSON.stringify(GUARD)); } catch (e) {} }, 400); };
   const salvar = idx => { try {
       const lista = idx == null ? null : [].concat(idx);
       const um = i => { const k = KEY(i);
@@ -1719,7 +1733,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   function piso15(na, nv){ const lim = nv * (1 - DESC_MAX); if (!(na > 0) || na >= lim - 1e-9) return na;
     for (let c = Math.ceil(lim * 100); c <= Math.round(nv * 100); c++) { const r = roundAtacado(c / 100, nv); if (r >= lim - 1e-9 && r <= nv) return r; } return nv; }
   const podeAceitar = i => MUD[i] || REAP[i];
-  const aceito = i => MUD[i] ? (ACE.has(i) ? ACE.get(i) : CT[i] === 0) : REAP[i] ? ACE.get(i) === true : false;
+  const aceito = i => (MUD[i] || REAP[i]) && ACE.get(i) === true;   // nada vem aceito sozinho: o aceite é dado pelo usuário ou pelo Aceitar todos
   const calcTudo = () => { for (let i = 0; i < N; i++) calc(i); };
 
   /* ---------- formatação ---------- */
@@ -2149,10 +2163,10 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   on($('pCols'), 'dragend', () => { ARR = null; $('pCols').querySelectorAll('.drag,.sobre').forEach(x => x.classList.remove('drag', 'sobre')); });
 
   /* ---------- painéis: arredondamento, piso e importação ---------- */
-  const pops = ['pRegras', 'pCols', 'pRnd', 'pPiso', 'pExp', 'pProp', 'pOpt'];
+  const pops = ['pRegras', 'pCols', 'pRnd', 'pPiso', 'pExp', 'pProp', 'pOpt', 'pBkp'];
   function abrir(id, botao){ pops.forEach(p => $(p).classList.toggle('on', p === id && !$(p).classList.contains('on')));
     const p = $(id); if (p.classList.contains('on') && botao) { const r = botao.getBoundingClientRect(); p.style.top = Math.max(8, Math.min(innerHeight - p.offsetHeight - 8, r.top - 10)) + 'px'; } }
-  on(document, 'click', e => { if (!e.target.closest('.pop') && !e.target.closest('#bRegras,#bCols,#bRnd,#bPiso,#bExp,#bProp,#bOpt,.modal')) pops.forEach(p => $(p).classList.remove('on')); });
+  on(document, 'click', e => { if (!e.target.closest('.pop') && !e.target.closest('#bRegras,#bCols,#bRnd,#bPiso,#bExp,#bProp,#bOpt,#bBkp,.modal')) pops.forEach(p => $(p).classList.remove('on')); });
   on(document, 'keydown', e => { if (e.key === 'Escape') pops.forEach(p => $(p).classList.remove('on')); });
   const faixas = [['A', 'Até R$ 10,99'], ['B', 'R$ 11,00 a R$ 19,99'], ['C', 'R$ 20,00 a R$ 40,00'], ['D', 'Acima de R$ 40,00']];
   const fimTxt = (reg, f) => f === 'A' ? `centavos terminando em ${reg[f].join(', ')}` : f === 'B' ? `dezena 1 a 9, final ${reg[f].join(', ')}` : `dezena 3 a 9, final ${reg[f].filter(x => x).join(', ')}${reg[f].includes(0) ? ' (ou ,50 e ,90)' : ''}`;
@@ -2189,8 +2203,8 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
         D.cu[i], D.vm[i], D.am[i] || null, D.vmk[i] || null, NV[i], NA[i] || null, +((NV[i] - D.cu[i]) / NV[i]).toFixed(4), D.vmk[i] > 0 ? +(NV[i] / D.vmk[i]).toFixed(4) : null, +(NV[i] / D.vm[i] - 1).toFixed(4),
         rotRegra(i), MUD[i] ? (CT[i] ? CORTES.filter((_, k) => CT[i] & (1 << k)).map(x => x[0]).join(' / ') : 'Dentro da regra') : 'Reaplicar', ini, fimd]);
       const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(an), 'Analise'); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([CAB, ...l]), 'Importacao');
-      XLSX.writeFile(wb, `PriceSense_Regular_PRICE_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`); toast(nf0.format(l.length) + ' linhas no Excel'); }
-    if (b.id === 'eCopy') { try { await navigator.clipboard.writeText(l.map(r => r.join('\t')).join('\n')); b.classList.add('ok'); setTimeout(() => b.classList.remove('ok'), 1800); toast(nf0.format(l.length) + ' linhas copiadas'); } catch (err) { toast('Não foi possível copiar; use o Excel'); } } });
+      backup(true); XLSX.writeFile(wb, `PriceSense_Regular_PRICE_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`); toast(nf0.format(l.length) + ' linhas no Excel'); }
+    if (b.id === 'eCopy') { backup(true); try { await navigator.clipboard.writeText(l.map(r => r.join('\t')).join('\n')); b.classList.add('ok'); setTimeout(() => b.classList.remove('ok'), 1800); toast(nf0.format(l.length) + ' linhas copiadas'); } catch (err) { toast('Não foi possível copiar; use o Excel'); } } });
   $('bRegras').onclick = e => abrir('pRegras', e.currentTarget);
   $('bCols').onclick = e => { montaColunas(); abrir('pCols', e.currentTarget); };
   $('bRnd').onclick = e => { montaRnd(); abrir('pRnd', e.currentTarget); };
@@ -2329,6 +2343,35 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     if (b.id === 'pCopy') { try { await navigator.clipboard.writeText(l.map(r => r.join('\t')).join('\n')); toast(nf0.format(l.length) + ' linhas de importação copiadas'); } catch (err) { toast('Não foi possível copiar; use o Excel'); } } });
   $('bProp').onclick = e => { montaProp(); abrir('pProp', e.currentTarget); };
 
+  /* ===================== backup da precificação (3 dias por usuário) ===================== */
+  let BKPS = (A.backups || []).map(b => Object.assign({}, b));
+  const hojeIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  function estadoAtual(){ const e = { v: 3, ov: {}, ova: {}, ace: {}, opt: {}, piso: {}, rnd: RND };
+    for (let i = 0; i < N; i++) { const k = KEY(i); if (OV.has(i)) e.ov[k] = OV.get(i); if (OVA.has(i)) e.ova[k] = OVA.get(i); if (ACE.get(i) === true) e.ace[k] = true; if (OPT.has(i)) e.opt[k] = OPT.get(i); }
+    D.ufs.forEach((u, k) => e.piso[u] = PISO[k]); return e; }
+  function resumoAtual(){ let ac = 0, mud = 0, ganho = 0, inv = 0; for (let i = 0; i < N; i++) { if (aceito(i)) { ac++; const d = (NV[i] - D.vm[i]) * D.un[i]; if (d > 0) ganho += d; else inv -= d; } if (MUD[i]) mud++; }
+    return { itens: N, aceitos: ac, mudam: mud, optimus: OPT.size, filiais: D.filiais.length, ganho: Math.round(ganho), investimento: Math.round(inv), hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }; }
+  function backup(silencioso){ if (HIST) return; const dia = hojeIso(), res = resumoAtual();
+    ST.valor({ acao: 'backup', dia, estado: estadoAtual(), resumo: res, silencioso: !!silencioso, ts: Date.now() });
+    BKPS = [{ dia, criado_em: new Date().toISOString(), resumo: res }, ...BKPS.filter(b => String(b.dia) !== dia)].slice(0, 3);
+    if ($('pBkp').classList.contains('on')) montaBkp(); }
+  const diaBr = d => String(d).slice(8, 10) + '/' + String(d).slice(5, 7) + '/' + String(d).slice(0, 4);
+  function montaBkp(){
+    $('pBkp').innerHTML = `<h4>${ic('bkp', 'var(--primary)')} Backup da precificação</h4>
+      <p>Guarda a mesa como estava no fim da precificação: preços, aceites, ajustes do Optimus e regras do dia. Fica salvo por usuário, um por dia, nos últimos 3 dias. Ao baixar ou copiar a importação, o backup do dia é salvo sozinho.</p>
+      ${HIST ? '' : `<button class="tx pri" id="kSalvar">${ic('bkp')}Salvar o backup de hoje agora</button>`}
+      <div class="bk-lista">${BKPS.length ? BKPS.map(b => { const r = b.resumo || {}; const atual = HIST && String(HIST.dia) === String(b.dia);
+        return `<div class="bk${atual ? ' on' : ''}"><div class="bk-d"><b>${diaBr(b.dia)}</b><small>${esc(r.hora || String(b.criado_em || '').slice(11, 16))}</small></div>
+          <div class="bk-n"><span><b>${nf0.format(r.aceitos || 0)}</b> aceitos</span><span><b>${nf0.format(r.mudam || 0)}</b> mudam</span><span><b>${nf0.format(r.optimus || 0)}</b> Optimus</span><span><b>${nf0.format(r.itens || 0)}</b> itens</span></div>
+          <button class="tx" data-abrir="${esc(b.dia)}" ${atual ? 'disabled' : ''}>${atual ? 'Aberto' : 'Abrir'}</button></div>`; }).join('') : '<div class="hvazio">Nenhum backup ainda.</div>'}</div>`;
+  }
+  on($('pBkp'), 'click', e => { if (e.target.closest('#kSalvar')) { backup(false); toast('Salvando o backup de hoje'); return; }
+    const b = e.target.closest('[data-abrir]'); if (b) { ST.valor({ acao: 'abrir_backup', dia: b.dataset.abrir, ts: Date.now() }); toast('Abrindo o backup de ' + diaBr(b.dataset.abrir)); } });
+  $('bBkp').onclick = e => { montaBkp(); abrir('pBkp', e.currentTarget); };
+  if (HIST) { const r = HIST.resumo || {}, ban = document.createElement('div'); ban.className = 'bkp-banner';
+    ban.innerHTML = `${ic('bkp', '#fff')}<span><b>Backup de ${diaBr(HIST.dia)}${r.hora ? ' às ' + esc(r.hora) : ''}</b>: a precificação como estava antes de importar. ${nf0.format(r.aceitos || 0)} aceitos. O que você mudar aqui não é salvo.</span><button id="kSair">Voltar para a precificação de hoje</button>`;
+    $('app').prepend(ban); ban.querySelector('#kSair').onclick = () => ST.valor({ acao: 'sair_backup', ts: Date.now() }); }
+
   /* ---------- ações ---------- */
   function atualizar(refiltrar = true){ kpis(); chipOptimus(); if (refiltrar) filtrar(); render(); }
   function chipOptimus(){ const ca = $('chAce'); if (ca) { let n = 0; for (let i = 0; i < N; i++) if (aceito(i)) n++; ca.querySelector('em').textContent = nf0.format(n); }
@@ -2360,10 +2403,11 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   $('escopo').textContent = `${nf0.format(N)} itens ${comPesq ? 'com pesquisa' : 'sem pesquisa'}, ${D.filiais.length} filiais`;
   $('escopo').dataset.tip = `${nf0.format(D.produtos.length)} produtos. ${nRegra ? nf0.format(nRegra) + ' itens com regra do Profimetrics.' : 'Sem regras do Profimetrics: margem objetiva 10% e máxima 30%.'} ${A.info || ''}`;
   aplicaColunas(); calcTudo();
-  if ((GUARD.v || 0) < 3) {                       // aceites dados em massa por versões antigas em itens da regra de corte saem (uma vez)
+  if (!HIST && (GUARD.v || 0) < 3) {                       // aceites dados em massa por versões antigas em itens da regra de corte saem (uma vez)
     let n = 0; for (let i = 0; i < N; i++) if (MUD[i] && CT[i] && ACE.get(i) === true) { ACE.delete(i); n++; }
     GUARD.v = 3; salvar(); if (n) setTimeout(() => toast(`${nf0.format(n)} aceites antigos em itens da regra de corte foram retirados`), 500); }
   filtrar(); kpis();
+  chipOptimus();
   if (VIS.length) selecionar(VIS[0]); else { render(); resumo(-1); historico(-1); }
 }
 
