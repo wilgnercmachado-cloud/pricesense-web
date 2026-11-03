@@ -256,6 +256,30 @@ body.foco .kpis,body.foco .linha2{display:grid}
 .ctx button svg{width:14px;height:14px}
 .ctx-s{height:1px;background:var(--line);margin:3px 4px}
 small.subp{font:600 10px 'Geist Mono',monospace;color:var(--amber);background:var(--amber-soft);border-radius:5px;padding:1px 5px;margin-left:4px}
+#chAce em{font-style:normal;font-family:'Geist Mono',monospace;font-size:11px;opacity:.7;margin-left:2px}
+.anuncio{position:fixed;inset:0;z-index:95;display:grid;place-items:center;pointer-events:none;background:rgba(15,23,42,0);transition:background .3s}
+.anuncio.on{pointer-events:auto;background:rgba(15,23,42,.18);backdrop-filter:blur(2px)}
+.an-card{position:relative;min-width:340px;max-width:520px;padding:26px 30px 22px;border-radius:22px;text-align:center;background:var(--surface-solid);border:1px solid var(--line);
+  box-shadow:0 30px 80px -30px rgba(15,23,42,.55);transform:translateY(14px) scale(.94);opacity:0;transition:transform .45s cubic-bezier(.2,.9,.2,1.2),opacity .3s;overflow:hidden}
+.anuncio.on .an-card{transform:none;opacity:1}
+.an-ic{width:58px;height:58px;margin:0 auto 12px;border-radius:18px;display:grid;place-items:center;background:var(--c);box-shadow:0 12px 30px -10px var(--c);position:relative;z-index:2}
+.an-ic svg{width:28px;height:28px}
+.an-card h2{margin:0 0 6px;font-size:21px;letter-spacing:-.02em;position:relative;z-index:2}
+.an-card p{margin:0;color:var(--muted);font-size:13px;line-height:1.5;position:relative;z-index:2}
+.an-num{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:16px;position:relative;z-index:2}
+.an-num div{background:var(--raised);border-radius:12px;padding:10px}
+.an-num b{display:block;font:650 22px 'Geist Mono',monospace;letter-spacing:-.03em}
+.an-num span{font-size:11px;color:var(--muted)}
+.premium .an-card{border-color:transparent;background:linear-gradient(var(--surface-solid),var(--surface-solid)) padding-box,linear-gradient(120deg,#7A3FD1,var(--primary),var(--up),#7A3FD1) border-box;
+  border:1.5px solid transparent;background-size:100% 100%,300% 100%;animation:an-borda 3s linear infinite}
+@keyframes an-borda{to{background-position:0 0,300% 0}}
+.an-aura{position:absolute;inset:-40%;background:conic-gradient(from 0deg,transparent,rgba(122,63,209,.22),transparent 30%,rgba(45,75,255,.18),transparent 60%);animation:an-gira 6s linear infinite;z-index:1}
+@keyframes an-gira{to{transform:rotate(360deg)}}
+.premium .an-ic{animation:an-pulso 1.6s ease-in-out infinite}
+@keyframes an-pulso{0%,100%{box-shadow:0 12px 30px -10px #7A3FD1,0 0 0 0 rgba(122,63,209,.45)}50%{box-shadow:0 12px 30px -10px #7A3FD1,0 0 0 14px rgba(122,63,209,0)}}
+.an-faiscas{position:absolute;left:50%;top:56px;width:0;height:0;z-index:1}
+.an-faiscas i{position:absolute;width:6px;height:6px;border-radius:50%;background:linear-gradient(135deg,#7A3FD1,var(--up));opacity:0;animation:an-faisca 1.2s cubic-bezier(.2,.8,.2,1) var(--d) forwards}
+@keyframes an-faisca{0%{opacity:1;transform:rotate(var(--a)) translateY(0) scale(1)}100%{opacity:0;transform:rotate(var(--a)) translateY(-120px) scale(.3)}}
 #chOpt em{font-style:normal;font-family:'Geist Mono',monospace;font-size:11px;opacity:.7;margin-left:2px}
 #root{display:block} #app{height:100%}
 </style>
@@ -1503,7 +1527,7 @@ body.foco .kpis,body.foco .linha2{display:grid}
 </head><body><div id="root"></div>
 <script>
 const APP_PRICE = (() => {
-const MARCACAO = "<div id=\"app\">\n  <div class=\"topo\">\n    <div class=\"marca\"><h1 id=\"titulo\"></h1><small id=\"escopo\"></small></div>\n    <div class=\"kstrip\" id=\"kpis\"></div>\n  </div>\n  <div class=\"linha2\">\n    <div class=\"glass histc\">\n      <div class=\"hhead\"><span class=\"htit\">Concorr\u00eancia <small id=\"histSub\"></small></span><div class=\"hchips\" id=\"hChips\"></div>\n        <span class=\"hseg\" id=\"hSeg\"><button data-hm=\"v\" class=\"on\">Varejo</button><button data-hm=\"a\">Atacado</button></span></div>\n      <div id=\"hist\"></div>\n    </div>\n    <div class=\"glass resumo\" id=\"resumo\"></div>\n  </div>\n  <div class=\"gridbox glass\">\n    <div class=\"tools\">\n      <input type=\"search\" id=\"q\" placeholder=\"Buscar produto, filial ou concorrente\">\n      <button class=\"chip\" data-rg=\"4\" data-ic=\"obj\" data-tip=\"Itens sem pesquisa que foram para a margem objetiva\">Aplicado objetiva</button>\n      <button class=\"chip\" data-rg=\"3\" data-ic=\"piso\" data-tip=\"Itens que pararam na margem m\u00ednima\">Aplicado m\u00ednima</button>\n      <button class=\"chip\" data-rg=\"2\" data-ic=\"teto\" data-tip=\"Itens que pararam na margem m\u00e1xima\">Aplicado m\u00e1xima</button>\n      <span class=\"csep\"></span>\n      <button class=\"chip\" data-fx=\"neg\" data-ic=\"tdDn\" data-tip=\"Novo varejo abaixo do custo\">Negativos</button>\n      <button class=\"chip\" data-fx=\"pos\" data-ic=\"tdUp\" data-tip=\"Novo varejo acima do custo\">Positivos</button>\n      <button class=\"chip\" data-fx=\"ipf\" data-ic=\"alerta\" data-tip=\"IP novo acima de 100,9%: mais caro que o mercado\">IP fora</button>\n      <button class=\"chip\" id=\"chOpt\" data-fx=\"opt\" data-ic=\"robo\" data-tip=\"S\u00f3 os itens ajustados pelo Optimus\" style=\"display:none\">Optimus <em>0</em></button>\n      <span class=\"cnt\" id=\"cnt\"></span>\n    </div>\n    <div id=\"scroll\" tabindex=\"0\"><div class=\"hdr\" id=\"hdr\"></div><div id=\"body\"></div></div>\n  </div>\n</div>\n<nav class=\"dock glass\" id=\"dock\">\n  <button class=\"ib robo\" id=\"bOpt\" data-tip=\"Optimus: an\u00e1lise inteligente dos itens filtrados\" data-ic=\"robo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib gr\" id=\"bAll\" data-tip=\"Aceitar todos os itens filtrados que estão fora da regra de corte\" data-ic=\"check\"></button>\n  <button class=\"ib\" id=\"bProx\" data-tip=\"Pr\u00f3ximo pre\u00e7o pendente (N)\" data-ic=\"prox\"></button>\n  <button class=\"ib\" id=\"bNone\" data-tip=\"Retirar aceite dos itens filtrados\" data-ic=\"x\"></button>\n  <button class=\"ib\" id=\"bReset\" data-tip=\"Voltar pre\u00e7os e aceites para a sugest\u00e3o do motor\" data-ic=\"undo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib\" id=\"bRegras\" data-tip=\"Regra de neg\u00f3cio e regra de altera\u00e7\u00e3o\" data-ic=\"regra\"></button>\n  <button class=\"ib\" id=\"bCols\" data-tip=\"Colunas e vis\u00e3o salva no seu perfil\" data-ic=\"cols\"></button>\n  <button class=\"ib\" id=\"bRnd\" data-tip=\"Regra de arredondamento\" data-ic=\"rnd\"></button>\n  <button class=\"ib\" id=\"bPiso\" data-tip=\"Piso de margem por estado\" data-ic=\"piso\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib pri\" id=\"bExp\" data-tip=\"Importa\u00e7\u00e3o (layout PRICE do Pre\u00e7o Bot)\" data-ic=\"up\"></button>\n  <button class=\"ib\" id=\"bProp\" data-tip=\"Importa\u00e7\u00e3o de proporcionais (filhos do produto PAI)\" data-ic=\"prop\"></button>\n  <button class=\"ib\" id=\"bFoco\" data-tip=\"Modo foco em tela cheia\" data-ic=\"foco\"></button>\n</nav>\n<div class=\"pop glass\" id=\"pRegras\"></div>\n<div class=\"pop glass larga\" id=\"pCols\"></div>\n<div class=\"pop glass\" id=\"pRnd\"></div>\n<div class=\"pop glass\" id=\"pPiso\"></div>\n<div class=\"pop glass\" id=\"pExp\"></div>\n<div class=\"pop glass\" id=\"pProp\"></div>\n<div class=\"pop glass larga\" id=\"pOpt\"></div>\n<div class=\"modal\" id=\"modal\"></div>\n<div id=\"tip\"></div><div class=\"toast\" id=\"toast\"></div>\n";
+const MARCACAO = "<div id=\"app\">\n  <div class=\"topo\">\n    <div class=\"marca\"><h1 id=\"titulo\"></h1><small id=\"escopo\"></small></div>\n    <div class=\"kstrip\" id=\"kpis\"></div>\n  </div>\n  <div class=\"linha2\">\n    <div class=\"glass histc\">\n      <div class=\"hhead\"><span class=\"htit\">Concorr\u00eancia <small id=\"histSub\"></small></span><div class=\"hchips\" id=\"hChips\"></div>\n        <span class=\"hseg\" id=\"hSeg\"><button data-hm=\"v\" class=\"on\">Varejo</button><button data-hm=\"a\">Atacado</button></span></div>\n      <div id=\"hist\"></div>\n    </div>\n    <div class=\"glass resumo\" id=\"resumo\"></div>\n  </div>\n  <div class=\"gridbox glass\">\n    <div class=\"tools\">\n      <input type=\"search\" id=\"q\" placeholder=\"Buscar produto, filial ou concorrente\">\n      <button class=\"chip\" data-rg=\"4\" data-ic=\"obj\" data-tip=\"Itens sem pesquisa que foram para a margem objetiva\">Aplicado objetiva</button>\n      <button class=\"chip\" data-rg=\"3\" data-ic=\"piso\" data-tip=\"Itens que pararam na margem m\u00ednima\">Aplicado m\u00ednima</button>\n      <button class=\"chip\" data-rg=\"2\" data-ic=\"teto\" data-tip=\"Itens que pararam na margem m\u00e1xima\">Aplicado m\u00e1xima</button>\n      <span class=\"csep\"></span>\n      <button class=\"chip\" data-fx=\"neg\" data-ic=\"tdDn\" data-tip=\"Novo varejo abaixo do custo\">Negativos</button>\n      <button class=\"chip\" data-fx=\"pos\" data-ic=\"tdUp\" data-tip=\"Novo varejo acima do custo\">Positivos</button>\n      <button class=\"chip\" data-fx=\"ipf\" data-ic=\"alerta\" data-tip=\"IP novo acima de 100,9%: mais caro que o mercado\">IP fora</button>\n      <button class=\"chip\" id=\"chAce\" data-fx=\"ace\" data-ic=\"check\" data-tip=\"S\u00f3 os pre\u00e7os com aceite: o que vai para a importa\u00e7\u00e3o\">Aceitos <em>0</em></button>\n      <button class=\"chip\" id=\"chOpt\" data-fx=\"opt\" data-ic=\"robo\" data-tip=\"S\u00f3 os itens ajustados pelo Optimus\" style=\"display:none\">Optimus <em>0</em></button>\n      <span class=\"cnt\" id=\"cnt\"></span>\n    </div>\n    <div id=\"scroll\" tabindex=\"0\"><div class=\"hdr\" id=\"hdr\"></div><div id=\"body\"></div></div>\n  </div>\n</div>\n<nav class=\"dock glass\" id=\"dock\">\n  <button class=\"ib robo\" id=\"bOpt\" data-tip=\"Optimus: an\u00e1lise inteligente dos itens filtrados\" data-ic=\"robo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib gr\" id=\"bAll\" data-tip=\"Aceitar todos os itens filtrados que est\u00e3o fora da regra de corte\" data-ic=\"check\"></button>\n  <button class=\"ib\" id=\"bProx\" data-tip=\"Pr\u00f3ximo pre\u00e7o pendente (N)\" data-ic=\"prox\"></button>\n  <button class=\"ib\" id=\"bNone\" data-tip=\"Retirar aceite dos itens filtrados\" data-ic=\"x\"></button>\n  <button class=\"ib\" id=\"bReset\" data-tip=\"Voltar pre\u00e7os e aceites para a sugest\u00e3o do motor\" data-ic=\"undo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib\" id=\"bRegras\" data-tip=\"Regra de neg\u00f3cio e regra de altera\u00e7\u00e3o\" data-ic=\"regra\"></button>\n  <button class=\"ib\" id=\"bCols\" data-tip=\"Colunas e vis\u00e3o salva no seu perfil\" data-ic=\"cols\"></button>\n  <button class=\"ib\" id=\"bRnd\" data-tip=\"Regra de arredondamento\" data-ic=\"rnd\"></button>\n  <button class=\"ib\" id=\"bPiso\" data-tip=\"Piso de margem por estado\" data-ic=\"piso\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib pri\" id=\"bExp\" data-tip=\"Importa\u00e7\u00e3o (layout PRICE do Pre\u00e7o Bot)\" data-ic=\"up\"></button>\n  <button class=\"ib\" id=\"bProp\" data-tip=\"Importa\u00e7\u00e3o de proporcionais (filhos do produto PAI)\" data-ic=\"prop\"></button>\n  <button class=\"ib\" id=\"bFoco\" data-tip=\"Modo foco em tela cheia\" data-ic=\"foco\"></button>\n</nav>\n<div class=\"pop glass\" id=\"pRegras\"></div>\n<div class=\"pop glass larga\" id=\"pCols\"></div>\n<div class=\"pop glass\" id=\"pRnd\"></div>\n<div class=\"pop glass\" id=\"pPiso\"></div>\n<div class=\"pop glass\" id=\"pExp\"></div>\n<div class=\"pop glass\" id=\"pProp\"></div>\n<div class=\"pop glass larga\" id=\"pOpt\"></div>\n<div class=\"modal\" id=\"modal\"></div>\n<div id=\"tip\"></div><div class=\"toast\" id=\"toast\"></div>\n";
 /* ===================== protocolo de componente do Streamlit (sem biblioteca) ===================== */
 const ST = {
   send(type, extra){ window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type }, extra || {}), '*'); },
@@ -1707,6 +1731,18 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
   const curto = s => String(s ?? '').replace(/^\d+\s*-\s*/, '').replace(/^-\s*/, '');
   const titulo_ = s => String(s || '').toLowerCase().replace(/(^|\s)\S/g, x => x.toUpperCase());
+  /* anúncio no centro da tela: simples para o aceite, premium para o Optimus */
+  function anuncio(o){ let el = document.getElementById('anuncio'); if (!el) { el = document.createElement('div'); el.id = 'anuncio'; document.body.appendChild(el); }
+    clearTimeout(el._t); el.className = 'anuncio' + (o.premium ? ' premium' : '');
+    el.innerHTML = `<div class="an-card">${o.premium ? '<div class="an-aura"></div><div class="an-faiscas">' + Array.from({ length: 18 }, (_, k) => `<i style="--a:${k * 20}deg;--d:${(k % 6) * 60}ms"></i>`).join('') + '</div>' : ''}
+      <div class="an-ic" style="--c:${o.cor || 'var(--up)'}">${ic(o.icone || 'check', '#fff')}</div><h2>${o.titulo}</h2>${o.texto ? `<p>${o.texto}</p>` : ''}
+      ${o.numeros ? `<div class="an-num">${o.numeros.map(([t, v, c]) => `<div><b style="color:${c || 'inherit'}" data-alvo="${v}">0</b><span>${t}</span></div>`).join('')}</div>` : ''}</div>`;
+    requestAnimationFrame(() => el.classList.add('on'));
+    el.querySelectorAll('[data-alvo]').forEach(b => { const raw = b.dataset.alvo, alvo = parseFloat(raw.replace(/[^0-9,-]/g, '').replace(',', '.')), pre = raw.startsWith('R$') ? 'R$ ' : raw.startsWith('+R$') ? '+R$ ' : raw.startsWith('−R$') ? '−R$ ' : '';
+      if (!isFinite(alvo)) { b.textContent = raw; return; } const t0 = performance.now();
+      const passo = now => { const k = Math.min(1, (now - t0) / 900), v = alvo * (1 - Math.pow(1 - k, 3)); b.textContent = pre + nf0.format(v); if (k < 1) requestAnimationFrame(passo); else b.textContent = raw; }; requestAnimationFrame(passo); });
+    const fecha = () => { el.classList.remove('on'); };
+    el.onclick = fecha; el._t = setTimeout(fecha, o.premium ? 4200 : 2600); }
   function toast(t){ const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('on'), 2600); }
   const optInfo = i => { const o = OPT.get(i); return typeof o === 'string' ? { m: o } : (o || {}); };
   const rotRegra = i => RG[i] === 6 ? 'Optimus: ' + (optInfo(i).m || 'ajustado') : RG[i] === 2 ? `Aplicado máxima ${nf1.format(UMAX[i])}%` : RG[i] === 3 ? (D.cesta[i] ? `Aplicado mínima cesta ${nf1.format(UMIN[i])}%` : `Aplicado mínima ${nf1.format(UMIN[i])}%`)
@@ -1857,7 +1893,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     for (let i = 0; i < N; i++) {
       if (F.travas.size && !F.travas.has(RG[i])) continue;
       if (F.extra.size) { const neg = NV[i] < D.cu[i] - 1e-9, ipf = D.vmk[i] > 0 && NV[i] / D.vmk[i] > 1.009;
-        if ((F.extra.has('neg') && !neg) || (F.extra.has('pos') && neg) || (F.extra.has('ipf') && !ipf) || (F.extra.has('opt') && !OPT.has(i))) continue; }
+        if ((F.extra.has('neg') && !neg) || (F.extra.has('pos') && neg) || (F.extra.has('ipf') && !ipf) || (F.extra.has('opt') && !OPT.has(i)) || (F.extra.has('ace') && !aceito(i))) continue; }
       if (F.regra >= 0 && RG[i] !== F.regra) continue;
       if (F.corte === 9 && !(MUD[i] && !aceito(i))) continue;
       if (F.corte >= 0 && F.corte < 9 && !(MUD[i] && (CT[i] & (1 << F.corte)))) continue;
@@ -2243,7 +2279,12 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   on($('pOpt'), 'click', e => {
     if (e.target.closest('#optAplica') && PREVIA) { let n = 0;
       for (const x of PREVIA) { if (Math.abs(x.nv - NV[x.i]) < 0.005 && Math.abs(x.na - NA[x.i]) < 0.005) continue; gravaOptimus(x); n++; }
-      salvar(); atualizar(); if (SEL >= 0) { resumo(SEL); historico(SEL); } $('pOpt').classList.remove('on'); toast(`Optimus ajustou ${nf0.format(n)} preços`); }
+      salvar(); atualizar(); if (SEL >= 0) { resumo(SEL); historico(SEL); } $('pOpt').classList.remove('on');
+      const feitos = PREVIA.filter(x => OPT.has(x.i)), erros = feitos.filter(x => x.tipo === 'erro').length, dde = feitos.filter(x => x.dde).length;
+      const imp = feitos.reduce((t, x) => t + (NV[x.i] - D.vm[x.i]) * D.un[x.i], 0);
+      anuncio({ premium: true, icone: 'robo', cor: '#7A3FD1', titulo: 'Optimus aplicado', texto: 'Pesquisa conferida item a item, dentro das margens, do piso e da régua da companhia.',
+        numeros: [['preços ajustados', nf0.format(n)], ['erros de pesquisa tratados', nf0.format(erros), 'var(--down)'], ['itens com DDE alto', nf0.format(dde), 'var(--amber)'],
+          ['impacto mensal', (imp >= 0 ? '+R$ ' : '−R$ ') + nf0.format(Math.abs(imp)), imp >= 0 ? 'var(--up)' : 'var(--down)']] }); }
     if (e.target.closest('#optDesfaz')) { let n = 0; for (const i of VIS) if (OPT.has(i)) { OPT.delete(i); OV.delete(i); OVA.delete(i); calc(i); n++; }
       salvar(); atualizar(); if (SEL >= 0) resumo(SEL); $('pOpt').classList.remove('on'); toast(`${nf0.format(n)} ajustes do Optimus desfeitos`); }
   });
@@ -2290,7 +2331,8 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
 
   /* ---------- ações ---------- */
   function atualizar(refiltrar = true){ kpis(); chipOptimus(); if (refiltrar) filtrar(); render(); }
-  function chipOptimus(){ const c = $('chOpt'); if (!c) return; c.style.display = OPT.size ? '' : 'none'; c.querySelector('em').textContent = nf0.format(OPT.size); if (!OPT.size && F.extra.has('opt')) { F.extra.delete('opt'); c.classList.remove('on'); } }
+  function chipOptimus(){ const ca = $('chAce'); if (ca) { let n = 0; for (let i = 0; i < N; i++) if (aceito(i)) n++; ca.querySelector('em').textContent = nf0.format(n); }
+    const c = $('chOpt'); if (!c) return; c.style.display = OPT.size ? '' : 'none'; c.querySelector('em').textContent = nf0.format(OPT.size); if (!OPT.size && F.extra.has('opt')) { F.extra.delete('opt'); c.classList.remove('on'); } }
   on($('q'), 'input', e => { F.q = e.target.value; clearTimeout(e.target._t); e.target._t = setTimeout(() => { filtrar(); sc.scrollTop = 0; render(); }, 150); });
   document.querySelectorAll('.chip').forEach(b => on(b, 'click', () => {
     if (b.dataset.fx) { const v = b.dataset.fx; if (F.extra.has(v)) F.extra.delete(v); else { if (v === 'neg') F.extra.delete('pos'); if (v === 'pos') F.extra.delete('neg'); F.extra.add(v); }
@@ -2301,7 +2343,8 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     for (const i of VIS) { if (MUD[i] && CT[i]) { if (!aceito(i)) corte++; continue; }        // regra de corte: aceite só manual
       if ((MUD[i] || REAP[i]) && !aceito(i)) { ACE.set(i, true); n++; } }
     salvar(); atualizar(false); if (SEL >= 0) resumo(SEL);
-    toast(`${nf0.format(n)} preços aceitos${corte ? `; ${nf0.format(corte)} na regra de corte ficaram de fora (aceite manual)` : ''}`); };
+    anuncio({ icone: 'check', cor: 'var(--up)', titulo: n ? `${nf0.format(n)} preços aceitos` : 'Nada novo para aceitar',
+      texto: corte ? `${nf0.format(corte)} itens na regra de corte ficaram de fora: o aceite deles é manual.` : 'Todos os itens filtrados fora da regra de corte estão aceitos.' }); };
   $('bNone').onclick = () => { let n = 0; for (const i of VIS) if (podeAceitar(i) && aceito(i)) { ACE.set(i, false); n++; } salvar(); atualizar(false); if (SEL >= 0) resumo(SEL); toast(`${nf0.format(n)} aceites retirados`); };
   $('bProx').onclick = () => proximoPendente();
   $('bReset').onclick = async () => { if (!OV.size && !OVA.size && !ACE.size) { toast('Não há ajustes manuais'); return; }
