@@ -255,6 +255,7 @@ body.foco .kpis,body.foco .linha2{display:grid}
 .ctx button:disabled{opacity:.35;cursor:default;background:transparent;color:var(--ink)}
 .ctx button svg{width:14px;height:14px}
 .ctx-s{height:1px;background:var(--line);margin:3px 4px}
+small.subp{font:600 10px 'Geist Mono',monospace;color:var(--amber);background:var(--amber-soft);border-radius:5px;padding:1px 5px;margin-left:4px}
 #chOpt em{font-style:normal;font-family:'Geist Mono',monospace;font-size:11px;opacity:.7;margin-left:2px}
 #root{display:block} #app{height:100%}
 </style>
@@ -1502,7 +1503,7 @@ body.foco .kpis,body.foco .linha2{display:grid}
 </head><body><div id="root"></div>
 <script>
 const APP_PRICE = (() => {
-const MARCACAO = "<div id=\"app\">\n  <div class=\"topo\">\n    <div class=\"marca\"><h1 id=\"titulo\"></h1><small id=\"escopo\"></small></div>\n    <div class=\"kstrip\" id=\"kpis\"></div>\n  </div>\n  <div class=\"linha2\">\n    <div class=\"glass histc\">\n      <div class=\"hhead\"><span class=\"htit\">Concorr\u00eancia <small id=\"histSub\"></small></span><div class=\"hchips\" id=\"hChips\"></div>\n        <span class=\"hseg\" id=\"hSeg\"><button data-hm=\"v\" class=\"on\">Varejo</button><button data-hm=\"a\">Atacado</button></span></div>\n      <div id=\"hist\"></div>\n    </div>\n    <div class=\"glass resumo\" id=\"resumo\"></div>\n  </div>\n  <div class=\"gridbox glass\">\n    <div class=\"tools\">\n      <input type=\"search\" id=\"q\" placeholder=\"Buscar produto, filial ou concorrente\">\n      <button class=\"chip\" data-rg=\"4\" data-ic=\"obj\" data-tip=\"Itens sem pesquisa que foram para a margem objetiva\">Aplicado objetiva</button>\n      <button class=\"chip\" data-rg=\"3\" data-ic=\"piso\" data-tip=\"Itens que pararam na margem m\u00ednima\">Aplicado m\u00ednima</button>\n      <button class=\"chip\" data-rg=\"2\" data-ic=\"teto\" data-tip=\"Itens que pararam na margem m\u00e1xima\">Aplicado m\u00e1xima</button>\n      <span class=\"csep\"></span>\n      <button class=\"chip\" data-fx=\"neg\" data-ic=\"tdDn\" data-tip=\"Novo varejo abaixo do custo\">Negativos</button>\n      <button class=\"chip\" data-fx=\"pos\" data-ic=\"tdUp\" data-tip=\"Novo varejo acima do custo\">Positivos</button>\n      <button class=\"chip\" data-fx=\"ipf\" data-ic=\"alerta\" data-tip=\"IP novo acima de 100,9%: mais caro que o mercado\">IP fora</button>\n      <button class=\"chip\" id=\"chOpt\" data-fx=\"opt\" data-ic=\"robo\" data-tip=\"S\u00f3 os itens ajustados pelo Optimus\" style=\"display:none\">Optimus <em>0</em></button>\n      <span class=\"cnt\" id=\"cnt\"></span>\n    </div>\n    <div id=\"scroll\" tabindex=\"0\"><div class=\"hdr\" id=\"hdr\"></div><div id=\"body\"></div></div>\n  </div>\n</div>\n<nav class=\"dock glass\" id=\"dock\">\n  <button class=\"ib robo\" id=\"bOpt\" data-tip=\"Optimus: an\u00e1lise inteligente dos itens filtrados\" data-ic=\"robo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib gr\" id=\"bAll\" data-tip=\"Aceitar todos os itens filtrados\" data-ic=\"check\"></button>\n  <button class=\"ib\" id=\"bProx\" data-tip=\"Pr\u00f3ximo pre\u00e7o pendente (N)\" data-ic=\"prox\"></button>\n  <button class=\"ib\" id=\"bNone\" data-tip=\"Retirar aceite dos itens filtrados\" data-ic=\"x\"></button>\n  <button class=\"ib\" id=\"bReset\" data-tip=\"Voltar pre\u00e7os e aceites para a sugest\u00e3o do motor\" data-ic=\"undo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib\" id=\"bRegras\" data-tip=\"Regra de neg\u00f3cio e regra de altera\u00e7\u00e3o\" data-ic=\"regra\"></button>\n  <button class=\"ib\" id=\"bCols\" data-tip=\"Colunas e vis\u00e3o salva no seu perfil\" data-ic=\"cols\"></button>\n  <button class=\"ib\" id=\"bRnd\" data-tip=\"Regra de arredondamento\" data-ic=\"rnd\"></button>\n  <button class=\"ib\" id=\"bPiso\" data-tip=\"Piso de margem por estado\" data-ic=\"piso\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib pri\" id=\"bExp\" data-tip=\"Importa\u00e7\u00e3o (layout PRICE do Pre\u00e7o Bot)\" data-ic=\"up\"></button>\n  <button class=\"ib\" id=\"bProp\" data-tip=\"Importa\u00e7\u00e3o de proporcionais (filhos do produto PAI)\" data-ic=\"prop\"></button>\n  <button class=\"ib\" id=\"bFoco\" data-tip=\"Modo foco em tela cheia\" data-ic=\"foco\"></button>\n</nav>\n<div class=\"pop glass\" id=\"pRegras\"></div>\n<div class=\"pop glass larga\" id=\"pCols\"></div>\n<div class=\"pop glass\" id=\"pRnd\"></div>\n<div class=\"pop glass\" id=\"pPiso\"></div>\n<div class=\"pop glass\" id=\"pExp\"></div>\n<div class=\"pop glass\" id=\"pProp\"></div>\n<div class=\"pop glass larga\" id=\"pOpt\"></div>\n<div class=\"modal\" id=\"modal\"></div>\n<div id=\"tip\"></div><div class=\"toast\" id=\"toast\"></div>\n";
+const MARCACAO = "<div id=\"app\">\n  <div class=\"topo\">\n    <div class=\"marca\"><h1 id=\"titulo\"></h1><small id=\"escopo\"></small></div>\n    <div class=\"kstrip\" id=\"kpis\"></div>\n  </div>\n  <div class=\"linha2\">\n    <div class=\"glass histc\">\n      <div class=\"hhead\"><span class=\"htit\">Concorr\u00eancia <small id=\"histSub\"></small></span><div class=\"hchips\" id=\"hChips\"></div>\n        <span class=\"hseg\" id=\"hSeg\"><button data-hm=\"v\" class=\"on\">Varejo</button><button data-hm=\"a\">Atacado</button></span></div>\n      <div id=\"hist\"></div>\n    </div>\n    <div class=\"glass resumo\" id=\"resumo\"></div>\n  </div>\n  <div class=\"gridbox glass\">\n    <div class=\"tools\">\n      <input type=\"search\" id=\"q\" placeholder=\"Buscar produto, filial ou concorrente\">\n      <button class=\"chip\" data-rg=\"4\" data-ic=\"obj\" data-tip=\"Itens sem pesquisa que foram para a margem objetiva\">Aplicado objetiva</button>\n      <button class=\"chip\" data-rg=\"3\" data-ic=\"piso\" data-tip=\"Itens que pararam na margem m\u00ednima\">Aplicado m\u00ednima</button>\n      <button class=\"chip\" data-rg=\"2\" data-ic=\"teto\" data-tip=\"Itens que pararam na margem m\u00e1xima\">Aplicado m\u00e1xima</button>\n      <span class=\"csep\"></span>\n      <button class=\"chip\" data-fx=\"neg\" data-ic=\"tdDn\" data-tip=\"Novo varejo abaixo do custo\">Negativos</button>\n      <button class=\"chip\" data-fx=\"pos\" data-ic=\"tdUp\" data-tip=\"Novo varejo acima do custo\">Positivos</button>\n      <button class=\"chip\" data-fx=\"ipf\" data-ic=\"alerta\" data-tip=\"IP novo acima de 100,9%: mais caro que o mercado\">IP fora</button>\n      <button class=\"chip\" id=\"chOpt\" data-fx=\"opt\" data-ic=\"robo\" data-tip=\"S\u00f3 os itens ajustados pelo Optimus\" style=\"display:none\">Optimus <em>0</em></button>\n      <span class=\"cnt\" id=\"cnt\"></span>\n    </div>\n    <div id=\"scroll\" tabindex=\"0\"><div class=\"hdr\" id=\"hdr\"></div><div id=\"body\"></div></div>\n  </div>\n</div>\n<nav class=\"dock glass\" id=\"dock\">\n  <button class=\"ib robo\" id=\"bOpt\" data-tip=\"Optimus: an\u00e1lise inteligente dos itens filtrados\" data-ic=\"robo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib gr\" id=\"bAll\" data-tip=\"Aceitar todos os itens filtrados que estão fora da regra de corte\" data-ic=\"check\"></button>\n  <button class=\"ib\" id=\"bProx\" data-tip=\"Pr\u00f3ximo pre\u00e7o pendente (N)\" data-ic=\"prox\"></button>\n  <button class=\"ib\" id=\"bNone\" data-tip=\"Retirar aceite dos itens filtrados\" data-ic=\"x\"></button>\n  <button class=\"ib\" id=\"bReset\" data-tip=\"Voltar pre\u00e7os e aceites para a sugest\u00e3o do motor\" data-ic=\"undo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib\" id=\"bRegras\" data-tip=\"Regra de neg\u00f3cio e regra de altera\u00e7\u00e3o\" data-ic=\"regra\"></button>\n  <button class=\"ib\" id=\"bCols\" data-tip=\"Colunas e vis\u00e3o salva no seu perfil\" data-ic=\"cols\"></button>\n  <button class=\"ib\" id=\"bRnd\" data-tip=\"Regra de arredondamento\" data-ic=\"rnd\"></button>\n  <button class=\"ib\" id=\"bPiso\" data-tip=\"Piso de margem por estado\" data-ic=\"piso\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib pri\" id=\"bExp\" data-tip=\"Importa\u00e7\u00e3o (layout PRICE do Pre\u00e7o Bot)\" data-ic=\"up\"></button>\n  <button class=\"ib\" id=\"bProp\" data-tip=\"Importa\u00e7\u00e3o de proporcionais (filhos do produto PAI)\" data-ic=\"prop\"></button>\n  <button class=\"ib\" id=\"bFoco\" data-tip=\"Modo foco em tela cheia\" data-ic=\"foco\"></button>\n</nav>\n<div class=\"pop glass\" id=\"pRegras\"></div>\n<div class=\"pop glass larga\" id=\"pCols\"></div>\n<div class=\"pop glass\" id=\"pRnd\"></div>\n<div class=\"pop glass\" id=\"pPiso\"></div>\n<div class=\"pop glass\" id=\"pExp\"></div>\n<div class=\"pop glass\" id=\"pProp\"></div>\n<div class=\"pop glass larga\" id=\"pOpt\"></div>\n<div class=\"modal\" id=\"modal\"></div>\n<div id=\"tip\"></div><div class=\"toast\" id=\"toast\"></div>\n";
 /* ===================== protocolo de componente do Streamlit (sem biblioteca) ===================== */
 const ST = {
   send(type, extra){ window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type }, extra || {}), '*'); },
@@ -1618,7 +1619,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   const REGRAS = [['Mercado − R$ 0,01', 'merc', 'var(--primary)'], null, ['Aplicado máxima (teto)', 'teto', 'var(--down)'],
     ['Aplicado mínima (piso)', 'piso', 'var(--up)'], ['Aplicado objetiva (sem pesquisa)', 'obj', 'var(--amber)'], ['Ajuste manual', 'mao', '#B794FF'], ['Optimus', 'robo', '#7A3FD1']];
   const ORDEM_R = [0, 2, 3, 4, 6, 5];
-  const CORTES = [['Variação acima de ±1,5%', 'tdUp'], ['Encarte, app ou mídia vigente', 'tagi'], ['Promoção comercial abaixo do mercado', 'alerta']];
+  const CORTES = [['Encarte, app ou mídia vigente', 'tagi'], ['Promoção comercial abaixo do mercado', 'alerta'], ['IP atual já na zona alvo (98% a 101%)', 'merc'], ['Variação abaixo de 0,7%', 'tdUp'], ['Variação acima de ±1,5%', 'tdUp']];
   const NV = new Float64Array(N), NA = new Float64Array(N), RG = new Uint8Array(N), MN = new Float64Array(N), MX = new Float64Array(N), OB = new Float64Array(N);
   const UMIN = new Float64Array(N), UMAX = new Float64Array(N), UOBJ = new Float64Array(N), CT = new Uint8Array(N), MUD = new Uint8Array(N), REAP = new Uint8Array(N);
   const DF0 = Date.UTC(2020, 0, 1), hj = new Date(), HOJE = Math.floor((Date.UTC(hj.getFullYear(), hj.getMonth(), hj.getDate()) - DF0) / 864e5) + 1;
@@ -1676,7 +1677,15 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     NV[i] = nv; NA[i] = na; RG[i] = rg; MN[i] = mn; MX[i] = mx; OB[i] = obj; UMIN[i] = umin; UMAX[i] = mmax; UOBJ[i] = mobj;
     const fimHoje = D.dfim[i] > 0 && D.dfim[i] === HOJE, tp = (D.tipos[D.ti[i]] || '').toUpperCase(), ip = vmk > 0 ? D.vm[i] / vmk : NaN;
     let ct = 0;
-    if (!fimHoje) { if (Math.abs(nv / D.vm[i] - 1) > CORTE / 100) ct |= 1; if (/ENCARTE|APP|MIDIA/.test(tp)) ct |= 2; if (/PROMOCAO COMERCIAL/.test(tp) && ip < 1) ct |= 4; }
+    /* regra de corte da planilha de precificação (W = IP atual, Z = delta do novo preço), só quando a vigência não termina hoje */
+    const tpn = tp.normalize('NFD').replace(/[\u0300-\u036f]/g, ''), z = nv / D.vm[i] - 1, regularPdv = /PRECO REGULAR/.test(tpn);
+    if (!fimHoje && !regularPdv) {
+      if (/ENCARTE|MIDIA|\bAPP\b/.test(tpn)) ct |= 1;                                     // encarte, encarte smarket, mídia, mídia smarket, app
+      if (/PROMOCAO COMERCIAL/.test(tpn) && ip < 1) ct |= 2;                                // promoção comercial já abaixo do mercado (planilha: IP <= 98%)
+      if (ip >= 0.98 && ip <= 1.01) ct |= 4;                                                // IP atual já na zona alvo
+      if (z > -0.007 && z < 0.007 && !(ip >= 1.01 || ip <= 0.96)) ct |= 8;                 // variação pequena com IP próximo do mercado
+    }
+    if (!fimHoje && !regularPdv && Math.abs(z) > CORTE / 100) ct |= 16;                   // regra adicional: variação acima de ±1,5% (preço regular sempre vai para análise, como na planilha)
     CT[i] = ct;
     { const d = D.dfim[i] - HOJE, dia = D.dfim[i] > 0 ? new Date(DF0 + (D.dfim[i] - 1) * 864e5).getUTCDay() : -1;
       REAP[i] = D.dfim[i] > 0 && (d === 0 || (d > 0 && d <= 6 && (dia === 6 || dia === 0))) ? 1 : 0; }
@@ -1748,12 +1757,15 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
       return `MESMO PREÇO, VIGÊNCIA TERMINANDO\nO novo preço é igual ao atual (${R$(D.vm[i])}), mas a vigência atual termina ${D.dfim[i] === HOJE ? 'hoje' : 'no ' + dia + ', ' + fim}.\nPor isso o aceite fica liberado: marque para reaplicar o preço e ele seguir valendo depois do fim da vigência.`; }
     if (!MUD[i]) return `SEM ALTERAÇÃO\nO novo preço é igual ao atual (${R$(D.vm[i])}) e a vigência atual ${D.dfim[i] > 0 ? 'vai até ' + fim : 'não tem data fim'}: nada a importar.\nO aceite só é liberado quando a vigência termina hoje ou no sábado/domingo.`;
     if (!CT[i]) { L.push('DENTRO DA REGRA: ACEITE AUTOMÁTICO');
-      L.push(D.dfim[i] === HOJE ? `O preço atual termina hoje (${fim}), então não há corte.` : `Variação de ${(v > 0 ? '+' : '') + P1(v)}, dentro do limite de ±${nf1.format(CORTE)}%, e o preço atual não está em ação que trave a alteração.`);
+      L.push(D.dfim[i] === HOJE ? `O preço atual termina hoje (${fim}), então não há corte.` : /PRECO REGULAR/.test((tp || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')) ? `Preço atual é regular (${titulo_(tp)}): sempre vai para análise.` : 'Nenhum critério de corte: não está em encarte, app ou mídia, o IP atual está fora da zona alvo e a variação é relevante.');
       return L.join('\n'); }
-    L.push('SEM ACEITE AUTOMÁTICO');
-    if (CT[i] & 1) L.push(`• Variação de ${(v > 0 ? '+' : '') + P1(v)} (de ${R$(D.vm[i])} para ${R$(NV[i])}), acima do limite de ±${nf1.format(CORTE)}%.`);
-    if (CT[i] & 2) L.push(`• Preço atual em ${titulo_(tp)} vigente (${fim}): encarte, app e mídia não mudam antes do fim da ação.`);
-    if (CT[i] & 4) L.push(`• Preço atual em promoção comercial com IP de ${nf1.format(D.vm[i] / D.vmk[i] * 100)}, abaixo de 100%: já está mais barato que o mercado.`);
+    L.push('SEM ACEITE AUTOMÁTICO (REGRA DE CORTE)');
+    const ipA = D.vmk[i] > 0 ? D.vm[i] / D.vmk[i] : NaN;
+    if (CT[i] & 1) L.push(`• Preço atual em ${titulo_(tp)} vigente (${fim}): o novo preço não entraria em vigor enquanto a ação roda.`);
+    if (CT[i] & 2) L.push(`• Preço atual em promoção comercial com IP de ${nf1.format(ipA * 100)}, abaixo de 100%: já está mais barato que o mercado.`);
+    if (CT[i] & 4) L.push(`• IP atual de ${nf1.format(ipA * 100)}, já dentro da zona alvo (98% a 101%): não precisa mexer.`);
+    if (CT[i] & 8) L.push(`• Variação de ${(v > 0 ? '+' : '') + P1(v)} (de ${R$(D.vm[i])} para ${R$(NV[i])}), abaixo de 0,7%, com o IP atual entre 96% e 101%.`);
+    if (CT[i] & 16) L.push(`• Variação de ${(v > 0 ? '+' : '') + P1(v)} (de ${R$(D.vm[i])} para ${R$(NV[i])}), acima do limite de ±${nf1.format(CORTE)}%.`);
     L.push(`Data fim do preço atual: ${fim}. Preços que terminam hoje não sofrem corte.`, 'Se quiser aplicar mesmo assim, marque o aceite.');
     return L.join('\n');
   }
@@ -1768,7 +1780,8 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   const col = (id, t, g, w, rend, ord, cls, txt) => C[id] = { id, t, g, w, rend, ord, cls: cls || '', txt };
   col('ok', 'Aceite', 'Identificação', 62, i => `<span class="ok-box${podeAceitar(i) ? (aceito(i) ? ' on' : '') : ' na'}" data-ok="${i}">${ic('check')}</span>`, i => (MUD[i] ? (aceito(i) ? 2 : 1) : 0));
   col('fil', 'Filial', 'Identificação', 140, i => esc(curto(D.filiais[D.fi[i]])), i => D.filiais[D.fi[i]], '', () => D.filiais.map(curto));
-  col('prod', 'Produto', 'Identificação', 280, i => esc(D.produtos[D.pi[i]]), i => D.produtos[D.pi[i]], '', () => D.produtos);
+  const SUB = i => D.subst && D.subst[i] ? D.subst[i] : 0;
+  col('prod', 'Produto', 'Identificação', 280, i => SUB(i) ? `<span data-tip="O PAI ${SUB(i)} está sem estoque nesta filial: este similar 100% de maior venda é precificado no lugar dele">${esc(D.produtos[D.pi[i]])} <small class="subp">no lugar do ${SUB(i)}</small></span>` : esc(D.produtos[D.pi[i]]), i => D.produtos[D.pi[i]], '', () => D.produtos);
   col('cv', 'Curva', 'Identificação', 58, i => `<span class="cv cv${'ABC'[D.curva[i]]}">${'ABC'[D.curva[i]]}</span>`, i => D.curva[i]);
   col('uf', 'Estado', 'Identificação', 110, i => esc(D.ufs[D.ui[i]]), i => D.ufs[D.ui[i]], '', () => D.ufs);
   col('comp', 'Comprador', 'Identificação', 160, i => esc(D.compradores[D.bi[i]]), i => D.compradores[D.bi[i]], '', () => D.compradores);
@@ -2055,7 +2068,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     const [mV, mA, mF] = modaItem(i), dm = mV > 0 && D.vmk[i] > 0 && !D.orig[i] ? D.vmk[i] / mV - 1 : null, m1 = (NV[i] - c) / NV[i];
     const st = (t, v, k) => `<div class="ms"><span>${t}</span><b class="${k || ''}">${v}</b></div>`;
     $('resumo').innerHTML = `<div class="rtop"><div class="rnome" title="${esc(D.produtos[D.pi[i]])}">${esc(curto(D.produtos[D.pi[i]]))}</div>${tagRegra(i)}</div>
-      <div class="rsub">${esc(curto(D.filiais[D.fi[i]]))}, curva ${'ABC'[D.curva[i]]}${D.cesta[i] ? ', cesta' : ''}. ${esc(D.orig[i] ? 'Moda (sem pesquisa direta)' : titulo_(curto(D.concs[D.ki[i]]).split(' - ')[0]))}${D.orig[i] ? '' : ', ' + esc(D.datas[D.dti[i]] || '')}. ${esc(titulo_(D.tipos[D.ti[i]] || ''))}${D.dfim[i] > 0 ? ' até ' + dfTxt(D.dfim[i]) : ''}.</div>
+      <div class="rsub">${SUB(i) ? `<b style="color:var(--amber)">No lugar do PAI ${SUB(i)} (sem estoque).</b> ` : ''}${esc(curto(D.filiais[D.fi[i]]))}, curva ${'ABC'[D.curva[i]]}${D.cesta[i] ? ', cesta' : ''}. ${esc(D.orig[i] ? 'Moda (sem pesquisa direta)' : titulo_(curto(D.concs[D.ki[i]]).split(' - ')[0]))}${D.orig[i] ? '' : ', ' + esc(D.datas[D.dti[i]] || '')}. ${esc(titulo_(D.tipos[D.ti[i]] || ''))}${D.dfim[i] > 0 ? ' até ' + dfTxt(D.dfim[i]) : ''}.</div>
       ${svg}
       <div class="mgrid" data-tip="Moda: ${FONTE_MODA[mF]}">${st('Moda var.', brl(mV))}${st('Moda atac.', brl(mA))}${st('Menor ÷ moda', dm == null ? '–' : (dm > 0 ? '+' : '') + pct(dm), dm < 0 ? 'neg' : '')}
         ${st('Menor var.', brl(D.vmk[i]))}${st('Menor atac.', brl(D.amk[i]))}${st('Margem nova', pct(m1), m1 < 0 ? 'neg' : 'pos')}</div>
@@ -2284,7 +2297,11 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
       document.querySelectorAll('[data-fx]').forEach(x => x.classList.toggle('on', F.extra.has(x.dataset.fx))); }
     else { const v = +b.dataset.rg; F.travas.has(v) ? F.travas.delete(v) : F.travas.add(v); b.classList.toggle('on'); }
     filtrar(); sc.scrollTop = 0; render(); }));
-  $('bAll').onclick = () => { let n = 0; for (const i of VIS) if (podeAceitar(i) && !aceito(i)) { ACE.set(i, true); n++; } salvar(); atualizar(false); if (SEL >= 0) resumo(SEL); toast(n ? `${nf0.format(n)} preços aceitos` : 'Itens filtrados já estão aceitos'); };
+  $('bAll').onclick = () => { let n = 0, corte = 0;
+    for (const i of VIS) { if (MUD[i] && CT[i]) { if (!aceito(i)) corte++; continue; }        // regra de corte: aceite só manual
+      if ((MUD[i] || REAP[i]) && !aceito(i)) { ACE.set(i, true); n++; } }
+    salvar(); atualizar(false); if (SEL >= 0) resumo(SEL);
+    toast(`${nf0.format(n)} preços aceitos${corte ? `; ${nf0.format(corte)} na regra de corte ficaram de fora (aceite manual)` : ''}`); };
   $('bNone').onclick = () => { let n = 0; for (const i of VIS) if (podeAceitar(i) && aceito(i)) { ACE.set(i, false); n++; } salvar(); atualizar(false); if (SEL >= 0) resumo(SEL); toast(`${nf0.format(n)} aceites retirados`); };
   $('bProx').onclick = () => proximoPendente();
   $('bReset').onclick = async () => { if (!OV.size && !OVA.size && !ACE.size) { toast('Não há ajustes manuais'); return; }
@@ -2299,7 +2316,11 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   const comPesq = D.orig.some(o => o === 0), nRegra = D.pobj.filter(v => v != null).length;
   $('escopo').textContent = `${nf0.format(N)} itens ${comPesq ? 'com pesquisa' : 'sem pesquisa'}, ${D.filiais.length} filiais`;
   $('escopo').dataset.tip = `${nf0.format(D.produtos.length)} produtos. ${nRegra ? nf0.format(nRegra) + ' itens com regra do Profimetrics.' : 'Sem regras do Profimetrics: margem objetiva 10% e máxima 30%.'} ${A.info || ''}`;
-  aplicaColunas(); calcTudo(); filtrar(); kpis();
+  aplicaColunas(); calcTudo();
+  if ((GUARD.v || 0) < 3) {                       // aceites dados em massa por versões antigas em itens da regra de corte saem (uma vez)
+    let n = 0; for (let i = 0; i < N; i++) if (MUD[i] && CT[i] && ACE.get(i) === true) { ACE.delete(i); n++; }
+    GUARD.v = 3; salvar(); if (n) setTimeout(() => toast(`${nf0.format(n)} aceites antigos em itens da regra de corte foram retirados`), 500); }
+  filtrar(); kpis();
   if (VIS.length) selecionar(VIS[0]); else { render(); resumo(-1); historico(-1); }
 }
 
@@ -2815,7 +2836,7 @@ const ic = (n, cor) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="$
     dup: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/>', olho: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
     ban: '<circle cx="12" cy="12" r="9"/><path d="m5.7 5.7 12.6 12.6"/>', gantt: '<path d="M3 5h10M7 12h12M5 19h8"/>', moeda: '<circle cx="12" cy="12" r="9"/><path d="M15 9.5c-.5-1-1.6-1.5-3-1.5-1.7 0-3 .8-3 2s1.3 1.8 3 2 3 .8 3 2-1.3 2-3 2c-1.4 0-2.5-.5-3-1.5M12 6v2M12 16v2"/>' });
   document.querySelectorAll('[data-ic]').forEach(b => { if (!b.querySelector('svg')) b.insertAdjacentHTML('afterbegin', ic(b.dataset.ic)); });
-  $('titulo').innerHTML = `<span class="logo">${ic('promo', '#fff')}</span>Promo<span>Metrics</span>`;
+  $('titulo').innerHTML = `<span class="logo">${ic('promo', '#fff')}</span>Metrics<span>Promo</span>`;
   const tip = $('tip');
   on(document, 'mouseover', e => { const t = e.target.closest('[data-tip]'); if (!t) { tip.classList.remove('on'); return; }
     tip.textContent = t.dataset.tip; const r = t.getBoundingClientRect(); tip.classList.add('on'); const w = tip.offsetWidth, h = tip.offsetHeight;
