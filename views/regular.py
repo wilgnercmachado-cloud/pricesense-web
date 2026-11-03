@@ -24,8 +24,8 @@ RAIZ = Path(__file__).resolve().parent.parent
 _MESA = components.declare_component("mesa_precificacao", path=str(RAIZ / "ui" / "metrics_comp"))
 TELA = "pricing_regular"
 FILTROS = ["Estado", "Diretor regional", "Filial", "Departamento", "Comprador", "Categoria"]
-PADRAO = {"cesta": True, "sem_acoes": False, "pesquisa": "Com pesquisa", **{f: [] for f in FILTROS}}
-LIMITE = 120_000
+PADRAO = {"cesta": False, "sem_acoes": False, "pesquisa": "Com pesquisa", **{f: [] for f in FILTROS}}   # padrão: todos os estados e todos os itens
+LIMITE = 400_000
 
 
 @st.cache_resource(show_spinner=False, max_entries=2)
@@ -59,35 +59,27 @@ def _fonte() -> tuple[pd.DataFrame, dict, dict] | None:
 
 
 def _filtros(df: pd.DataFrame) -> dict:
-    """Filtros recolhidos num botão, como no relatório: abre, escolhe e aplica."""
-    atual = st.session_state.setdefault("reg_filtros", dict(PADRAO))
-    ativos = sum(bool(atual[f]) for f in FILTROS) + (atual["pesquisa"] != "Com pesquisa") + (not atual["cesta"]) + atual["sem_acoes"]
+    """Filtros num botão, aplicados na hora a cada clique (sem botão Aplicar)."""
+    ss = st.session_state
+    for k, v in PADRAO.items():
+        ss.setdefault(f"rf_{k}", list(v) if isinstance(v, list) else v)
+    ativos = sum(bool(ss[f"rf_{c}"]) for c in FILTROS) + (ss.rf_pesquisa != "Com pesquisa") + (ss.rf_cesta is True) + bool(ss.rf_sem_acoes)
     with st.popover(f"{ativos}" if ativos else "", icon=":material/filter_list:", help="Filtros da análise"):
-        with st.form("reg_form_filtros", border=False):
-            pesquisa = st.segmented_control("Itens", ["Com pesquisa", "Sem pesquisa"], default=atual["pesquisa"], required=True,
-                                            help="Sem pesquisa: o varejo vai para a margem objetiva e o atacado sai do objetivo com a base de redução.")
-            c1, c2 = st.columns(2)
-            sel = {}
-            for n, col in enumerate(FILTROS):
-                opcoes = sorted(str(v) for v in pd.unique(df[col]) if pd.notna(v))
-                sel[col] = (c1 if n % 2 == 0 else c2).multiselect(col, opcoes, default=[v for v in atual[col] if v in opcoes], placeholder="Todos")
-            c3, c4 = st.columns(2)
-            cesta = c3.toggle("Só cesta", value=atual["cesta"])
-            sem_acoes = c4.toggle("Sem itens em ação", value=atual["sem_acoes"],
-                                  help="Tira encarte, mídia, vencimento e travados. Desligado, eles entram e caem na regra de corte.")
-            c5, c6 = st.columns(2)
-            aplicar = c5.form_submit_button("Aplicar", type="primary", width="stretch", icon=":material/check:")
-            limpar = c6.form_submit_button("Limpar", width="stretch", icon=":material/filter_alt_off:")
-        if aplicar or limpar:
-            st.session_state.reg_filtros = dict(PADRAO) if limpar else {**sel, "cesta": cesta, "sem_acoes": sem_acoes, "pesquisa": pesquisa}
-            st.session_state._fechar_popover = True
+        st.segmented_control("Itens", ["Com pesquisa", "Sem pesquisa"], key="rf_pesquisa", required=True,
+                             help="Sem pesquisa: o varejo vai para a margem objetiva e o atacado sai do objetivo com a base de redução.")
+        c1, c2 = st.columns(2)
+        for n, col in enumerate(FILTROS):
+            opcoes = sorted(str(v) for v in pd.unique(df[col]) if pd.notna(v) and str(v).strip())
+            ss[f"rf_{col}"] = [v for v in ss[f"rf_{col}"] if v in opcoes]
+            (c1 if n % 2 == 0 else c2).multiselect(col, opcoes, key=f"rf_{col}", placeholder="Todos")
+        c3, c4 = st.columns(2)
+        c3.toggle("Só cesta", key="rf_cesta")
+        c4.toggle("Sem itens em ação", key="rf_sem_acoes", help="Tira encarte, mídia, vencimento e travados. Desligado, eles entram e caem na regra de corte.")
+        if st.button("Limpar filtros", width="stretch", icon=":material/filter_alt_off:", key="rf_limpar"):
+            for k, v in PADRAO.items():
+                ss[f"rf_{k}"] = list(v) if isinstance(v, list) else v
             st.rerun()
-    if st.session_state.pop("_fechar_popover", False):
-        # fecha o painel de filtros depois de aplicar (o Streamlit o mantém aberto entre execuções)
-        components.html("<script>const d=window.parent.document;setTimeout(()=>{d.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));"
-                        "d.body.dispatchEvent(new MouseEvent('mousedown',{bubbles:true}));d.body.dispatchEvent(new MouseEvent('mouseup',{bubbles:true}));"
-                        "d.body.click();},150)</script>", height=0, width=0)
-    return st.session_state.reg_filtros
+    return {k: (list(ss[f"rf_{k}"]) if isinstance(PADRAO[k], list) else ss[f"rf_{k}"]) for k in PADRAO}
 
 
 def _profimetrics() -> pd.DataFrame:
