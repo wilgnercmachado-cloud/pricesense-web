@@ -24,7 +24,7 @@ _DICIONARIOS = {"F": "Filial", "C": "Classificação", "B": "Comprador", "D": "D
 _BLOQUEIO = re.compile(r"VENCIMENTO|ENCARTE|MIDIA")
 
 
-VERSAO = "2026-11-03c"   # muda quando o formato lido muda: invalida a base guardada em cache no servidor
+VERSAO = "2026-11-04"   # muda quando o formato lido muda: invalida a base guardada em cache no servidor
 
 
 class ErroLeitura(ValueError):
@@ -180,15 +180,8 @@ def aplicar_vencedor(df: pd.DataFrame, col: dict, extra: dict | None = None) -> 
     w = w[~w["ch"].isin(ruins)]
     w = w.sort_values(["ch", "v"]).drop_duplicates("ch")
     w = w.sort_values(["p", "f", "v", "dia"], ascending=[True, True, True, False]).drop_duplicates(["p", "f"])
-    # moda do concorrente vencedor no período inteiro (regular, promoção e ponto extra; empate: menor preço)
-    valid = np.isin(A["t"], list(TIPOS_VALIDOS)) & np.isin(_chave(A["p"], A["f"], A["k"]), w["ch"].to_numpy())
-    m = pd.DataFrame({"p": A["p"][valid], "f": A["f"][valid], "v": A["v"][valid], "a": A["a"][valid]})
-    def _moda(c):
-        x = m[m[c] > 0].groupby(["p", "f", c]).size().reset_index(name="n")
-        x = x.sort_values(["p", "f", "n", c], ascending=[True, True, False, True]).drop_duplicates(["p", "f"])
-        return x.set_index(["p", "f"])[c]
-    moda_v, moda_a = _moda("v"), _moda("a")
-    del m, A, W
+
+    del A, W
     chave_df = pd.MultiIndex.from_arrays([df["_p"].astype(np.int32).to_numpy(), df["_f"].astype(np.int16).to_numpy()])
     w = w.set_index(["p", "f"]).reindex(chave_df)
     tem = w["v"].notna().to_numpy()
@@ -200,12 +193,7 @@ def aplicar_vencedor(df: pd.DataFrame, col: dict, extra: dict | None = None) -> 
             df[c + " (relatório)"] = df[c]
     df["mk"] = v
     df["amk"] = at
-    if "mo" in df:
-        mo_v = moda_v.reindex(chave_df).to_numpy(dtype=float) / 100
-        mo_a = moda_a.reindex(chave_df).to_numpy(dtype=float) / 100
-        df["moda_venc"] = np.where(np.isnan(mo_v), 0, 1).astype(np.int8)
-        df["mo"] = np.where(np.isnan(mo_v), df["mo (relatório)"], mo_v)
-        df["ma"] = np.where(np.isnan(mo_a), df["ma (relatório)"], mo_a)
+    df["_kv"] = np.where(tem, np.nan_to_num(w["k"].to_numpy(dtype=float), nan=-1), -1).astype(np.int32)   # concorrente vencedor (para a moda)
     ks, ds_, ts = w["k"].to_numpy(), w["dia"].to_numpy(), w["t"].to_numpy()
     rotulos = {}
     rot = lambda o: rotulos.setdefault(int(o), _dt.date.fromordinal(int(o)).strftime("%d/%m"))
@@ -215,6 +203,53 @@ def aplicar_vencedor(df: pd.DataFrame, col: dict, extra: dict | None = None) -> 
     df["Data pesquisa"] = pd.Categorical([rotulos[int(x)] if ok_ else "" for ok_, x in zip(tem, dsn)])
     df["Tipo de preço"] = pd.Categorical([TIPOS_VALIDOS.get(int(t), "") if ok_ else "" for ok_, t in zip(tem, np.nan_to_num(ts))])
     return [rot(min(corte.values())), rot(int(dd.max()))] if corte else []
+
+
+def aplicar_moda(df: pd.DataFrame, h: dict | None) -> None:
+    """Moda de varejo e atacado de cada filial x produto (altera df), pelo histórico de cada concorrente (HTML + 1067).
+
+    1. Só coletas REGULAR, PROMOÇÃO e PONTO EXTRA.
+    2. Por concorrente: o preço de VAREJO praticado em mais dias, com pelo menos 3 dias; empate: o menor preço.
+    3. Atacado da moda: o atacado das mesmas coletas desse varejo (mesmo concorrente, mesmos dias), o de mais dias;
+       empate: o menor; sem atacado coletado, o próprio varejo.
+    4. Para a filial: a moda do concorrente vencedor; se ele não tiver moda consistente, a moda com mais dias entre os
+       concorrentes associados à filial (empate: menor preço). Sem nenhuma moda consistente, o item fica sem moda.
+    """
+    if "mo" not in df or not h or not {"dP", "dK", "dT", "dV", "dA", "fil_conc_f", "fil_conc_k"}.issubset(h):
+        return
+    t = np.asarray(h["dTp"]) if "dTp" in h else np.zeros(len(h["dP"]), dtype=np.int16)
+    ok = np.isin(t, list(TIPOS_VALIDOS)) & (np.asarray(h["dV"]) > 0)
+    r = pd.DataFrame({"p": np.asarray(h["dP"])[ok].astype(np.int32), "k": np.asarray(h["dK"])[ok].astype(np.int32),
+                      "d": np.asarray(h["dT"])[ok].astype(np.int32), "v": np.asarray(h["dV"])[ok].astype(np.int32), "a": np.asarray(h["dA"])[ok].astype(np.int32)})
+    dv = r[["p", "k", "v", "d"]].drop_duplicates().groupby(["p", "k", "v"]).size().reset_index(name="n")
+    dv = dv[dv["n"] >= 3]
+    mk = dv.sort_values(["p", "k", "n", "v"], ascending=[True, True, False, True]).drop_duplicates(["p", "k"])
+    ma = r[r["a"] > 0].merge(mk[["p", "k", "v"]], on=["p", "k", "v"])[["p", "k", "a", "d"]].drop_duplicates()
+    ma = ma.groupby(["p", "k", "a"]).size().reset_index(name="na").sort_values(["p", "k", "na", "a"], ascending=[True, True, False, True]).drop_duplicates(["p", "k"])
+    mk = mk.merge(ma[["p", "k", "a"]], on=["p", "k"], how="left")
+    mk["a"] = mk["a"].fillna(mk["v"])
+    del r, dv, ma
+    base = pd.DataFrame({"p": df["_p"].astype(np.int32).to_numpy(), "f": df["_f"].astype(np.int32).to_numpy(),
+                         "kv": df["_kv"].to_numpy() if "_kv" in df else -1}).reset_index(drop=True)
+    base["i"] = np.arange(len(base))
+    # 1º a moda do vencedor
+    v1 = base.merge(mk, left_on=["p", "kv"], right_on=["p", "k"], how="inner")[["i", "k", "v", "a", "n"]].assign(fonte=1)
+    # 2º a moda com mais dias entre os concorrentes associados à filial
+    assoc = pd.DataFrame({"f": np.asarray(h["fil_conc_f"]).astype(np.int32), "k": np.asarray(h["fil_conc_k"]).astype(np.int32)}).drop_duplicates()
+    falta = base[~base["i"].isin(v1["i"])]
+    v2 = falta.merge(assoc, on="f").merge(mk, on=["p", "k"])
+    v2 = v2.sort_values(["i", "n", "v"], ascending=[True, False, True]).drop_duplicates("i")[["i", "k", "v", "a", "n"]].assign(fonte=2)
+    esc = pd.concat([v1, v2], ignore_index=True).set_index("i").reindex(np.arange(len(base)))
+    tem = esc["v"].notna().to_numpy()
+    nomes = list(h.get("K", []))
+    ek = np.nan_to_num(esc["k"].to_numpy(dtype=float), nan=-1).astype(np.int64)
+    if "mo (relatório)" not in df:
+        df["mo (relatório)"], df["ma (relatório)"] = df["mo"], df["ma"]
+    df["moda_venc"] = np.where(tem, esc["fonte"].fillna(0).to_numpy(), 0).astype(np.int8)    # 1 vencedor, 2 maior moda da filial, 0 sem moda
+    df["mo"] = np.where(tem, esc["v"].to_numpy(dtype=float) / 100, 0.0)
+    df["ma"] = np.where(tem, esc["a"].to_numpy(dtype=float) / 100, 0.0)
+    df["moda_dias"] = np.where(tem, esc["n"].fillna(0).to_numpy(), 0).astype(np.int16)
+    df["moda_conc"] = pd.Categorical([nomes[k] if o and 0 <= k < len(nomes) else "" for o, k in zip(tem, ek)])
 
 
 def _array_js(js: str, inicio_padrao: str) -> bytes | None:
@@ -293,8 +328,10 @@ def ler_relatorio(html: bytes) -> tuple[pd.DataFrame, dict]:
 
     coletas = coletas_html(html, cab.get("upd"))
     recorte = aplicar_vencedor(df, coletas) if coletas and "_p" in df else []
+    hist = _historico(html, dic.get("hU"))
+    aplicar_moda(df, hist)
     meta = {"recorte": recorte, "coletas": coletas, "atualizado": cab.get("upd"), "periodo": cab.get("hist"), "linhas": n,
-            "filiais": len(dic.get("F", [])), "produtos": len(dic.get("P", [])), "hist": _historico(html, dic.get("hU")),
+            "filiais": len(dic.get("F", [])), "produtos": len(dic.get("P", [])), "hist": hist,
             "com_data_fim": int((df["data_fim"] > 0).sum())}
     return df, meta
 

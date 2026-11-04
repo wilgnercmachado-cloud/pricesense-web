@@ -180,6 +180,8 @@ def payload(b: pd.DataFrame, hist: dict | None = None, props: pd.DataFrame | Non
         "tcol": _tipo_coleta(col("Tipo de preço").astype(str)),
         "subst": [int(x) for x in col("pai_subst").fillna(0)],
         "mf": [int(x) for x in col("moda_venc").fillna(0)],
+        "mfd": [int(x) for x in col("moda_dias").fillna(0)],
+        **(lambda d: {"mcs": d[0], "mci": d[1]})(dic("moda_conc") if "moda_conc" in b else ([], [0] * len(b))),
         "props": _proporcionais(b, props),
         **_historico(b, hist, filiais, produtos, ufs),
     }
