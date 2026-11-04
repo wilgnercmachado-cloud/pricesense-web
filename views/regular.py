@@ -11,7 +11,7 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
-from core import db
+from core import auth, db
 from core import gmat_reader as gr
 from core import precificacao as pr
 from core import profimetrics as pf
@@ -49,7 +49,45 @@ def _com_1067(base_id: str, em_1067: str, _df: pd.DataFrame, _meta: dict, _pacot
     ext = p67.para_indices(_pacote, _df, _meta["coletas"]["K"])
     df = _df.assign()                                     # cópia rasa: só as colunas do vencedor são trocadas
     recorte = gr.aplicar_vencedor(df, _meta["coletas"], ext)
-    return df, dict(_meta, recorte=recorte, p1067={**_pacote["meta"], "na_base": int(len(ext["p"])), "fora_da_base": ext["fora_da_base"]})
+    return df, dict(_meta, recorte=recorte, hist=_hist_com_1067(_meta.get("hist"), ext, _df, _meta.get("atualizado")),
+                    p1067={**_pacote["meta"], "na_base": int(len(ext["p"])), "fora_da_base": ext["fora_da_base"]})
+
+
+def _hist_com_1067(h: dict | None, ext: dict, df: pd.DataFrame, upd) -> dict | None:
+    """Histórico do gráfico de concorrência com as coletas da 1067 somadas (mesma regra: na mesma data e concorrente, vale a 1067)."""
+    import datetime as _dt
+    if not h or not len(ext["p"]) or "dP" not in h:
+        return h
+    h = dict(h)
+    K = list(h["K"]) + list(ext.get("K_novos", []))
+    KE = list(h.get("KE", [])) + [""] * len(ext.get("K_novos", []))
+    # dia: rótulo dd/mm do histórico; datas novas entram no fim
+    T = list(h["T"])
+    ords = gr._ordinais(T, upd)
+    pos = {int(o): n for n, o in enumerate(ords)}
+    ultimo = int(ords.max()) if len(ords) else 0
+    novos = sorted(int(o) for o in set(ext["dia"].tolist()) if int(o) not in pos and int(o) > ultimo)
+    for o in novos:
+        pos[o] = len(T); T.append(_dt.date.fromordinal(o).strftime("%d/%m"))
+    t_idx = np.array([pos.get(int(o), -1) for o in ext["dia"]])
+    # estado de cada coleta pela filial
+    uf_f = pd.Series(df["Estado"].astype(str).to_numpy(), index=df["_f"].to_numpy()).groupby(level=0).first()
+    u_pos = {u: n for n, u in enumerate(h["U"])}
+    u_idx = np.array([u_pos.get(uf_f.get(int(f), ""), -1) for f in ext["f"]])
+    ok = (t_idx >= 0) & (u_idx >= 0)
+    nP, nK, nT = ext["p"][ok].astype(h["dP"].dtype), ext["k"][ok].astype(np.int64), t_idx[ok]
+    chave = lambda p, k, t: (p.astype(np.int64) * 100000 + k) * 1000 + t
+    fica = ~np.isin(chave(h["dP"], h["dK"].astype(np.int64), h["dT"].astype(np.int64)), chave(nP, nK, nT))
+    junta = lambda velho, novo: np.concatenate([np.asarray(velho)[fica], novo.astype(np.asarray(velho).dtype)])
+    h.update({"dP": junta(h["dP"], nP), "dU": junta(h["dU"], u_idx[ok]), "dK": junta(h["dK"], nK), "dT": junta(h["dT"], nT),
+              "dV": junta(h["dV"], ext["v"][ok]), "dA": junta(h["dA"], ext["a"][ok])})
+    if "dTp" in h:
+        h["dTp"] = np.concatenate([np.asarray(h["dTp"])[fica], ext["t"][ok].astype(np.asarray(h["dTp"]).dtype)])
+    pares = set(zip(np.asarray(h["fil_conc_f"]).tolist(), np.asarray(h["fil_conc_k"]).tolist()))
+    pares |= set(zip(ext["f"].tolist(), ext["k"].tolist()))
+    pf_, pk_ = zip(*sorted(pares)) if pares else ((), ())
+    h.update({"fil_conc_f": np.asarray(pf_, dtype=np.int32), "fil_conc_k": np.asarray(pk_, dtype=np.int32), "K": K, "KE": KE, "T": T})
+    return h
 
 
 def base_atual() -> tuple[pd.DataFrame, dict, dict] | None:
@@ -142,6 +180,28 @@ def _pesquisa_1067(rel: dict, meta: dict) -> None:
             p67.remover(eu); st.rerun()
 
 
+def _pedir_aprovacao(tipo: str, arquivo, validar) -> None:
+    """Usuário sem perfil de administrador: confere o arquivo e manda para a fila de aprovação."""
+    from core import aprovacoes as ap
+    try:
+        with st.spinner("Conferindo o arquivo"):
+            resumo = validar(arquivo)
+            arquivo.seek(0)
+            ap.enviar(tipo, st.session_state.get("usuario_login", ""), getattr(arquivo, "name", tipo), arquivo.getvalue(), resumo)
+        st.toast("Enviado para aprovação do administrador. Só entra na base depois de aprovado.", icon=":material/pending:")
+    except (pf.ErroProfimetrics, pp.ErroProporcao) as exc:
+        st.error(str(exc), icon=":material/error:")
+    except Exception as exc:
+        st.error(f"Não foi possível enviar para aprovação: {exc}. Confira a tabela aprovacoes_upload (supabase/migrations.sql).", icon=":material/error:")
+
+
+def _meus_pedidos(tipo: str) -> None:
+    from core import aprovacoes as ap
+    for p in [x for x in ap.meus(st.session_state.get("usuario_login", "")) if x.get("tipo") == tipo][:2]:
+        rot = {"pendente": "aguardando aprovação", "aprovado": "aprovado", "recusado": "recusado"}.get(p.get("status"), p.get("status"))
+        st.caption(f"Seu envio {p.get('nome_arquivo')} de {str(p.get('criado_em'))[:16].replace('T', ' ')}: {rot}.")
+
+
 def _profimetrics() -> pd.DataFrame:
     regras, meta = pf.carregar()
     with st.popover("", icon=":material/tune:", help="Regras de margem (Profimetrics)"):
@@ -152,8 +212,16 @@ def _profimetrics() -> pd.DataFrame:
             st.caption("Nenhuma regra salva: a mesa usa margem objetiva de 10% e máxima de 30%.")
         st.caption("Envie a planilha Detalhes Produtos do Profimetrics. Ela fica salva no Supabase até o próximo envio: "
                    "o arquivo novo substitui a regra do mesmo produto na mesma zona, e o resto é mantido.")
+        if not auth.eh_admin():
+            st.caption("Seu envio vai para aprovação do administrador e só entra na base depois de aprovado.")
+            _meus_pedidos("profimetrics")
         arq = st.file_uploader("Planilha Profimetrics (XLSX)", type=["xlsx", "xls"], key="reg_pf", label_visibility="collapsed")
-        if st.button("Salvar no Supabase", type="primary", width="stretch", icon=":material/cloud_upload:", disabled=arq is None, key="reg_pf_salvar"):
+        admin = auth.eh_admin()
+        if st.button("Salvar no Supabase" if admin else "Enviar para aprovação", type="primary", width="stretch", icon=":material/cloud_upload:",
+                     disabled=arq is None, key="reg_pf_salvar"):
+            if not admin:
+                _pedir_aprovacao("profimetrics", arq, lambda a: {"regras": int(len(pf.ler_planilha(a)))})
+                return regras
             try:
                 with st.spinner("Lendo a planilha e mesclando com as regras salvas"):
                     r = pf.salvar(pf.ler_planilha(arq), st.session_state.get("usuario_logado", ""))
@@ -171,8 +239,15 @@ def _profimetrics() -> pd.DataFrame:
                     f"{ui.numero(int((props['proporcao'] != 100).sum()))} proporcionais). " if len(props) else "Nenhuma proporção cadastrada. ")
                    + "Envie a base com ID_PRODUTO, ID_PAI e Proporcao. Ela define o PAI de cada família (a mesa precifica só o PAI) "
                    "e os proporcionais; cada envio substitui a proporção do mesmo produto.")
+        if not auth.eh_admin():
+            _meus_pedidos("proporcoes")
         arq_p = st.file_uploader("Base PROP% (XLSX)", type=["xlsx", "xls"], key="reg_prop", label_visibility="collapsed")
-        if st.button("Salvar proporções", width="stretch", icon=":material/cloud_upload:", disabled=arq_p is None, key="reg_prop_salvar"):
+        if st.button("Salvar proporções" if admin else "Enviar proporções para aprovação", width="stretch", icon=":material/cloud_upload:",
+                     disabled=arq_p is None, key="reg_prop_salvar"):
+            if not admin:
+                _pedir_aprovacao("proporcoes", arq_p, lambda a: (lambda d: {"relacoes": int(len(d)), "similares": int((d["proporcao"] == 100).sum()),
+                                                                             "proporcionais": int((d["proporcao"] != 100).sum())})(pp.ler_planilha(a)))
+                return regras
             try:
                 barra = st.progress(0.0, text="Cruzando com a dim_produto e gravando as proporções")
                 r = pp.salvar(pp.ler_planilha(arq_p), progresso=lambda x: barra.progress(x, text="Gravando as proporções"))

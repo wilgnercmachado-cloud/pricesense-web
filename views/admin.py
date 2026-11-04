@@ -72,16 +72,42 @@ def render() -> None:
     online = sum(1 for u in ativos if presenca.resumo(u)["online"])
     bloqueados = [u for u in usuarios if u.get("status") not in ("Pendente", "Aprovado")]
     pedidos_cluster = db.listar_solicitacoes_cluster()
+    from core import aprovacoes as ap
+    uploads = ap.pendentes()
 
     ui.etiquetas([
         ui.etiqueta("Aguardando aprovação", len(pendentes), tipo="numero", tom="promo" if pendentes else "neutro"),
         ui.etiqueta("Usuários ativos", len(ativos), tipo="numero", tom="primary"),
         ui.etiqueta("Online agora", online, tipo="numero", tom="ok"),
         ui.etiqueta("Clusters para mapear", len(pedidos_cluster), tipo="numero", tom="alert" if pedidos_cluster else "neutro"),
+        ui.etiqueta("Uploads para aprovar", len(uploads), tipo="numero", tom="promo" if uploads else "neutro"),
     ])
 
     abas = st.tabs([f"Solicitações ({len(pendentes)})", f"Usuários ({len(ativos)})",
-                    f"Clusters ({len(pedidos_cluster)})", f"Bloqueados ({len(bloqueados)})"])
+                    f"Clusters ({len(pedidos_cluster)})", f"Bloqueados ({len(bloqueados)})", f"Uploads ({len(uploads)})"])
+
+    with abas[4]:
+        if not uploads:
+            ui.vazio("Nenhum upload aguardando", "Regras do Profimetrics e bases PROP% enviadas por usuários aparecem aqui antes de ir para o Supabase.")
+        for u in uploads:
+            with st.container(border=True, key=f"psc_up_{u['id']}"):
+                c1, c2, c3 = st.columns([3, 0.8, 0.8], vertical_alignment="center")
+                res = ", ".join(f"{ui.numero(v)} {k}" for k, v in (u.get("resumo") or {}).items())
+                c1.html(f"<b>{ui.esc(ap.TIPOS.get(u['tipo'], u['tipo']))}</b><br><span style='color:var(--ps-muted);font-size:.86rem'>"
+                        f"{ui.esc(u.get('usuario'))} enviou {ui.esc(u.get('nome_arquivo') or '')}"
+                        f"{' em ' + ui.esc(str(u.get('criado_em'))[:16].replace('T', ' ')) if u.get('criado_em') else ''}"
+                        f"{': ' + ui.esc(res) if res else ''}</span>")
+                if c2.button("Aprovar", type="primary", key=f"up_ok_{u['id']}", width="stretch"):
+                    try:
+                        barra = st.progress(0.0, text="Gravando no Supabase")
+                        msg = ap.aprovar(u, st.session_state.get("usuario_login", ""), progresso=lambda x: barra.progress(x, text="Gravando no Supabase"))
+                        st.toast(f"Aprovado e gravado: {msg}.", icon=":material/check_circle:")
+                        st.rerun()
+                    except Exception as exc:
+                        st.error(f"Não foi possível gravar: {exc}", icon=":material/error:")
+                if c3.button("Recusar", key=f"up_no_{u['id']}", width="stretch"):
+                    ap.recusar(u, st.session_state.get("usuario_login", ""))
+                    st.rerun()
 
     with abas[0]:
         if not pendentes:
