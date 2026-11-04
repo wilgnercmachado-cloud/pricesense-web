@@ -108,14 +108,18 @@ if admin_on and pagina.url_path != "admin":
     def _aviso_solicitacoes() -> None:
         """Pop-up para administradores quando chegam pedidos de acesso (verifica a cada 30 s)."""
         try:
-            fila = db.pendentes()
+            from core import aprovacoes as ap
+            fila = db.pendentes() + [{"nome": f"{x.get('usuario')} enviou {ap.TIPOS.get(x.get('tipo'), 'um arquivo')}", "usuario": x.get("usuario"), "_up": 1}
+                                     for x in ap.pendentes()]
         except Exception:
             return
         if not fila or st.session_state.get("_aviso_dispensado") == len(fila):
             return
         with st.container(key="ps_aviso"):
             nomes = ", ".join(ui.esc(u.get("nome") or u["usuario"]) for u in fila[:2]) + (f" e mais {len(fila) - 2}" if len(fila) > 2 else "")
-            titulo = "Nova solicitação de acesso" if len(fila) == 1 else f"{len(fila)} solicitações de acesso"
+            ups = sum(1 for u in fila if u.get("_up"))
+            titulo = ("Upload aguardando aprovação" if ups == len(fila) == 1 else "Nova solicitação de acesso" if len(fila) == 1
+                      else f"{len(fila)} pedidos aguardando você")
             st.html(f"<div class='ps-aviso'><i class='ps-live'></i><div><b>{titulo}</b><span>{nomes}</span></div></div>")
             c1, c2 = st.columns(2)
             if c1.button("Revisar", type="primary", width="stretch", key="aviso_ir"):
