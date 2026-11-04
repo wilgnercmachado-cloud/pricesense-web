@@ -167,7 +167,8 @@ def _profimetrics() -> pd.DataFrame:
         st.divider()
         props = pp.carregar()
         st.markdown("**Proporcionais (base PROP%)**")
-        st.caption((f"{ui.numero(len(props))} produtos filhos com proporção na dim_produto. " if len(props) else "Nenhuma proporção cadastrada. ")
+        st.caption((f"{ui.numero(len(props))} produtos filhos na base PROP% ({ui.numero(int((props['proporcao'] == 100).sum()))} similares 100% e "
+                    f"{ui.numero(int((props['proporcao'] != 100).sum()))} proporcionais). " if len(props) else "Nenhuma proporção cadastrada. ")
                    + "Envie a base com ID_PRODUTO, ID_PAI e Proporcao. Ela define o PAI de cada família (a mesa precifica só o PAI) "
                    "e os proporcionais; cada envio substitui a proporção do mesmo produto.")
         arq_p = st.file_uploader("Base PROP% (XLSX)", type=["xlsx", "xls"], key="reg_prop", label_visibility="collapsed")
@@ -176,8 +177,8 @@ def _profimetrics() -> pd.DataFrame:
                 barra = st.progress(0.0, text="Cruzando com a dim_produto e gravando as proporções")
                 r = pp.salvar(pp.ler_planilha(arq_p), progresso=lambda x: barra.progress(x, text="Gravando as proporções"))
                 barra.empty()
-                st.toast(f"{ui.numero(r['salvas'])} proporções gravadas"
-                         + (f"; {ui.numero(r['fora_da_dim'])} produtos não existem na dim_produto." if r["fora_da_dim"] else "."), icon=":material/check_circle:")
+                st.toast(f"Base PROP% gravada: {ui.numero(r['salvas'] + r['fora_da_dim'])} relações valem na precificação "
+                         f"({ui.numero(r['salvas'])} também na dim_produto).", icon=":material/check_circle:")
                 st.rerun()
             except pp.ErroProporcao as exc:
                 st.error(str(exc), icon=":material/error:")
