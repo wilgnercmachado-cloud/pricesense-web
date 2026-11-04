@@ -74,7 +74,9 @@ def _com_1067(base_id: str, em_1067: str, _df: pd.DataFrame, _meta: dict, _pacot
     ext = p67.para_indices(_pacote, _df, _meta["coletas"]["K"])
     df = _df.assign()                                     # cópia rasa: só as colunas do vencedor são trocadas
     recorte = gr.aplicar_vencedor(df, _meta["coletas"], ext)
-    return df, dict(_meta, recorte=recorte, hist=_hist_com_1067(_meta.get("hist"), ext, _df, _meta.get("atualizado")),
+    hist = _hist_com_1067(_meta.get("hist"), ext, _df, _meta.get("atualizado"))
+    gr.aplicar_moda(df, hist)                             # moda refeita com as coletas da 1067
+    return df, dict(_meta, recorte=recorte, hist=hist,
                     p1067={**_pacote["meta"], "na_base": int(len(ext["p"])), "fora_da_base": ext["fora_da_base"]})
 
 
