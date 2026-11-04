@@ -29,7 +29,11 @@ def ler_planilha(arquivo) -> pd.DataFrame:
         try:
             if hasattr(arquivo, "seek"):
                 arquivo.seek(0)
-            bruto = pd.read_excel(arquivo, sheet_name=0, engine=motor)
+            cab = pd.read_excel(arquivo, sheet_name=0, engine=motor, nrows=0)
+            usar = [c for c in cab.columns if _norm(c) in ("idproduto", "idpai", "proporcao")]
+            if hasattr(arquivo, "seek"):
+                arquivo.seek(0)
+            bruto = pd.read_excel(arquivo, sheet_name=0, engine=motor, usecols=usar or None)   # só as 3 colunas: leitura bem mais rápida
             break
         except ImportError:
             continue
@@ -62,19 +66,23 @@ def salvar(df: pd.DataFrame, progresso=None) -> dict:
     completo = df[["id_produto", "id_pai", "proporcao"]].drop_duplicates("id_produto", keep="last")
     db.sb().storage.from_("relatorios").upload(ARQUIVO, _gz.compress(completo.to_csv(index=False).encode(), 6),
                                                {"content-type": "application/gzip", "upsert": "true"})
-    ids = df["id_produto"].tolist()
-    existentes: set[int] = set()
-    for i in range(0, len(ids), 300):
-        resp = db.sb().table("dim_produto").select("id_produto").in_("id_produto", ids[i:i + 300]).execute()
-        existentes.update(int(r["id_produto"]) for r in (resp.data or []))
-    validos = df[df["id_produto"].isin(existentes)]
-    registros = [{"id_produto": int(r.id_produto), "id_pai": int(r.id_pai), "proporcao": float(r.proporcao)} for r in validos.itertuples()]
+    # a função do banco só atualiza quem já existe na dim_produto: não precisa consultar antes
+    registros = [{"id_produto": int(a), "id_pai": int(b), "proporcao": float(c)}
+                 for a, b, c in zip(completo["id_produto"], completo["id_pai"], completo["proporcao"])]
+    salvas = 0
     try:
-        for i in range(0, len(registros), 1000):
-            db.sb().rpc("atualizar_proporcoes", {"dados": registros[i:i + 1000]}).execute()
-            if progresso:
-                progresso(min(1.0, (i + 1000) / max(1, len(registros))))
+        from concurrent.futures import ThreadPoolExecutor
+        lotes = [registros[i:i + 5000] for i in range(0, len(registros), 5000)]
+        def lote(l):
+            r = db.sb().rpc("atualizar_proporcoes", {"dados": l}).execute()
+            return int(r.data or 0) if isinstance(r.data, (int, float)) else len(l)
+        with ThreadPoolExecutor(max_workers=4) as ex:              # lotes grandes em paralelo
+            for n, q in enumerate(ex.map(lote, lotes), 1):
+                salvas += q
+                if progresso:
+                    progresso(n / len(lotes))
     except Exception:
+        salvas = len(registros)
         # sem a função no banco: UPDATE produto a produto (mais lento, mesmo resultado)
         from concurrent.futures import ThreadPoolExecutor
         def um(r):
@@ -84,7 +92,7 @@ def salvar(df: pd.DataFrame, progresso=None) -> dict:
                 if progresso and n % 50 == 0:
                     progresso(n / len(registros))
     carregar.clear()
-    return {"salvas": len(registros), "fora_da_dim": len(df) - len(registros)}
+    return {"salvas": salvas, "fora_da_dim": max(0, len(completo) - salvas)}
 
 
 ARQUIVO = "config/proporcoes.csv.gz"
