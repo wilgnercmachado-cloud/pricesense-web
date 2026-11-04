@@ -66,7 +66,9 @@ def _formulario(rel: dict | None) -> None:
                                             placeholder="Busque pelo nome", key=f"pub_users_{sufixo}")
                 setores = st.multiselect("Setores", _setores(), default=[x for x in (rel.get("setores_permitidos") or []) if x in _setores()] if editando else [],
                                          placeholder="Todos os usuários destes setores", key=f"pub_set_{sufixo}")
-                estados = st.multiselect("Estados", UFS, default=[x for x in (rel.get("estados_permitidos") or []) if x in UFS] if editando else [],
+                from views.regular import estados_atuacao
+                ufs = estados_atuacao() or UFS
+                estados = st.multiselect("Estados", ufs, default=[x for x in (rel.get("estados_permitidos") or []) if x in ufs] if editando else [],
                                          placeholder="Todos os usuários destes estados", key=f"pub_uf_{sufixo}")
                 combinar = "e"
                 if setores and estados:

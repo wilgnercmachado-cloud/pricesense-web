@@ -131,6 +131,18 @@ def base_atual() -> tuple[pd.DataFrame, dict, dict] | None:
     return df, meta, rel
 
 
+@st.cache_data(ttl=900, show_spinner=False)
+def estados_atuacao() -> list[str]:
+    """Siglas dos estados em que atuamos: os mesmos da base da PriceMetrics."""
+    try:
+        fonte = base_atual()
+        if fonte:
+            return sorted({str(e).split(" - ")[0].strip() for e in fonte[0]["Estado"].astype(str).unique() if str(e).strip()})
+    except Exception:
+        pass
+    return []
+
+
 def _fonte() -> tuple[pd.DataFrame, dict, dict] | None:
     rel = _relatorio_padrao()
     if rel is None:

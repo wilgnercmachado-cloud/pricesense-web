@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from core import auth, db, presenca
+from core import reports, auth, db, presenca
 from ui import components as ui
 
 
@@ -43,19 +43,25 @@ def _linha_usuario(u: dict) -> None:
             st.toast(f"{u.get('nome') or u['usuario']} {'agora é administrador' if novo_admin else 'deixou de ser administrador'}.",
                      icon=":material/admin_panel_settings:")
             st.rerun()
-        s1, s2, _ = st.columns([1.3, 0.8, 2.4], vertical_alignment="center")
+        s1, s2, _ = st.columns([1.3, 1.6, 1.6], vertical_alignment="center")
         setores = st.session_state.get("_setores_lista", [])
         setor_atual = u.get("setor") or None
         setor = s1.selectbox("Setor", sorted(set(setores) | ({setor_atual} if setor_atual else set())), index=None if not setor_atual else
                              sorted(set(setores) | {setor_atual}).index(setor_atual), accept_new_options=True, placeholder="Setor (digite para criar)",
                              key=f"set_{u['usuario']}", label_visibility="collapsed")
-        from views.publicar import UFS
-        estado = s2.selectbox("Estado", UFS, index=UFS.index(u["estado"]) if u.get("estado") in UFS else None, placeholder="Estado",
-                              key=f"uf_{u['usuario']}", label_visibility="collapsed")
-        if (setor or None) != setor_atual or (estado or None) != (u.get("estado") or None):
+        from views.regular import estados_atuacao
+        opcoes = ["TODOS"] + estados_atuacao()
+        atuais = [x for x in reports.estados_do_usuario(u.get("estado")) if x in opcoes]
+        escolha = s2.multiselect("Estados", opcoes, default=atuais, placeholder="Estados", format_func=lambda x: "Todos (Brasil)" if x == "TODOS" else x,
+                                 key=f"uf_{u['usuario']}", label_visibility="collapsed")
+        if "TODOS" in escolha and len(escolha) > 1:
+            escolha = ["TODOS"]                         # Todos (Brasil) já inclui qualquer estado
+        estado = ";".join(escolha) or None
+        if (setor or None) != setor_atual or estado != (";".join(atuais) or None):
             try:
-                db.atualizar_usuario(u["usuario"], {"setor": setor or None, "estado": estado or None})
-                st.toast(f"{u.get('nome') or u['usuario']}: setor {setor or '-'}, estado {estado or '-'}.", icon=":material/badge:")
+                db.atualizar_usuario(u["usuario"], {"setor": setor or None, "estado": estado})
+                rot = "Todos (Brasil)" if escolha == ["TODOS"] else (", ".join(escolha) or "-")
+                st.toast(f"{u.get('nome') or u['usuario']}: setor {setor or '-'}, estados {rot}.", icon=":material/badge:")
             except Exception as exc:
                 st.error(f"Não foi possível salvar: {exc}. Crie as colunas setor e estado em usuarios (supabase/migrations.sql).")
         with c4.popover("Ações", width="stretch"):
