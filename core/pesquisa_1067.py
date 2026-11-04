@@ -184,7 +184,7 @@ def salvar(lido: dict, base: str, usuario: str) -> dict:
                         t=t["t"].to_numpy(np.int8), v=t["v"].to_numpy(np.int32), a=t["a"].to_numpy(np.int32),
                         meta=np.frombuffer(json.dumps(meta).encode(), dtype=np.uint8),
                         nomes=np.frombuffer(json.dumps({str(k): v for k, v in lido["nomes"].items()}).encode(), dtype=np.uint8))
-    db.sb().storage.from_(BUCKET).upload(_caminho(usuario), buf.getvalue(), {"content-type": "application/octet-stream", "upsert": "true"})
+    db.sb().storage.from_(BUCKET).upload(_caminho(usuario), buf.getvalue(), {"content-type": "application/gzip", "upsert": "true"})
     _lista.clear(); _somar.clear()
     return meta
 
