@@ -25,7 +25,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 _MESA = components.declare_component("mesa_precificacao", path=str(RAIZ / "ui" / "metrics_comp"))
 TELA = "pricing_regular"
 FILTROS = ["Estado", "Diretor regional", "Filial", "Departamento", "Comprador", "Categoria"]
-PADRAO = {"cesta": True, "sem_acoes": False, "pesquisa": "Com pesquisa", **{f: [] for f in FILTROS}}   # padrão: com pesquisa e só cesta, todos os estados
+PADRAO = {"cesta": True, "pesquisa": "Com pesquisa", **{f: [] for f in FILTROS}}   # padrão: com pesquisa e só cesta, todos os estados
 LIMITE = 400_000
 
 
@@ -164,9 +164,11 @@ def _filtros(df: pd.DataFrame) -> dict:
     ss = st.session_state
     for k, v in PADRAO.items():
         ss.setdefault(f"rf_{k}", list(v) if isinstance(v, list) else v)
-    ativos = sum(bool(ss[f"rf_{c}"]) for c in FILTROS) + sum(ss[f"rf_{k}"] != PADRAO[k] for k in ("pesquisa", "cesta", "sem_acoes"))
+    # "Com pesquisa" e "Só cesta" vêm ligados ao abrir e contam como filtros ativos
+    ativos = sum(bool(ss[f"rf_{c}"]) for c in FILTROS) + 1 + bool(ss.rf_cesta)
+    resumo = ", ".join([ss.rf_pesquisa] + (["só cesta"] if ss.rf_cesta else []) + [f"{c.lower()} ({len(ss[f'rf_{c}'])})" for c in FILTROS if ss[f"rf_{c}"]])
     with st.popover(f"Filtros · {ativos}" if ativos else "Filtros", icon=":material/filter_list:", help="Filtros da análise"):
-        ui.gaveta_topo("Filtros", f"{ativos} filtro{'s' if ativos > 1 else ''} ativo{'s' if ativos > 1 else ''}" if ativos else "Nenhum filtro ativo")
+        ui.gaveta_topo("Filtros", resumo)
         st.segmented_control("Itens", ["Com pesquisa", "Sem pesquisa"], key="rf_pesquisa", required=True, width="stretch",
                              help="Sem pesquisa: o varejo vai para a margem objetiva e o atacado sai do objetivo com a base de redução.")
         for col in FILTROS:
@@ -174,7 +176,6 @@ def _filtros(df: pd.DataFrame) -> dict:
             ss[f"rf_{col}"] = [v for v in ss[f"rf_{col}"] if v in opcoes]
             st.multiselect(col, opcoes, key=f"rf_{col}", placeholder="Todos")
         st.toggle("Só cesta", key="rf_cesta")
-        st.toggle("Sem itens em ação", key="rf_sem_acoes", help="Tira encarte, mídia, vencimento e travados. Desligado, eles entram e caem na regra de corte.")
         if st.button("Limpar filtros", width="stretch", key="rf_limpar"):
             for k, v in PADRAO.items():
                 ss[f"rf_{k}"] = list(v) if isinstance(v, list) else v
@@ -338,7 +339,7 @@ def _dados_mesa(filtros: str, versao: str, _df_all, _meta, _regras, _props) -> t
     for col in FILTROS:
         if f.get(col):
             mask &= _df_all[col].isin(f[col]).to_numpy()
-    b = pr.base(_df_all[mask], so_cesta=f["cesta"], ignorar_acoes=f["sem_acoes"], regras=_regras, com_pesquisa=f["pesquisa"] == "Com pesquisa", props=_props)
+    b = pr.base(_df_all[mask], so_cesta=f["cesta"], ignorar_acoes=False, regras=_regras, com_pesquisa=f["pesquisa"] == "Com pesquisa", props=_props)
     if b.empty:
         return None, 0, ""
     if len(b) > LIMITE:
