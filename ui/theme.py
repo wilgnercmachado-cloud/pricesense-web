@@ -228,7 +228,47 @@ body:has([data-testid="stPopoverBody"] .ps-gaveta) [data-testid="stApp"] {{
 .ps-gaveta-x:hover {{ transform: rotate(90deg); background: var(--ps-primary-soft); color: var(--ps-primary); }}
 .ps-atualizado {{ display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; border-radius: 999px; white-space: nowrap;
   font-size: .78rem; color: var(--ps-muted); background: var(--ps-surface); border: 1px solid var(--ps-line); backdrop-filter: blur(12px); }}
+body.ps-selo-curto .ps-atualizado .ps-at-txt {{ display: none; }}
+body.ps-selo-oculto .st-key-reg_topo [data-testid="stHtml"]:has(.ps-atualizado) {{ display: none; }}
 .ps-atualizado i {{ width: 8px; height: 8px; border-radius: 50%; background: var(--ps-up); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ps-up) 22%, transparent); }}
+
+/* ---------- carregamento: anel tecnológico (spinners e execuções demoradas do site) ---------- */
+@keyframes ps-gira-anel {{ to {{ transform: rotate(360deg); }} }}
+@keyframes ps-gira-volta {{ to {{ transform: rotate(-360deg); }} }}
+@keyframes ps-aparece {{ from {{ opacity: 0; scale: .85; }} to {{ opacity: 1; scale: 1; }} }}
+@keyframes ps-pulso-nucleo {{ 0%, 100% {{ transform: scale(.7); opacity: .65; }} 50% {{ transform: scale(1); opacity: 1; }} }}
+[data-testid="stSpinnerIcon"] {{ display: none !important; }}
+[data-testid="stSpinner"] {{ display: flex; align-items: center; gap: 12px; }}
+[data-testid="stSpinner"]::before {{
+  content: ""; width: 26px; height: 26px; border-radius: 50%; flex: none;
+  background: conic-gradient(from 0deg, transparent 0 25%, var(--ps-primary) 60%, var(--ps-up) 100%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px));
+  animation: ps-gira-anel .8s linear infinite; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--ps-primary) 55%, transparent));
+}}
+/* execução que passa de ~0,7 s (troca de página, leitura de base): anel duplo no centro da tela */
+.stApp[data-test-script-state="running"]::before, .stApp[data-test-script-state="running"]::after {{
+  content: ""; position: fixed; left: 50%; top: 50%; translate: -50% -50%; z-index: 1000050; pointer-events: none; border-radius: 50%;
+  opacity: 0; animation: ps-aparece .35s cubic-bezier(.2,.8,.2,1) .7s forwards;
+}}
+.stApp[data-test-script-state="running"]::before {{
+  width: 76px; height: 76px;
+  background: conic-gradient(from 0deg, transparent 0 20%, var(--ps-primary) 55%, var(--ps-up) 80%, #7A3FD1 100%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4.5px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4.5px));
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--ps-primary) 60%, transparent));
+}}
+.stApp[data-test-script-state="running"]::after {{
+  width: 50px; height: 50px; border: 2px dashed color-mix(in srgb, var(--ps-up) 70%, transparent);
+  background: radial-gradient(circle, var(--ps-primary) 0 5px, color-mix(in srgb, var(--ps-primary) 25%, transparent) 6px 9px, transparent 10px),
+              color-mix(in srgb, var(--ps-surface-solid) 70%, transparent);
+  box-shadow: 0 0 0 14px color-mix(in srgb, var(--ps-surface-solid) 55%, transparent), 0 18px 50px -18px rgba(15,23,42,.5);
+  backdrop-filter: blur(6px);
+}}
+.stApp[data-test-script-state="running"]::before {{ animation: ps-aparece .35s cubic-bezier(.2,.8,.2,1) .7s forwards, ps-gira-anel-c 1s linear infinite; }}
+.stApp[data-test-script-state="running"]::after {{ animation: ps-aparece .35s cubic-bezier(.2,.8,.2,1) .7s forwards, ps-gira-volta-c 2.6s linear infinite; }}
+@keyframes ps-gira-anel-c {{ from {{ rotate: 0deg; }} to {{ rotate: 360deg; }} }}
+@keyframes ps-gira-volta-c {{ from {{ rotate: 0deg; }} to {{ rotate: -360deg; }} }}
 
 /* ---------- toques modernos e leves ---------- */
 [data-testid="stMainBlockContainer"] > div {{ animation: ps-entra .35s ease-out; }}
@@ -238,7 +278,7 @@ body:has([data-testid="stPopoverBody"] .ps-gaveta) [data-testid="stApp"] {{
 ::-webkit-scrollbar {{ width: 9px; height: 9px; }}
 ::-webkit-scrollbar-thumb {{ background: color-mix(in srgb, var(--ps-ink) 20%, transparent); border-radius: 9px; border: 2px solid transparent; background-clip: padding-box; }}
 ::-webkit-scrollbar-thumb:hover {{ background-color: color-mix(in srgb, var(--ps-primary) 55%, transparent); }}
-@media (prefers-reduced-motion: reduce) {{ *, *::before {{ animation: none !important; transition: none !important; }} }}
+@media (prefers-reduced-motion: reduce) {{ *:not(.stApp), *:not(.stApp)::before {{ animation: none !important; transition: none !important; }} }}
 @media (max-width: 900px) {{ [data-testid="stTopNav"] {{ position: static !important; transform: none; max-width: none; }} }}
 
 header[data-testid="stHeader"] {{
