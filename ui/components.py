@@ -39,6 +39,26 @@ def data_curta(iso: str | None) -> str:
         return str(iso)[:10]
 
 
+def gaveta_topo(titulo: str, subtitulo: str = "") -> None:
+    """Cabeçalho de gaveta lateral (o popover vira um painel à direita com o fundo desfocado)."""
+    st.html(f"<div class='ps-gaveta'><div><b>{esc(titulo)}</b><span>{esc(subtitulo)}</span></div>"
+            f"<button class='ps-gaveta-x' title='Fechar' aria-label='Fechar'>✕</button></div>")
+
+
+def data_hora(iso: str | None) -> str:
+    """dd/mm/aaaa às hh:mm, no horário de Brasília/Bahia."""
+    if not iso:
+        return ""
+    try:
+        from zoneinfo import ZoneInfo
+        d = datetime.fromisoformat(str(iso).replace("Z", "+00:00"))
+        if d.tzinfo:
+            d = d.astimezone(ZoneInfo("America/Bahia"))
+        return d.strftime("%d/%m/%Y às %H:%M")
+    except Exception:
+        return str(iso)[:16].replace("T", " ")
+
+
 def numero(n) -> str:
     return f"{int(n or 0):,}".replace(",", ".")
 
@@ -362,6 +382,9 @@ const d = window.parent.document, w = window.parent;
   let tentativas = 0; const t = setInterval(() => { ajustaIlha(); const nav = d.querySelector('[data-testid="stTopNav"]'); if ((nav && nav.dataset.ilha) || ++tentativas > 25) clearInterval(t); }, 200);
   if (!w.__psIlha) { w.__psIlha = true; w.addEventListener('resize', () => { const nav = d.querySelector('[data-testid="stTopNav"]'); if (nav) nav.dataset.ilha = ''; setTimeout(ajustaIlha, 80); }); }
 }
+if (!d.__psGaveta) { d.__psGaveta = true;            /* botão ✕ das gavetas: fecha como o Esc */
+  d.addEventListener('click', e => { if (e.target.closest('.ps-gaveta-x')) { e.preventDefault();
+    d.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true })); setTimeout(() => d.body.click(), 30); } }, true); }
 if (!d.__psHover && w.matchMedia('(hover: hover)').matches) {
   d.__psHover = true;
   let aberto = null, timer = null, abertoEm = 0;

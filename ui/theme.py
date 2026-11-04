@@ -203,6 +203,33 @@ html, body, .stApp, button, input, textarea, select, [data-testid="stMarkdownCon
 }}
 [data-testid="stTopNavPopover"] {{ transform-origin: top center; }}
 
+/* ---------- gaveta lateral (filtros e uploads) com fundo desfocado ---------- */
+[data-testid="stPopoverBody"]:has(.ps-gaveta) {{
+  position: fixed !important; inset: 10px 10px 10px auto !important; transform: none !important; translate: none !important;
+  width: min(420px, 94vw) !important; max-width: none !important; height: calc(100vh - 20px) !important; max-height: none !important;
+  z-index: 1000010 !important; overflow-y: auto !important; padding: 18px 20px 22px !important; border-radius: 22px !important;
+  background: color-mix(in srgb, var(--ps-surface-solid) 90%, transparent) !important; border: 1px solid var(--ps-line) !important;
+  box-shadow: -24px 0 60px -30px rgba(15,23,42,.45), 0 0 0 100vmax color-mix(in srgb, var(--ps-canvas) 30%, transparent) !important;
+  animation: ps-gaveta-in .38s cubic-bezier(.2,.8,.2,1);
+}}
+/* fundo desfocado: o site inteiro (fora da gaveta, que fica num portal à parte) ganha desfoque enquanto a gaveta está aberta */
+body:has([data-testid="stPopoverBody"] .ps-gaveta) [data-testid="stApp"] {{
+  filter: blur(7px) saturate(120%) brightness(.96); transition: filter .28s ease-out; pointer-events: none;
+}}
+[data-testid="stApp"] {{ transition: filter .22s ease-out; }}
+[data-testid="stPopoverBody"]:has(.ps-gaveta) [data-testid="stWidgetLabel"] p {{ font-size: .78rem; color: var(--ps-muted); }}
+@keyframes ps-gaveta-in {{ from {{ opacity: 0; transform: translateX(28px); }} to {{ opacity: 1; transform: none; }} }}
+@keyframes ps-fundo-in {{ from {{ opacity: 0; }} to {{ opacity: 1; }} }}
+.ps-gaveta {{ display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 6px; }}
+.ps-gaveta b {{ font-size: 1.28rem; letter-spacing: -.02em; margin-right: 10px; }}
+.ps-gaveta span {{ font-size: .8rem; color: var(--ps-muted); }}
+.ps-gaveta-x {{ width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--ps-line); background: var(--ps-surface-solid); color: var(--ps-ink);
+  cursor: pointer; font-size: 14px; display: grid; place-items: center; transition: transform .2s, background .2s; flex: none; }}
+.ps-gaveta-x:hover {{ transform: rotate(90deg); background: var(--ps-primary-soft); color: var(--ps-primary); }}
+.ps-atualizado {{ display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; border-radius: 999px; white-space: nowrap;
+  font-size: .78rem; color: var(--ps-muted); background: var(--ps-surface); border: 1px solid var(--ps-line); backdrop-filter: blur(12px); }}
+.ps-atualizado i {{ width: 8px; height: 8px; border-radius: 50%; background: var(--ps-up); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ps-up) 22%, transparent); }}
+
 /* ---------- toques modernos e leves ---------- */
 [data-testid="stMainBlockContainer"] > div {{ animation: ps-entra .35s ease-out; }}
 @keyframes ps-entra {{ from {{ opacity: 0; }} to {{ opacity: 1; }} }}   /* só opacidade: transform quebraria os botões fixos do topo */
