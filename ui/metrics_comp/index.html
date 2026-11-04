@@ -1669,7 +1669,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   const REGRAS = [['Mercado − R$ 0,01', 'merc', 'var(--primary)'], null, ['Aplicado máxima (teto)', 'teto', 'var(--down)'],
     ['Aplicado mínima (piso)', 'piso', 'var(--up)'], ['Aplicado objetiva (sem pesquisa)', 'obj', 'var(--amber)'], ['Ajuste manual', 'mao', '#B794FF'], ['Optimus', 'robo', '#7A3FD1']];
   const ORDEM_R = [0, 2, 3, 4, 6, 5];
-  const CORTES = [['Encarte, app ou mídia vigente', 'tagi'], ['Promoção comercial abaixo do mercado', 'alerta'], ['IP atual já na zona alvo (98% a 101%)', 'merc'], ['Variação abaixo de 0,7%', 'tdUp'], ['Variação dentro de ±1,5%', 'pct']];
+  const CORTES = [['Encarte, mídia ou app vigente', 'tagi'], ['Promoção comercial com IP até 100%', 'alerta'], ['Delta entre −1,5% e +1,5%', 'pct']];
   const NV = new Float64Array(N), NA = new Float64Array(N), RG = new Uint8Array(N), MN = new Float64Array(N), MX = new Float64Array(N), OB = new Float64Array(N);
   const UMIN = new Float64Array(N), UMAX = new Float64Array(N), UOBJ = new Float64Array(N), CT = new Uint8Array(N), MUD = new Uint8Array(N), REAP = new Uint8Array(N);
   const DF0 = Date.UTC(2020, 0, 1), hj = new Date(), HOJE = Math.floor((Date.UTC(hj.getFullYear(), hj.getMonth(), hj.getDate()) - DF0) / 864e5) + 1;
@@ -1728,15 +1728,19 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     NV[i] = nv; NA[i] = na; RG[i] = rg; MN[i] = mn; MX[i] = mx; OB[i] = obj; UMIN[i] = umin; UMAX[i] = mmax; UOBJ[i] = mobj;
     const fimHoje = D.dfim[i] > 0 && D.dfim[i] === HOJE, tp = (D.tipos[D.ti[i]] || '').toUpperCase(), ip = vmk > 0 ? D.vm[i] / vmk : NaN;
     let ct = 0;
-    /* regra de corte da planilha de precificação (W = IP atual, Z = delta do novo preço), só quando a vigência não termina hoje */
-    const tpn = tp.normalize('NFD').replace(/[\u0300-\u036f]/g, ''), z = nv / D.vm[i] - 1, regularPdv = /PRECO REGULAR/.test(tpn);
-    if (!fimHoje && !regularPdv) {
-      if (/ENCARTE|MIDIA|\bAPP\b/.test(tpn)) ct |= 1;                                     // encarte, encarte smarket, mídia, mídia smarket, app
-      if (/PROMOCAO COMERCIAL/.test(tpn) && ip < 1) ct |= 2;                                // promoção comercial já abaixo do mercado (planilha: IP <= 98%)
-      if (ip >= 0.98 && ip <= 1.01) ct |= 4;                                                // IP atual já na zona alvo
-      if (z > -0.007 && z < 0.007 && !(ip >= 1.01 || ip <= 0.96)) ct |= 8;                 // variação pequena com IP próximo do mercado
+    /* REGRA DE CORTE (só quando o preço vigente não termina hoje nem no próximo sábado ou domingo):
+       1. preço atual em ENCARTE, MÍDIA ou APP;
+       2. preço atual em PROMOÇÃO COMERCIAL com IP atual igual ou menor que 100%;
+       3. delta do preço novo para o atual entre −1,5% e +1,5%.
+       Fora disso, o item vai para aceite. */
+    const dSem = D.dfim[i] > 0 ? new Date(DF0 + (D.dfim[i] - 1) * 864e5).getUTCDay() : -1, dFal = D.dfim[i] - HOJE;
+    const fimFds = D.dfim[i] > 0 && dFal > 0 && dFal <= 6 && (dSem === 6 || dSem === 0);
+    const tpn = tp.normalize('NFD').replace(/[\u0300-\u036f]/g, ''), z = nv / D.vm[i] - 1;
+    if (!fimHoje && !fimFds) {
+      if (/ENCARTE|MIDIA|\bAPP\b/.test(tpn)) ct |= 1;
+      if (/PROMOCAO COMERCIAL/.test(tpn) && ip <= 1) ct |= 2;
+      if (Math.abs(z) <= CORTE / 100 + 1e-9) ct |= 4;
     }
-    if (!fimHoje && !regularPdv && Math.abs(z) < CORTE / 100) ct |= 16;                   // regra adicional: mudança pequena, dentro de ±1,5%, não vale trocar o preço em ação vigente (variação maior vai para aceite)
     CT[i] = ct;
     { const d = D.dfim[i] - HOJE, dia = D.dfim[i] > 0 ? new Date(DF0 + (D.dfim[i] - 1) * 864e5).getUTCDay() : -1;
       REAP[i] = D.dfim[i] > 0 && (d === 0 || (d > 0 && d <= 6 && (dia === 6 || dia === 0))) ? 1 : 0; }
@@ -1816,22 +1820,23 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   }
   function explicaCorte(i){
     const v = NV[i] / D.vm[i] - 1, tp = D.tipos[D.ti[i]] || '', fim = D.dfim[i] > 0 ? dfTxt(D.dfim[i]) : 'sem data fim', L = [];
-    if (!MUD[i] && REAP[i]) { const dia = ['domingo', '', '', '', '', '', 'sábado'][new Date(DF0 + (D.dfim[i] - 1) * 864e5).getUTCDay()];
-      return `MESMO PREÇO, VIGÊNCIA TERMINANDO\nO novo preço é igual ao atual (${R$(D.vm[i])}), mas a vigência atual termina ${D.dfim[i] === HOJE ? 'hoje' : 'no ' + dia + ', ' + fim}.\nPor isso o aceite fica liberado: marque para reaplicar o preço e ele seguir valendo depois do fim da vigência.`; }
-    if (!MUD[i]) return `SEM ALTERAÇÃO\nO novo preço é igual ao atual (${R$(D.vm[i])}) e a vigência atual ${D.dfim[i] > 0 ? 'vai até ' + fim : 'não tem data fim'}: nada a importar.\nO aceite só é liberado quando a vigência termina hoje ou no sábado/domingo.`;
+    const dSem = D.dfim[i] > 0 ? new Date(DF0 + (D.dfim[i] - 1) * 864e5).getUTCDay() : -1, dFal = D.dfim[i] - HOJE;
+    const termina = D.dfim[i] > 0 && (dFal === 0 || (dFal > 0 && dFal <= 6 && (dSem === 6 || dSem === 0)));
+    const quando = dFal === 0 ? 'hoje' : (dSem === 6 ? 'no sábado, ' : 'no domingo, ') + fim;
+    if (!MUD[i] && REAP[i]) return `MESMO PREÇO, VIGÊNCIA TERMINANDO\nO novo preço é igual ao atual (${R$(D.vm[i])}), mas a vigência atual termina ${quando}.\nPor isso o aceite fica liberado: marque para reaplicar o preço e ele seguir valendo depois do fim da vigência.`;
+    if (!MUD[i]) return `SEM ALTERAÇÃO\nO novo preço é igual ao atual (${R$(D.vm[i])}) e a vigência atual ${D.dfim[i] > 0 ? 'vai até ' + fim : 'não tem data fim'}: nada a importar.\nO aceite só é liberado quando a vigência termina hoje ou no próximo sábado ou domingo.`;
     if (!CT[i]) { L.push('DENTRO DA REGRA: ENTRA NO ACEITAR TODOS');
-      L.push(D.dfim[i] === HOJE ? `O preço atual termina hoje (${fim}), então não há corte.` : /PRECO REGULAR/.test((tp || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')) ? `Preço atual é regular (${titulo_(tp)}): sempre vai para análise.` : `Nenhum critério de corte: não está em encarte, app ou mídia, o IP atual está fora da zona alvo e a variação (${(nv_ => (nv_ > 0 ? '+' : '') + P1(nv_))(NV[i] / D.vm[i] - 1)}) passa de ±${nf1.format(CORTE)}%.`);
+      L.push(termina ? `O preço vigente termina ${quando}: não há corte.` : `Nenhum critério de corte: preço atual em ${titulo_(tp) || 'tipo não informado'} e delta de ${(v > 0 ? '+' : '') + P1(v)}, fora da faixa de −1,5% a +1,5%.`);
       return L.join('\n'); }
     L.push('REGRA DE CORTE: FICA FORA DO ACEITAR TODOS (ACEITE MANUAL)');
     const ipA = D.vmk[i] > 0 ? D.vm[i] / D.vmk[i] : NaN;
-    if (CT[i] & 1) L.push(`• Preço atual em ${titulo_(tp)} vigente (${fim}): o novo preço não entraria em vigor enquanto a ação roda.`);
-    if (CT[i] & 2) L.push(`• Preço atual em promoção comercial com IP de ${nf1.format(ipA * 100)}, abaixo de 100%: já está mais barato que o mercado.`);
-    if (CT[i] & 4) L.push(`• IP atual de ${nf1.format(ipA * 100)}, já dentro da zona alvo (98% a 101%): não precisa mexer.`);
-    if (CT[i] & 8) L.push(`• Variação de ${(v > 0 ? '+' : '') + P1(v)} (de ${R$(D.vm[i])} para ${R$(NV[i])}), abaixo de 0,7%, com o IP atual entre 96% e 101%.`);
-    if (CT[i] & 16) L.push(`• Variação de só ${(v > 0 ? '+' : '') + P1(v)} (de ${R$(D.vm[i])} para ${R$(NV[i])}), dentro de ±${nf1.format(CORTE)}%: mudança pequena demais para trocar um preço em ação vigente.`);
-    L.push(`Data fim do preço atual: ${fim}. Preços que terminam hoje não sofrem corte.`, 'Se quiser aplicar mesmo assim, marque o aceite.');
+    if (CT[i] & 1) L.push(`• Preço atual em ${titulo_(tp)} vigente: o novo preço não entraria em vigor enquanto a ação roda.`);
+    if (CT[i] & 2) L.push(`• Preço atual em promoção comercial com IP de ${nf1.format(ipA * 100)}, igual ou menor que 100%.`);
+    if (CT[i] & 4) L.push(`• Delta de ${(v > 0 ? '+' : '') + P1(v)} (de ${R$(D.vm[i])} para ${R$(NV[i])}), entre −1,5% e +1,5%.`);
+    L.push(`Data fim do preço vigente: ${fim}. Não termina hoje nem no próximo sábado ou domingo, por isso vale o corte.`, 'Se quiser aplicar mesmo assim, marque o aceite.');
     return L.join('\n');
   }
+
   const vneg = (v, txt) => `<span class="${v < -1e-9 ? 'neg' : ''}">${txt}</span>`;
   const num_ = v => v == null || !isFinite(v) ? '–' : nf2.format(v);
   const ipCor = v => v > 1.009 ? 'var(--down)' : v >= 0.99 ? 'var(--primary)' : 'var(--amber)';
@@ -2036,10 +2041,10 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     const rm = Math.max(...rc, 1), cm = Math.max(...cc, sem, 1);
     $('pRegras').innerHTML = `<div class="regp"><h4>Regra de negócio</h4><p>Motivo da formação do novo preço. Clique para filtrar a grade.</p><div class="lista">`
       + ORDEM_R.map(k => { const [t, n, c] = REGRAS[k]; return `<div class="rg${F.regra === k ? ' on' : ''}" data-rgf="${k}">${ic(n, c)}<span>${t}</span><div class="bar"><i style="width:${100 * rc[k] / rm}%;background:${c}"></i></div><b>${nf0.format(rc[k])}</b></div>`; }).join('')
-      + `</div><h4>Regra de alteração</h4><p>Por que o preço ficou sem aceite automático.</p><div class="lista">`
+      + `</div><h4>Regra de alteração</h4><p>Por que o preço ficou fora do Aceitar todos.</p><div class="lista">`
       + `<div class="rg${F.corte === 9 ? ' on' : ''}" data-ct="9">${ic('x', 'var(--down)')}<span>Todos sem aceite</span><div class="bar"><i style="width:${100 * sem / cm}%;background:var(--down)"></i></div><b>${nf0.format(sem)}</b></div>`
       + CORTES.map(([t, n], k) => `<div class="rg${F.corte === k ? ' on' : ''}" data-ct="${k}">${ic(n, 'var(--down)')}<span>${t}</span><div class="bar"><i style="width:${100 * cc[k] / cm}%;background:var(--down)"></i></div><b>${nf0.format(cc[k])}</b></div>`).join('')
-      + `<div class="rg" style="cursor:default">${ic('cal', 'var(--faint)')}<span style="color:var(--muted)">Preço com data fim hoje não sofre corte</span><span></span><span></span></div></div>`
+      + `<div class="rg" style="cursor:default">${ic('cal', 'var(--faint)')}<span style="color:var(--muted)">Preço que termina hoje ou no próximo sábado ou domingo não sofre corte</span><span></span><span></span></div></div>`
       + `<button class="tx" id="limpaRegras">${ic('x')}Limpar filtros de regra</button></div>`;
   }
   on($('pRegras'), 'click', e => { if (e.target.closest('#limpaRegras')) { F.regra = -1; F.corte = -1; atualizar(); return; }
