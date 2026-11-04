@@ -110,6 +110,8 @@ def entrar(usuario: str, senha: str) -> tuple[bool, str]:
     st.session_state.foto_perfil = registro.get("foto_perfil") or ""
     st.session_state.is_admin = bool(registro.get("is_admin", False))
     st.session_state.permissoes = normalizar_permissoes(registro.get("permissoes"))
+    st.session_state.usuario_setor = registro.get("setor") or ""
+    st.session_state.usuario_estado = registro.get("estado") or ""
     return True, ""
 
 

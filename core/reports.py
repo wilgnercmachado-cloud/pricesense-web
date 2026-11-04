@@ -18,7 +18,7 @@ GZIP = b"\x1f\x8b"
 VISIBILIDADES = ["Todos", "Selecionados", "Admins"]
 ROTULO_VISIBILIDADE = {
     "Todos": "Toda a equipe",
-    "Selecionados": "Pessoas específicas",
+    "Selecionados": "Pessoas, setores ou estados",
     "Admins": "Só administradores",
 }
 
@@ -106,14 +106,20 @@ def links_assinados(base: str, partes: int, versao: str) -> list[str]:
 
 
 # ---------------------------------------------------------------- permissões
-def pode_ver(rel: dict, login: str, admin: bool) -> bool:
+def pode_ver(rel: dict, login: str, admin: bool, setor: str | None = None, estado: str | None = None) -> bool:
     if admin or rel.get("autor_usuario") == login:
         return True
     vis = rel.get("visibilidade") or "Todos"
     if vis == "Todos":
         return True
     if vis == "Selecionados":
-        return login in (rel.get("usuarios_permitidos") or [])
+        if login in (rel.get("usuarios_permitidos") or []):
+            return True
+        setores, estados = rel.get("setores_permitidos") or [], rel.get("estados_permitidos") or []
+        no_setor, no_estado = bool(setor) and setor in setores, bool(estado) and estado in estados
+        if setores and estados and (rel.get("combinar_publico") or "e") == "e":
+            return no_setor and no_estado          # ex.: só o Comercial da BA
+        return no_setor or no_estado
     return False
 
 
@@ -122,7 +128,9 @@ def pode_editar(rel: dict, login: str, admin: bool) -> bool:
 
 
 def visiveis(login: str, admin: bool) -> list[dict]:
-    return [r for r in listar() if pode_ver(r, login, admin)]
+    import streamlit as _st
+    setor, estado = _st.session_state.get("usuario_setor") or None, _st.session_state.get("usuario_estado") or None
+    return [r for r in listar() if pode_ver(r, login, admin, setor, estado)]
 
 
 # ---------------------------------------------------------------- escrita
@@ -189,7 +197,6 @@ def atualizar(rel: dict, meta: dict, conteudo: bytes | None = None, progresso=No
         campos["arquivo_path"] = caminho
         campos["partes"] = partes
         campos["tamanho_bytes"] = len(conteudo)
-        campos["versao"] = int(rel.get("versao") or 1) + 1
     try:
         db.sb().table("relatorios").update(campos).eq("id", rel["id"]).execute()
     except Exception as exc:
