@@ -351,7 +351,6 @@ def render() -> None:
     df_all, meta, rel = fonte
 
     with st.container(horizontal=True, vertical_alignment="center", gap="small", key="reg_topo"):
-        st.html(f"<span class='ps-atualizado'><i></i>Atualizado {ui.esc(_data_base(rel, meta))}</span>")
         f = _filtros(df_all)
         _uploads(rel, meta)
     regras, _ = pf.carregar()
@@ -394,7 +393,7 @@ def render() -> None:
             st.session_state.pop("reg_backup", None)
             st.error(f"Não foi possível abrir o backup: {exc}", icon=":material/error:")
     retorno = _MESA(app="price", dados=dados, chave=chave, tokens=_tokens_css(), fonte=theme.FONTE_URL, visao=st.session_state.reg_visao,
-                    altura=900, info=info, usuario=usuario, base=base_id, backups=backups, historico=historico, estado=estado,
+                    altura=900, info=info, usuario=usuario, base=base_id, atualizado=_data_base(rel, meta), backups=backups, historico=historico, estado=estado,
                     key="mesa_regular", default=None)
     if isinstance(retorno, dict) and retorno.get("ts") != st.session_state.get("_reg_ts") and retorno.get("acao") in ("backup", "abrir_backup", "sair_backup"):
         st.session_state._reg_ts = retorno.get("ts")
