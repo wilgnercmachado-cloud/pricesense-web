@@ -232,6 +232,42 @@ body.ps-selo-curto .ps-atualizado .ps-at-txt {{ display: none; }}
 body.ps-selo-oculto .st-key-reg_topo [data-testid="stHtml"]:has(.ps-atualizado) {{ display: none; }}
 .ps-atualizado i {{ width: 8px; height: 8px; border-radius: 50%; background: var(--ps-up); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ps-up) 22%, transparent); }}
 
+/* ---------- cores sempre do tema DESTA sessão ----------
+   O tema nativo do Streamlit é do servidor inteiro: com um usuário no claro e outro no escuro, ele pode chegar trocado.
+   Menu, menus suspensos, gavetas e campos usam então as cores da sessão (variáveis --ps-*), nunca as do tema nativo. */
+[data-testid="stTopNav"] [data-testid="stTopNavLink"], [data-testid="stTopNav"] [data-testid="stTopNavSection"],
+[data-testid="stTopNav"] [data-testid="stTopNavLink"] *, [data-testid="stTopNav"] [data-testid="stTopNavSection"] * {{ color: var(--ps-ink) !important; }}
+[data-testid="stTopNav"] [data-testid="stTopNavLink"][aria-current="page"], [data-testid="stTopNav"] [data-testid="stTopNavLink"][aria-current="page"] *,
+[data-testid="stTopNav"] [data-testid="stTopNavSection"][aria-expanded="true"], [data-testid="stTopNav"] [data-testid="stTopNavSection"][aria-expanded="true"] * {{ color: var(--ps-primary) !important; }}
+[data-testid="stTopNavPopoverBody"], [data-testid="stTopNavPopover"] > div {{ background: color-mix(in srgb, var(--ps-surface-solid) 94%, transparent) !important; }}
+[data-testid="stTopNavDropdownLink"], [data-testid="stTopNavDropdownLink"] * {{ color: var(--ps-ink) !important; opacity: 1 !important; }}
+[data-testid="stTopNavDropdownLink"]:hover, [data-testid="stTopNavDropdownLink"]:hover * {{ color: var(--ps-primary) !important; }}
+[data-testid="stPopoverBody"] {{ background: var(--ps-surface-solid) !important; color: var(--ps-ink) !important; border-color: var(--ps-line) !important; }}
+[data-testid="stPopoverBody"] p, [data-testid="stPopoverBody"] label, [data-testid="stPopoverBody"] span:not([data-baseweb="tag"] *),
+[data-testid="stPopoverBody"] [data-testid="stMarkdownContainer"] {{ color: var(--ps-ink); }}
+[data-testid="stPopoverBody"] [data-testid="stCaptionContainer"], [data-testid="stPopoverBody"] [data-testid="stCaptionContainer"] * {{ color: var(--ps-muted) !important; }}
+[data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label {{ color: var(--ps-muted) !important; }}
+[data-baseweb="select"] > div, [data-baseweb="input"] > div, [data-baseweb="base-input"], [data-baseweb="textarea"] > div {{
+  background: var(--ps-field) !important; border-color: var(--ps-line) !important; color: var(--ps-ink) !important; }}
+[data-baseweb="select"] *, [data-baseweb="input"] input, [data-baseweb="textarea"] textarea, [data-baseweb="base-input"] input {{ color: var(--ps-ink) !important; -webkit-text-fill-color: var(--ps-ink); }}
+[data-baseweb="select"] input::placeholder, [data-baseweb="input"] input::placeholder {{ color: var(--ps-faint) !important; -webkit-text-fill-color: var(--ps-faint); }}
+[data-baseweb="select"] svg {{ fill: var(--ps-muted) !important; color: var(--ps-muted) !important; }}
+[data-baseweb="tag"] {{ background: var(--ps-primary) !important; }}
+[data-baseweb="tag"] * {{ color: #fff !important; }}
+[data-baseweb="popover"] ul[role="listbox"], [data-baseweb="popover"] [data-baseweb="menu"], [data-baseweb="popover"] [role="listbox"] {{
+  background: var(--ps-surface-solid) !important; border: 1px solid var(--ps-line) !important; }}
+[data-baseweb="popover"] li[role="option"], [data-baseweb="popover"] li[role="option"] * {{ color: var(--ps-ink) !important; background: transparent; }}
+[data-baseweb="popover"] li[role="option"]:hover, [data-baseweb="popover"] li[role="option"][aria-selected="true"] {{ background: var(--ps-primary-soft) !important; }}
+[data-testid="stCheckbox"] label *, [data-testid="stToggle"] label *, [data-testid="stRadio"] label * {{ color: var(--ps-ink) !important; }}
+[data-testid="stButtonGroup"] button {{ background: var(--ps-field) !important; color: var(--ps-ink) !important; border-color: var(--ps-line) !important; }}
+[data-testid="stButtonGroup"] button[kind*="Active"], [data-testid="stButtonGroup"] button[aria-checked="true"] {{ background: var(--ps-primary-soft) !important; color: var(--ps-primary) !important; border-color: var(--ps-primary) !important; }}
+[data-testid="stPopoverBody"] button[kind="secondary"], [data-testid="stBaseButton-secondary"] {{ background: var(--ps-surface-solid) !important; color: var(--ps-ink) !important; border-color: var(--ps-line) !important; }}
+[data-testid="stFileUploaderDropzone"] {{ background: var(--ps-field) !important; border-color: var(--ps-line) !important; }}
+[data-testid="stFileUploaderDropzone"] * {{ color: var(--ps-muted) !important; }}
+[data-testid="stFileUploaderDropzone"] button, [data-testid="stFileUploaderDropzone"] button * {{ color: var(--ps-ink) !important; }}
+[data-testid="stPopoverButton"], [data-testid="stPopoverButton"] * {{ color: var(--ps-ink) !important; }}
+[data-testid="stToggle"] label[data-baseweb="checkbox"] > div:first-child {{ box-shadow: inset 0 0 0 1px var(--ps-line-strong); }}
+
 /* ---------- carregamento: anel tecnológico (spinners e execuções demoradas do site) ---------- */
 @keyframes ps-gira-anel {{ to {{ transform: rotate(360deg); }} }}
 @keyframes ps-gira-volta {{ to {{ transform: rotate(-360deg); }} }}
