@@ -1719,7 +1719,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   const MOV = new Float64Array(N).fill(NaN), MOA = new Float64Array(N).fill(NaN), MOF = new Uint8Array(N);
   function modaItem(i){
     if (!isNaN(MOV[i])) return [MOV[i], MOA[i], MOF[i]];
-    if (D.mf && D.mf[i]) { MOV[i] = D.mo[i] || 0; MOA[i] = D.ma[i] || 0; MOF[i] = 1; return [MOV[i], MOA[i], 1]; }   // moda do vencedor calculada na base (HTML + 1067)
+    if (D.mf) { const f = D.mf[i] || 0; MOV[i] = f ? D.mo[i] || 0 : 0; MOA[i] = f ? D.ma[i] || 0 : 0; MOF[i] = f; return [MOV[i], MOA[i], f]; }   // moda calculada na base (HTML + 1067): vencedor, maior moda da filial ou sem moda
     let mv = null, ma = null, f = 3;
     if (!semPesq(i)) {
       const rows = HD.get(D.pi[i] * 64 + D.ui[i]) || [], fil = new Set(D.fk[D.fi[i]] || []), wk = KPOS.get(D.concs[D.ki[i]]);
@@ -1736,7 +1736,8 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     if (ma == null) ma = D.ma[i] > 0 ? D.ma[i] : 0;
     MOV[i] = mv; MOA[i] = ma; MOF[i] = f; return [mv, ma, f];
   }
-  const FONTE_MODA = ['', 'moda do concorrente vencedor', 'menor moda entre os concorrentes da filial', 'moda de maior frequência do relatório'];
+  const FONTE_MODA = ['sem moda consistente (nenhum preço repetido em 3 dias ou mais)', 'moda do concorrente vencedor', 'maior moda da filial: o vencedor não tem pesquisa consistente', 'moda de maior frequência do relatório'];
+  const modaDe_ = i => D.mcs && D.mcs.length ? `${curto(D.mcs[D.mci[i]] || '')}${D.mfd && D.mfd[i] ? ', ' + D.mfd[i] + ' dias' : ''}` : '';
   function calc(i){
     const c = D.cu[i], vmk = D.vmk[i], amk = D.amk[i] || 0, merch = D.merch[i] || 0;
     const mobj = D.pobj[i] ?? MOBJ, mmax = (D.pmax[i] > 0 ? D.pmax[i] : MMAX), ps = PISO[D.ui[i]] || { cesta: -15, sem: 0 };
@@ -2184,7 +2185,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     $('resumo').innerHTML = `<div class="rtop"><div class="rnome" title="${esc(D.produtos[D.pi[i]])}">${esc(curto(D.produtos[D.pi[i]]))}</div>${tagRegra(i)}</div>
       <div class="rsub">${SUB(i) ? `<span class="subp" data-tip="Troca de PAI: o produto PAI ${SUB(i)} está sem estoque nesta filial, então este similar 100% de maior venda é precificado no lugar dele.">${ic('troca')}${SUB(i)}</span> ` : ''}${esc(curto(D.filiais[D.fi[i]]))}, curva ${'ABC'[D.curva[i]]}${D.cesta[i] ? ', cesta' : ''}. ${esc(D.orig[i] ? 'Moda (sem pesquisa direta)' : titulo_(curto(D.concs[D.ki[i]]).split(' - ')[0]))}${D.orig[i] ? '' : ', ' + esc(D.datas[D.dti[i]] || '')}. ${esc(titulo_(D.tipos[D.ti[i]] || ''))}${D.dfim[i] > 0 ? ' até ' + dfTxt(D.dfim[i]) : ''}.</div>
       ${svg}
-      <div class="mgrid" data-tip="Moda: ${FONTE_MODA[mF]}">${st('Moda var.', brl(mV))}${st('Moda atac.', brl(mA))}${st('Menor ÷ moda', dm == null ? '–' : (dm > 0 ? '+' : '') + pct(dm), dm < 0 ? 'neg' : '')}
+      <div class="mgrid" data-tip="Moda: ${FONTE_MODA[mF]}${mF ? ' (' + modaDe_(i) + ')' : ''}. Varejo que o concorrente praticou em mais dias (mínimo 3), só regular, promoção e ponto extra; atacado das mesmas coletas.">${st('Moda var.', brl(mV))}${st('Moda atac.', brl(mA))}${st('Menor ÷ moda', dm == null ? '–' : (dm > 0 ? '+' : '') + pct(dm), dm < 0 ? 'neg' : '')}
         ${st('Menor var.', brl(D.vmk[i]))}${st('Menor atac.', brl(D.amk[i]))}${st('Margem nova', pct(m1), m1 < 0 ? 'neg' : 'pos')}</div>
       <div class="ralts"><button class="ib2" data-alt="m" data-tip="Usar mercado − 0,01">${ic('merc')}</button><button class="ib2" data-alt="o" data-tip="Usar moda − 0,01">${ic('moda')}</button>
         <button class="ib2" data-alt="b" data-tip="Usar objetivo">${ic('obj')}</button><button class="ib2" data-alt="r" data-tip="Voltar à sugestão do motor">${ic('undo')}</button>
@@ -2291,7 +2292,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     for (const j of rows) { if (!TIPO_OK.has(D.dtp[j])) continue; const v = D.dv[j] / 100; if (!(v > 0)) continue;
       const k = D.dk[j]; let l = porK.get(k); if (!l) porK.set(k, l = []); l.push(v); }
     const propriaVals = wk != null ? porK.get(wk) : null;
-    const propria = D.mf && D.mf[i] && D.mo[i] > 0 ? D.mo[i] : propriaVals && propriaVals.length >= 3 ? modaDe(propriaVals) : null;   // moda do vencedor na filial, já com a 1067
+    const propria = D.mf ? (D.mf[i] === 1 && D.mo[i] > 0 ? D.mo[i] : null) : propriaVals && propriaVals.length >= 3 ? modaDe(propriaVals) : null;   // só a moda consistente do vencedor (base HTML + 1067)   // moda do vencedor na filial, já com a 1067
     const usaFil = [...porK.keys()].some(k => fil.has(k));
     const modasFil = [...porK.entries()].filter(([k, l]) => (!usaFil || fil.has(k)) && l.length >= 3).map(([, l]) => modaDe(l));
     const menorModa = modasFil.length ? Math.min(...modasFil) : (D.mo[i] > 0 ? D.mo[i] : null);
