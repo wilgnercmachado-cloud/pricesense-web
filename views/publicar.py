@@ -9,6 +9,16 @@ from ui import components as ui
 NOVA = "Nova categoria"
 
 
+UFS = ["AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT", "PA", "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO"]
+
+
+def _setores() -> list[str]:
+    try:
+        return sorted({str(u.get("setor")).strip() for u in db.listar_usuarios() if u.get("setor")})
+    except Exception:
+        return []
+
+
 def _usuarios_aprovados() -> dict[str, str]:
     """{login: nome}, em ordem alfabética de nome."""
     try:
@@ -46,18 +56,30 @@ def _formulario(rel: dict | None) -> None:
             visibilidade = st.radio("Visibilidade", reports.VISIBILIDADES, index=reports.VISIBILIDADES.index(vis_atual),
                                     format_func=reports.ROTULO_VISIBILIDADE.get, label_visibility="collapsed", key=f"pub_vis_{sufixo}")
             permitidos: list[str] = []
+            setores: list[str] = []
+            estados: list[str] = []
+            combinar = "e"
             if visibilidade == "Selecionados":
                 pessoas = _usuarios_aprovados()
                 permitidos = st.multiselect("Pessoas com acesso", list(pessoas), format_func=lambda u: pessoas.get(u, u),
                                             default=[u for u in (rel.get("usuarios_permitidos") or []) if u in pessoas] if editando else [],
                                             placeholder="Busque pelo nome", key=f"pub_users_{sufixo}")
+                setores = st.multiselect("Setores", _setores(), default=[x for x in (rel.get("setores_permitidos") or []) if x in _setores()] if editando else [],
+                                         placeholder="Todos os usuários destes setores", key=f"pub_set_{sufixo}")
+                estados = st.multiselect("Estados", UFS, default=[x for x in (rel.get("estados_permitidos") or []) if x in UFS] if editando else [],
+                                         placeholder="Todos os usuários destes estados", key=f"pub_uf_{sufixo}")
+                combinar = "e"
+                if setores and estados:
+                    combinar = st.radio("Quem vê", ["e", "ou"], horizontal=True, key=f"pub_comb_{sufixo}",
+                                        index=0 if (rel.get("combinar_publico") or "e") == "e" or not editando else 1,
+                                        format_func=lambda x: "Setor E estado (ex.: Comercial da BA)" if x == "e" else "Setor OU estado")
             destaque = False
             if admin:
                 destaque = st.toggle("Destacar no topo da biblioteca", value=bool(rel.get("destaque")) if editando else False,
                                      key=f"pub_dest_{sufixo}")
 
             ui.secao("Arquivo" if not editando else "Substituir arquivo",
-                     None if not editando else f"Versão atual: {rel.get('versao') or 1}. Envie um novo HTML só se quiser trocar o conteúdo.")
+                     None if not editando else f"Atualizado em {ui.data_hora(rel.get('atualizado_em'))}. Envie um novo HTML só se quiser trocar o conteúdo.")
             fonte = st.segmented_control("Origem", ["Enviar arquivo", "Colar código"], default="Enviar arquivo", required=True,
                                          key=f"pub_fonte_{sufixo}", label_visibility="collapsed")
             conteudo: bytes | None = None
@@ -86,8 +108,8 @@ def _formulario(rel: dict | None) -> None:
         erros.append("a categoria")
     if not editando and not conteudo:
         erros.append("o arquivo HTML")
-    if visibilidade == "Selecionados" and not permitidos:
-        erros.append("ao menos uma pessoa com acesso")
+    if visibilidade == "Selecionados" and not (permitidos or setores or estados):
+        erros.append("ao menos uma pessoa, setor ou estado com acesso")
 
     c1, c2, _ = st.columns([1, 1, 2])
     rotulo = "Salvar alterações" if editando else "Publicar relatório"
@@ -102,6 +124,9 @@ def _formulario(rel: dict | None) -> None:
             "titulo": titulo.strip(), "descricao": descricao.strip(), "categoria": categoria.strip(),
             "tags": [t.strip() for t in tags_txt.split(",") if t.strip()][:12],
             "visibilidade": visibilidade, "usuarios_permitidos": permitidos,
+            "setores_permitidos": setores if visibilidade == "Selecionados" else [],
+            "estados_permitidos": estados if visibilidade == "Selecionados" else [],
+            "combinar_publico": combinar,
             "destaque": destaque if admin else bool(rel.get("destaque")) if editando else False,
         }
         try:
@@ -150,8 +175,7 @@ def _gerenciar() -> None:
         for rel in meus:
             c1, c2, c3, c4 = st.columns([3, 1.1, 0.8, 0.8], vertical_alignment="center")
             c1.markdown(f"**{rel.get('titulo')}**  \n<span style='color:var(--ps-muted);font-size:.85rem'>"
-                        f"{ui.esc(rel.get('categoria') or 'Geral')}, versão {rel.get('versao') or 1}, "
-                        f"{ui.data_curta(rel.get('atualizado_em'))}</span>", unsafe_allow_html=True)
+                        f"{ui.esc(rel.get('categoria') or 'Geral')}, atualizado em {ui.data_hora(rel.get('atualizado_em'))}</span>", unsafe_allow_html=True)
             c2.caption(f"{ui.numero(rel.get('visualizacoes'))} visualizações")
             if c3.button("Editar", key=f"ger_ed_{rel['id']}", width="stretch"):
                 st.query_params["editar"] = rel["id"]

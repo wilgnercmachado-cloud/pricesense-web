@@ -152,8 +152,7 @@ def _visualizador(rel: dict, prefs: dict) -> None:
   <h2>{ui.esc(rel.get('titulo', ''))}</h2>
   {f"<p>{ui.esc(rel['descricao'])}</p>" if rel.get('descricao') else ''}
   <div class='ps-rep-meta'><span>Publicado por {ui.esc(rel.get('autor_nome') or rel.get('autor_usuario') or '')}</span>
-  <span>Atualizado em {ui.data_curta(rel.get('atualizado_em') or rel.get('criado_em'))}</span>
-  <span>Versão {rel.get('versao') or 1}</span></div>
+  <span>Atualizado em {ui.data_hora(rel.get('atualizado_em') or rel.get('criado_em'))}</span></div>
 </div>""")
 
     with st.container(horizontal=True, vertical_alignment="center", gap="small", key="rel_acoes"):
@@ -176,7 +175,7 @@ def render() -> None:
     alvo = st.query_params.get("r")
     if alvo:
         rel = reports.buscar(alvo)
-        if rel and reports.pode_ver(rel, login, admin):
+        if rel and reports.pode_ver(rel, login, admin, st.session_state.get("usuario_setor"), st.session_state.get("usuario_estado")):
             _visualizador(rel, prefs)
             return
         st.query_params.clear()

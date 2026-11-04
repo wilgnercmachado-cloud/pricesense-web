@@ -31,7 +31,32 @@ LIMITE = 400_000
 
 @st.cache_resource(show_spinner=False, max_entries=1)
 def _base_publicada(caminho: str, partes: int, versao: str, leitor: str = "") -> tuple[pd.DataFrame, dict]:
-    return gr.ler_de_gzip_ou_html(reports.baixar_conteudo({"arquivo_path": caminho, "partes": partes}))
+    """Base do relatório. Na primeira leitura de cada HTML o resultado fica salvo pronto no Storage:
+    depois de um reinício do servidor, a base volta em ~1 s e com pouca memória, sem reler o HTML (que pesa)."""
+    import gc
+    import pickle
+    import re as _re
+    pronto = f"cache_base/{_re.sub(r'[^A-Za-z0-9_.-]', '_', caminho)}_{_re.sub(r'[^0-9]', '', versao)}_{_re.sub(r'[^0-9A-Za-z]', '', leitor)}.pkl.gz"
+    try:
+        df, meta = pickle.loads(gzip.decompress(db.sb().storage.from_("relatorios").download(pronto)))
+        return df, meta
+    except Exception:
+        pass
+    df, meta = gr.ler_de_gzip_ou_html(reports.baixar_conteudo({"arquivo_path": caminho, "partes": partes}))
+    gc.collect()
+    try:
+        gz = gzip.compress(pickle.dumps((df, meta), protocol=5), 3)
+        if len(gz) < 45 * 1024 * 1024:
+            db.sb().storage.from_("relatorios").upload(pronto, gz, {"content-type": "application/gzip", "upsert": "true"})
+            antigos = [f"cache_base/{x['name']}" for x in (db.sb().storage.from_("relatorios").list("cache_base") or [])
+                       if f"cache_base/{x.get('name')}" != pronto]
+            if antigos:
+                db.sb().storage.from_("relatorios").remove(antigos)          # só a base atual fica guardada
+        del gz
+    except Exception:
+        pass
+    gc.collect()
+    return df, meta
 
 
 def _relatorio_padrao() -> dict | None:
@@ -121,23 +146,22 @@ def _fonte() -> tuple[pd.DataFrame, dict, dict] | None:
 
 
 def _filtros(df: pd.DataFrame) -> dict:
-    """Filtros num botão, aplicados na hora a cada clique (sem botão Aplicar)."""
+    """Filtros numa gaveta lateral com fundo desfocado, aplicados na hora a cada clique."""
     ss = st.session_state
     for k, v in PADRAO.items():
         ss.setdefault(f"rf_{k}", list(v) if isinstance(v, list) else v)
     ativos = sum(bool(ss[f"rf_{c}"]) for c in FILTROS) + sum(ss[f"rf_{k}"] != PADRAO[k] for k in ("pesquisa", "cesta", "sem_acoes"))
-    with st.popover(f"{ativos}" if ativos else "", icon=":material/filter_list:", help="Filtros da análise"):
-        st.segmented_control("Itens", ["Com pesquisa", "Sem pesquisa"], key="rf_pesquisa", required=True,
+    with st.popover(f"Filtros · {ativos}" if ativos else "Filtros", icon=":material/filter_list:", help="Filtros da análise"):
+        ui.gaveta_topo("Filtros", f"{ativos} filtro{'s' if ativos > 1 else ''} ativo{'s' if ativos > 1 else ''}" if ativos else "Nenhum filtro ativo")
+        st.segmented_control("Itens", ["Com pesquisa", "Sem pesquisa"], key="rf_pesquisa", required=True, width="stretch",
                              help="Sem pesquisa: o varejo vai para a margem objetiva e o atacado sai do objetivo com a base de redução.")
-        c1, c2 = st.columns(2)
-        for n, col in enumerate(FILTROS):
+        for col in FILTROS:
             opcoes = sorted(str(v) for v in pd.unique(df[col]) if pd.notna(v) and str(v).strip())
             ss[f"rf_{col}"] = [v for v in ss[f"rf_{col}"] if v in opcoes]
-            (c1 if n % 2 == 0 else c2).multiselect(col, opcoes, key=f"rf_{col}", placeholder="Todos")
-        c3, c4 = st.columns(2)
-        c3.toggle("Só cesta", key="rf_cesta")
-        c4.toggle("Sem itens em ação", key="rf_sem_acoes", help="Tira encarte, mídia, vencimento e travados. Desligado, eles entram e caem na regra de corte.")
-        if st.button("Limpar filtros", width="stretch", icon=":material/filter_alt_off:", key="rf_limpar"):
+            st.multiselect(col, opcoes, key=f"rf_{col}", placeholder="Todos")
+        st.toggle("Só cesta", key="rf_cesta")
+        st.toggle("Sem itens em ação", key="rf_sem_acoes", help="Tira encarte, mídia, vencimento e travados. Desligado, eles entram e caem na regra de corte.")
+        if st.button("Limpar filtros", width="stretch", key="rf_limpar"):
             for k, v in PADRAO.items():
                 ss[f"rf_{k}"] = list(v) if isinstance(v, list) else v
             st.rerun()
@@ -150,8 +174,7 @@ def _pesquisa_1067(rel: dict, meta: dict) -> None:
     base_id = f"{rel.get('id')}:{rel.get('atualizado_em')}"
     atual = meta.get("p1067")
     eu = st.session_state.get("usuario_login", "")
-    with st.popover(atual["dias"][-1][:5] if atual else "", icon=":material/add_chart:", help="Pesquisa mais recente (1067)"):
-        st.markdown("**Pesquisa mais recente (1067)**")
+    with st.container():
         st.caption("O HTML chega no dia seguinte à pesquisa. Cada usuário envia a sua 1067: todas são somadas ao histórico deste HTML, "
                    "e na mesma filial + produto + concorrente + data vale a coleta mais recente enviada. Com HTML novo, os envios são descartados.")
         if atual:
@@ -202,9 +225,31 @@ def _meus_pedidos(tipo: str) -> None:
         st.caption(f"Seu envio {p.get('nome_arquivo')} de {str(p.get('criado_em'))[:16].replace('T', ' ')}: {rot}.")
 
 
-def _profimetrics() -> pd.DataFrame:
+def _data_base(rel: dict, meta: dict) -> str:
+    """Data e hora da base em uso: o HTML publicado e, se houver, a última 1067 somada."""
+    txt = ui.data_hora(rel.get("atualizado_em")) or str(meta.get("atualizado") or "")
+    p1067 = meta.get("p1067")
+    if p1067:
+        txt += f" + 1067 de {ui.data_hora(p1067.get('em'))[:10]}"
+    return txt
+
+
+def _uploads(rel: dict, meta_base: dict) -> None:
+    """Um único botão de upload: pesquisa 1067, regras de margem (Profimetrics) e base PROP%."""
+    with st.popover("", icon=":material/cloud_upload:", help="Uploads: pesquisa 1067, regras de margem e proporções"):
+        ui.gaveta_topo("Uploads", "Pesquisa do dia, regras de margem e proporcionais")
+        aba = st.segmented_control("Upload", ["Pesquisa 1067", "Regras de margem", "Proporções"], default="Pesquisa 1067", required=True,
+                                   key="reg_up_aba", label_visibility="collapsed", width="stretch")
+        if aba == "Pesquisa 1067":
+            _pesquisa_1067(rel, meta_base)
+        else:
+            _profimetrics(aba)
+
+
+def _profimetrics(secao: str) -> None:
     regras, meta = pf.carregar()
-    with st.popover("", icon=":material/tune:", help="Regras de margem (Profimetrics)"):
+    with st.container():
+      if secao == "Regras de margem":
         if meta:
             st.caption(f"{ui.numero(meta['linhas'])} regras do Profimetrics, {meta['zonas']} zonas, {ui.numero(meta['produtos'])} produtos. "
                        f"Atualizadas em {meta['atualizado_em']}.")
@@ -221,7 +266,7 @@ def _profimetrics() -> pd.DataFrame:
                      disabled=arq is None, key="reg_pf_salvar"):
             if not admin:
                 _pedir_aprovacao("profimetrics", arq, lambda a: {"regras": int(len(pf.ler_planilha(a)))})
-                return regras
+                return
             try:
                 with st.spinner("Lendo a planilha e mesclando com as regras salvas"):
                     r = pf.salvar(pf.ler_planilha(arq), st.session_state.get("usuario_logado", ""))
@@ -232,7 +277,8 @@ def _profimetrics() -> pd.DataFrame:
                 st.error(str(exc), icon=":material/error:")
             except Exception as exc:
                 st.error(f"Não foi possível salvar no Supabase: {exc}", icon=":material/error:")
-        st.divider()
+      else:
+        admin = auth.eh_admin()
         props = pp.carregar()
         st.markdown("**Proporcionais (base PROP%)**")
         st.caption((f"{ui.numero(len(props))} produtos filhos na base PROP% ({ui.numero(int((props['proporcao'] == 100).sum()))} similares 100% e "
@@ -247,7 +293,7 @@ def _profimetrics() -> pd.DataFrame:
             if not admin:
                 _pedir_aprovacao("proporcoes", arq_p, lambda a: (lambda d: {"relacoes": int(len(d)), "similares": int((d["proporcao"] == 100).sum()),
                                                                              "proporcionais": int((d["proporcao"] != 100).sum())})(pp.ler_planilha(a)))
-                return regras
+                return
             try:
                 barra = st.progress(0.0, text="Cruzando com a dim_produto e gravando as proporções")
                 r = pp.salvar(pp.ler_planilha(arq_p), progresso=lambda x: barra.progress(x, text="Gravando as proporções"))
@@ -270,7 +316,7 @@ def _tokens_css() -> str:
     return "".join(f"--{k.replace('_', '-')}:{t[k]};" for k in nomes) + f"--shadow:{t['shadow']};"
 
 
-@st.cache_resource(show_spinner=False, max_entries=4)
+@st.cache_resource(show_spinner=False, max_entries=3)
 def _dados_mesa(filtros: str, versao: str, _df_all, _meta, _regras, _props) -> tuple[str | None, int, str]:
     """Pacote da mesa guardado por filtro + versão da base e das regras: reabrir a página não refaz o cálculo."""
     f = json.loads(filtros)
@@ -305,9 +351,10 @@ def render() -> None:
     df_all, meta, rel = fonte
 
     with st.container(horizontal=True, vertical_alignment="center", gap="small", key="reg_topo"):
+        st.html(f"<span class='ps-atualizado'><i></i>Atualizado {ui.esc(_data_base(rel, meta))}</span>")
         f = _filtros(df_all)
-        _pesquisa_1067(rel, meta)
-        regras = _profimetrics()
+        _uploads(rel, meta)
+    regras, _ = pf.carregar()
     dtfim = meta.get("com_data_fim", 0)
     info = (f"{rel.get('titulo')}: base de {meta.get('atualizado')}, pesquisa de {' a '.join(meta.get('periodo') or [])}. "
             + (f"Data fim (DTFIM) em {ui.numero(dtfim)} itens." if dtfim else "DTFIM vazia nesta base.")

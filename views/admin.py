@@ -43,6 +43,21 @@ def _linha_usuario(u: dict) -> None:
             st.toast(f"{u.get('nome') or u['usuario']} {'agora é administrador' if novo_admin else 'deixou de ser administrador'}.",
                      icon=":material/admin_panel_settings:")
             st.rerun()
+        s1, s2, _ = st.columns([1.3, 0.8, 2.4], vertical_alignment="center")
+        setores = st.session_state.get("_setores_lista", [])
+        setor_atual = u.get("setor") or None
+        setor = s1.selectbox("Setor", sorted(set(setores) | ({setor_atual} if setor_atual else set())), index=None if not setor_atual else
+                             sorted(set(setores) | {setor_atual}).index(setor_atual), accept_new_options=True, placeholder="Setor (digite para criar)",
+                             key=f"set_{u['usuario']}", label_visibility="collapsed")
+        from views.publicar import UFS
+        estado = s2.selectbox("Estado", UFS, index=UFS.index(u["estado"]) if u.get("estado") in UFS else None, placeholder="Estado",
+                              key=f"uf_{u['usuario']}", label_visibility="collapsed")
+        if (setor or None) != setor_atual or (estado or None) != (u.get("estado") or None):
+            try:
+                db.atualizar_usuario(u["usuario"], {"setor": setor or None, "estado": estado or None})
+                st.toast(f"{u.get('nome') or u['usuario']}: setor {setor or '-'}, estado {estado or '-'}.", icon=":material/badge:")
+            except Exception as exc:
+                st.error(f"Não foi possível salvar: {exc}. Crie as colunas setor e estado em usuarios (supabase/migrations.sql).")
         with c4.popover("Ações", width="stretch"):
             if st.button("Redefinir senha", key=f"rst_{u['usuario']}", width="stretch"):
                 temp = auth.senha_temporaria()
@@ -67,6 +82,7 @@ def render() -> None:
         return
 
     pendentes = [u for u in usuarios if u.get("status") == "Pendente"]
+    st.session_state._setores_lista = sorted({str(u.get("setor")).strip() for u in usuarios if u.get("setor")})
     ativos = sorted([u for u in usuarios if u.get("status") == "Aprovado"],
                     key=lambda u: (not presenca.resumo(u)["online"], not u.get("is_admin"), (u.get("nome") or "").lower()))
     online = sum(1 for u in ativos if presenca.resumo(u)["online"])

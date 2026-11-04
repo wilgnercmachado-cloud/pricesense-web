@@ -45,7 +45,8 @@ def render() -> None:
         return
     f = st.session_state.setdefault("mk_filtros", {"uf": ufs[0], "cesta": True, "deps": []})
     with st.container(horizontal=True, vertical_alignment="center", gap="small", key="mk_topo"):
-        with st.popover(f["uf"].split(" - ")[0], icon=":material/filter_list:", help="Estado e recorte da pesquisa"):
+        with st.popover(f"Filtros · {f['uf'].split(' - ')[0]}", icon=":material/filter_list:", help="Estado e recorte da pesquisa"):
+            ui.gaveta_topo("Filtros", f"{f['uf']}{', só cesta' if f['cesta'] else ''}")
             with st.form("mk_form", border=False):
                 uf = st.segmented_control("Estado", ufs, default=f["uf"] if f["uf"] in ufs else ufs[0], required=True)
                 deps = st.multiselect("Departamento", sorted(df["Departamento"].astype(str).unique()), default=f["deps"], placeholder="Todos")
