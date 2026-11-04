@@ -56,6 +56,12 @@ def salvar(df: pd.DataFrame, progresso=None) -> dict:
     Nenhuma outra coluna da dim_produto é tocada e nenhum produto novo é criado. Usa a função
     atualizar_proporcoes do Supabase (uma chamada por lote); sem ela, atualiza produto a produto.
     """
+    # a base completa fica guardada no Storage: é ela que define PAI e similares na precificação,
+    # inclusive dos produtos que ainda não existem na dim_produto
+    import gzip as _gz
+    completo = df[["id_produto", "id_pai", "proporcao"]].drop_duplicates("id_produto", keep="last")
+    db.sb().storage.from_("relatorios").upload(ARQUIVO, _gz.compress(completo.to_csv(index=False).encode(), 6),
+                                               {"content-type": "application/gzip", "upsert": "true"})
     ids = df["id_produto"].tolist()
     existentes: set[int] = set()
     for i in range(0, len(ids), 300):
@@ -81,12 +87,23 @@ def salvar(df: pd.DataFrame, progresso=None) -> dict:
     return {"salvas": len(registros), "fora_da_dim": len(df) - len(registros)}
 
 
+ARQUIVO = "config/proporcoes.csv.gz"
+
+
 @st.cache_data(ttl=600, show_spinner=False)
 def carregar() -> pd.DataFrame:
+    """Relações PAI x filho da base PROP%: do arquivo completo no Storage; sem ele, da dim_produto."""
+    try:
+        import gzip as _gz, io as _io
+        df = pd.read_csv(_io.BytesIO(_gz.decompress(db.sb().storage.from_("relatorios").download(ARQUIVO))))
+        if len(df):
+            return df.astype({"id_produto": "int64", "id_pai": "int64", "proporcao": "float64"}).assign(nome="")
+    except Exception:
+        pass
     linhas, pagina = [], 0
     try:
         while True:
-            resp = (db.sb().table("dim_produto").select("*").gt("proporcao", 0)
+            resp = (db.sb().table("dim_produto").select("*").gt("proporcao", 0).order("id_produto")
                     .range(pagina * 1000, pagina * 1000 + 999).execute())
             lote = resp.data or []
             linhas.extend(lote)

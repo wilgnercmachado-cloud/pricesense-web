@@ -26,8 +26,9 @@ def curva_abc(df: pd.DataFrame) -> pd.Series:
 def so_pais(b: pd.DataFrame, props: pd.DataFrame | None) -> pd.DataFrame:
     """Deixa só o produto PAI de cada família (base PROP%).
 
-    Filhos (similares 100% e proporcionais) saem da mesa. Se o PAI estiver sem estoque na filial (ou nem estiver nela),
-    entra no lugar dele o filho de proporção 100% com maior venda naquela filial. A coluna pai_subst guarda o PAI substituído.
+    Filhos (similares 100% e proporcionais) saem da mesa. Só quando o PAI está ausente da base (1082) na filial,
+    provavelmente sem estoque, entra no lugar dele UM filho: o de proporção 100% com maior venda naquela filial.
+    A coluna pai_subst guarda o PAI substituído.
     """
     if props is None or not len(props) or not len(b):
         return b.assign(pai_subst=0)
@@ -37,9 +38,7 @@ def so_pais(b: pd.DataFrame, props: pd.DataFrame | None) -> pd.DataFrame:
     pc = pd.to_numeric(_codigo(b["Produto"]), errors="coerce").fillna(-1).astype("int64").to_numpy()
     fc = _codigo(b["Filial"]).to_numpy()
     filho = np.isin(pc, pai_de.index.to_numpy())
-    qtd = b["qtd"].to_numpy(dtype=float) if "qtd" in b else np.ones(len(b))
-    com_est = ~filho & (np.nan_to_num(qtd) > 0)
-    pais_ok = set(zip(fc[com_est], pc[com_est]))
+    pais_ok = set(zip(fc[~filho], pc[~filho]))                              # PAI presente na base (1082) da filial
     c = pd.DataFrame({"pos": np.nonzero(filho)[0], "f": fc[filho], "pai": pai_de.reindex(pc[filho]).to_numpy(),
                       "prop": prop_de.reindex(pc[filho]).to_numpy(), "venda": b["venda"].to_numpy(dtype=float)[filho]})
     c = c[(c["prop"] == 100).to_numpy() & np.array([(f, p) not in pais_ok for f, p in zip(c["f"], c["pai"])], dtype=bool)]
@@ -71,8 +70,8 @@ def so_pais(b: pd.DataFrame, props: pd.DataFrame | None) -> pd.DataFrame:
 def base(df: pd.DataFrame, so_cesta: bool = True, ignorar_acoes: bool = False, regras: pd.DataFrame | None = None,
          com_pesquisa: bool = True, props: pd.DataFrame | None = None) -> pd.DataFrame:
     """com_pesquisa=True: só itens com pesquisa direta (menor preço). False: os sem pesquisa, que vão para o objetivo."""
-    b = df[df["cu"] > 0.09]
-    b = so_pais(b, props)
+    b = so_pais(df, props)                                                   # presença do PAI medida na base inteira da filial
+    b = b[b["cu"] > 0.09]
     if so_cesta and "Cesta" in b:
         b = b[b["Cesta"].astype(str) == "CESTA"]
     b = b.assign(Curva=curva_abc(b))
