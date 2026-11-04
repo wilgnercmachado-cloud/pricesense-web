@@ -106,6 +106,13 @@ def links_assinados(base: str, partes: int, versao: str) -> list[str]:
 
 
 # ---------------------------------------------------------------- permissões
+def estados_do_usuario(valor) -> list[str]:
+    """Estados gravados no usuário: 'TODOS' ou siglas separadas por ponto e vírgula (ex.: 'BA;SE')."""
+    if isinstance(valor, (list, tuple)):
+        return [str(x) for x in valor if x]
+    return [x.strip() for x in str(valor or "").replace(",", ";").split(";") if x.strip()]
+
+
 def pode_ver(rel: dict, login: str, admin: bool, setor: str | None = None, estado: str | None = None) -> bool:
     if admin or rel.get("autor_usuario") == login:
         return True
@@ -116,7 +123,9 @@ def pode_ver(rel: dict, login: str, admin: bool, setor: str | None = None, estad
         if login in (rel.get("usuarios_permitidos") or []):
             return True
         setores, estados = rel.get("setores_permitidos") or [], rel.get("estados_permitidos") or []
-        no_setor, no_estado = bool(setor) and setor in setores, bool(estado) and estado in estados
+        meus = estados_do_usuario(estado)
+        no_setor = bool(setor) and setor in setores
+        no_estado = bool(estados) and ("TODOS" in meus or bool(set(meus) & set(estados)))
         if setores and estados and (rel.get("combinar_publico") or "e") == "e":
             return no_setor and no_estado          # ex.: só o Comercial da BA
         return no_setor or no_estado
