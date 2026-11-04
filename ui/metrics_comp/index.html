@@ -1,6 +1,13 @@
 <!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <!-- Um só arquivo para os dois painéis (PriceMetrics e PromoMetrics): o Python diz qual abrir em args.app. -->
+<script>
+/* avisa o Streamlit que o componente está pronto logo no início (antes de baixar estilos e bibliotecas) e guarda o
+   primeiro pedido de desenho até o resto do arquivo carregar */
+window.__psRender = null;
+window.addEventListener('message', e => { if (e.data && e.data.type === 'streamlit:render') window.__psRender = e.data; });
+window.parent.postMessage({ isStreamlitMessage: true, type: 'streamlit:componentReady', apiVersion: 1 }, '*');
+</script>
 <style id="estilo-tema"></style>
 <style id="css-price" media="not all">
 @import url('__FONTE__');
@@ -1215,6 +1222,10 @@ html,body{overflow:hidden}
 .rel{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 12px;cursor:pointer;color:var(--ink);font-family:'Geist',sans-serif;transition:border-color .2s,transform .2s}
 .rel:hover{border-color:var(--primary);transform:translateX(3px)}.rel b{font-size:13px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rel small{color:var(--faint);font-size:11px}
 @media (max-width:1100px){.cards{grid-template-columns:repeat(2,1fr)}.hrow,.hrow2{grid-template-columns:1fr}}
+.skb{height:26px;width:70%;margin-top:8px;border-radius:8px;background:linear-gradient(90deg,var(--raised),var(--line),var(--raised));background-size:200% 100%;animation:brilho 1.2s linear infinite}
+.skl{height:30px;margin:8px 0;border-radius:8px;background:linear-gradient(90deg,var(--raised),var(--line),var(--raised));background-size:200% 100%;animation:brilho 1.2s linear infinite}
+@keyframes brilho{to{background-position:-200% 0}}
+.sk-msg{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);margin:4px 0 10px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
 <style id="css-promo" media="not all">
@@ -1533,7 +1544,7 @@ body.foco .kpis,body.foco .linha2{display:grid}
 .prev small{color:var(--muted);font-size:11px}
 .ib.robo{background:linear-gradient(135deg,#7A3FD1,var(--primary));color:#fff;border-color:transparent}
 </style>
-<script src="xlsx.mini.min.js"></script>
+<script src="xlsx.mini.min.js" async></script>
 </head><body><div id="root"></div>
 <script>
 const APP_PRICE = (() => {
@@ -2832,6 +2843,7 @@ const ic = (n, cor) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="$
   on(document, 'mouseover', e => { const t = e.target.closest('[data-tip]'); if (!t) { tip.classList.remove('on'); return; } tip.textContent = t.dataset.tip; const r = t.getBoundingClientRect(); tip.classList.add('on');
     const w = tip.offsetWidth, h = tip.offsetHeight; tip.style.left = Math.max(6, Math.min(innerWidth - w - 6, r.left + r.width / 2 - w / 2)) + 'px'; tip.style.top = (r.bottom + h + 14 > innerHeight ? r.top - h - 8 : r.bottom + 8) + 'px'; });
   const P = A.painel || { estados: [], serie: {}, dias: [] }, E = P.estados || [], sigla = u => String(u).split(' - ')[0];
+  const CARREGANDO = !!A.carregando;
   const serie = u => (P.serie[u] || []).map(x => x[1]);
   const d7 = u => { const s = serie(u); return s.length > 7 ? s[s.length - 1] - s[s.length - 8] : 0; };
   const soma = k => E.reduce((a, e) => a + (e[k] || 0), 0);
@@ -2852,23 +2864,26 @@ const ic = (n, cor) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="$
     ['Acima da margem máxima', soma('acima_max'), 0, '', 'var(--amber)', 'teto', 'Itens com margem atual acima da máxima do Profimetrics (ou 30%)'],
     ['Abaixo da margem mínima', soma('abaixo_min'), 0, '', 'var(--down)', 'piso', 'Itens abaixo do piso: cesta −15%, Profimetrics ou custo'],
     ['Acima do mercado', soma('acima_mercado'), 0, '', 'var(--down)', 'alerta', 'Itens com IP acima de 100,9']];
-  $('cards').innerHTML = cards.map(([t, v, dec, pre, c, n, d], k) => `<div class="hc" style="--c:${c};animation-delay:${k * 70}ms" data-tip="${esc(d)}"><span>${ic(n, c)}${t}</span>
+  if (CARREGANDO) { $('cards').innerHTML = cards.map(([t, , , , c, n], k) => `<div class="hc sk" style="--c:${c};animation-delay:${k * 70}ms"><span>${ic(n, c)}${t}</span><b class="skb"></b><div class="hcl"></div></div>`).join('');
+    $('board').innerHTML = '<div class="sk-msg"><span class="live"></span>Atualizando o painel de mercado com a pesquisa mais recente…</div>' + '<div class="skl"></div>'.repeat(6);
+    $('duelo').innerHTML = '<div class="skl"></div>'.repeat(6); $('tick').innerHTML = ''; }
+  else $('cards').innerHTML = cards.map(([t, v, dec, pre, c, n, d], k) => `<div class="hc" style="--c:${c};animation-delay:${k * 70}ms" data-tip="${esc(d)}"><span>${ic(n, c)}${t}</span>
     <b data-v="${v}" data-dec="${dec}" data-pre="${pre}">0</b><div class="hcl"></div></div>`).join('');
-  document.querySelectorAll('[data-v]').forEach(el => { const alvo = +el.dataset.v, dec = +el.dataset.dec, pre = el.dataset.pre, t0 = performance.now();
+  if (!CARREGANDO) document.querySelectorAll('[data-v]').forEach(el => { const alvo = +el.dataset.v, dec = +el.dataset.dec, pre = el.dataset.pre, t0 = performance.now();
     const passo = now => { const k = Math.min(1, (now - t0) / 1200), e = 1 - Math.pow(1 - k, 3), v = alvo * e;
       el.textContent = !isFinite(alvo) ? '–' : pre === 'R$' ? mi(v) : dec ? nf1.format(v) : nf0.format(v); if (k < 1) requestAnimationFrame(passo); }; requestAnimationFrame(passo); });
   /* pregão por estado */
   const spark = u => { const s = serie(u); if (s.length < 2) return ''; const lo = Math.min(...s, .99), hi = Math.max(...s, 1.01), X = k => 2 + 116 * k / (s.length - 1), Y = v => 26 - 22 * (v - lo) / (hi - lo);
     return `<svg class="hsp" viewBox="0 0 120 28"><line x1="0" x2="120" y1="${Y(1)}" y2="${Y(1)}" stroke="var(--line-strong)" stroke-dasharray="2 3"/><polyline points="${s.map((v, k) => X(k) + ',' + Y(v)).join(' ')}" fill="none" stroke="${ipCor(s[s.length - 1])}" stroke-width="1.8" class="traco"/></svg>`; };
   const cel = (v, cls, tipo) => `<td class="r ${cls || ''}">${tipo === 'R' ? mi(v) : nf0.format(v)}</td>`;
-  $('board').innerHTML = `<table><tr><th>Estado</th><th>IP 30 dias</th><th class="r">IP</th><th class="r">7 dias</th><th class="r">Itens</th><th class="r">Acima do mercado</th><th class="r">Captura cesta</th><th class="r">Captura não cesta</th>
+  if (!CARREGANDO) $('board').innerHTML = `<table><tr><th>Estado</th><th>IP 30 dias</th><th class="r">IP</th><th class="r">7 dias</th><th class="r">Itens</th><th class="r">Acima do mercado</th><th class="r">Captura cesta</th><th class="r">Captura não cesta</th>
     <th class="r">Investimento cesta</th><th class="r">Investimento não cesta</th><th class="r">Acima da máx.</th><th class="r">Abaixo da mín.</th></tr>
     ${E.map((e, k) => { const d = d7(e.uf); return `<tr style="animation-delay:${k * 60}ms"><td><b>${esc(sigla(e.uf))}</b> <small>${esc(String(e.uf).split(' - ')[1] || '')}</small></td><td>${spark(e.uf)}</td>
       <td class="r"><b style="color:${ipCor(e.ip)}">${nf1.format(e.ip * 100)}</b></td><td class="r ${d > 0 ? 'neg' : 'pos'}">${d > 0 ? '▲' : '▼'} ${nf1.format(Math.abs(d) * 100)}</td>
       ${cel(e.itens)}${cel(e.acima_mercado, 'neg')}${cel(e.opor_cesta, 'pos', 'R')}${cel(e.opor_nao, 'pos', 'R')}${cel(e.inv_cesta, 'neg', 'R')}${cel(e.inv_nao, 'neg', 'R')}${cel(e.acima_max, 'amb')}${cel(e.abaixo_min, 'neg')}</tr>`; }).join('')}</table>`;
   /* captura x investimento */
   const mx = Math.max(...E.map(e => Math.max(e.opor_cesta + e.opor_nao, e.inv_cesta + e.inv_nao)), 1);
-  $('duelo').innerHTML = E.map(e => { const o = e.opor_cesta + e.opor_nao, i = e.inv_cesta + e.inv_nao; return `<div class="du" data-tip="${esc(e.uf)}: captura ${mi(o)} (cesta ${mi(e.opor_cesta)}), investimento ${mi(i)} (cesta ${mi(e.inv_cesta)})">
+  if (!CARREGANDO) $('duelo').innerHTML = E.map(e => { const o = e.opor_cesta + e.opor_nao, i = e.inv_cesta + e.inv_nao; return `<div class="du" data-tip="${esc(e.uf)}: captura ${mi(o)} (cesta ${mi(e.opor_cesta)}), investimento ${mi(i)} (cesta ${mi(e.inv_cesta)})">
     <div class="dl"><i style="width:${50 * i / mx}%"></i></div><b>${esc(sigla(e.uf))}</b><div class="dr"><i style="width:${50 * o / mx}%"></i></div></div>`; }).join('')
     + `<div class="dleg"><span class="neg">◀ investimento abaixo do custo</span><span class="pos">captura de margem ▶</span></div>`;
   /* ferramentas e relatórios */
@@ -3271,8 +3286,7 @@ return montar;
 (() => {
   const enviar = (type, extra) => window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type }, extra || {}), '*');
   let chave = null, app = null;
-  window.addEventListener('message', ev => {
-    const d = ev.data; if (!d || d.type !== 'streamlit:render') return; const a = d.args || {};
+  const desenhar = d => { const a = d.args || {};
     if (a.chave === chave && a.app === app) { document.getElementById('estilo-tema').textContent = `@import url('${a.fonte}');:root{${a.tokens}}`; return; }
     chave = a.chave; app = a.app || 'price';
     document.getElementById('css-price').media = app === 'price' ? 'all' : 'not all';
@@ -3281,7 +3295,9 @@ return montar;
     document.getElementById('css-market').media = app === 'market' ? 'all' : 'not all';
     document.getElementById('css-home').media = app === 'home' ? 'all' : 'not all';
     ({ promo: APP_PROMO, bot: APP_BOT, market: APP_MARKET, home: APP_HOME }[app] || APP_PRICE)(a);
-  });
-  enviar('streamlit:componentReady', { apiVersion: 1 });
+  };
+  window.addEventListener('message', ev => { const d = ev.data; if (d && d.type === 'streamlit:render') desenhar(d); });
+  if (window.__psRender) desenhar(window.__psRender);
+
 })();
 </script></body></html>
