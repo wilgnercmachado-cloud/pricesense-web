@@ -2052,7 +2052,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     const c = e.target.closest('[data-ct]'); if (c) { const k = +c.dataset.ct; F.corte = F.corte === k ? -1 : k; atualizar(); } });
 
   /* ---------- histórico de preço do mercado ---------- */
-  const TPN = ['Regular', 'Promoção', 'Encarte', 'Mídia', 'Ponto extra'];
+  const TPN = ['Regular', 'Promoção', 'Encarte', 'Mídia', 'Ponto extra', 'Validade', 'Outro'];
   const HD = new Map(), HO = new Map();
   for (let j = 0; j < D.dp.length; j++) { const k = D.dp[j] * 64 + D.du[j]; let a = HD.get(k); if (!a) HD.set(k, a = []); a.push(j); }
   for (let j = 0; j < D.op.length; j++) { const k = D.op[j] * 64 + D.ou[j]; let a = HO.get(k); if (!a) HO.set(k, a = []); a.push(j); }
@@ -2665,7 +2665,7 @@ const ic = (n, cor) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="$
   if (!A.dados) { $('grade').innerHTML = '<div class="hvazio" style="padding:30px">Sem histórico de pesquisa para o filtro. Abra os filtros e escolha outro estado.</div>'; return; }
   const bin = atob(A.dados), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
   const D = JSON.parse(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).text());
-  const NP = D.prod.length, T = D.T.length, NK = D.K.length, TPN = ['Regular', 'Promoção', 'Encarte', 'Mídia', 'Ponto extra'];
+  const NP = D.prod.length, T = D.T.length, NK = D.K.length, TPN = ['Regular', 'Promoção', 'Encarte', 'Mídia', 'Ponto extra', 'Validade', 'Outro'];
   const empresa = k => D.KE[k] ? tit(D.KE[k]) : curto(D.K[k]).split(' - ')[0];
   const moda = l => { const f = new Map(); for (const v of l) f.set(v, (f.get(v) || 0) + 1); let b = null, n = 0; for (const [v, q] of f) if (q > n || (q === n && v < b)) { b = v; n = q; } return b; };
 
