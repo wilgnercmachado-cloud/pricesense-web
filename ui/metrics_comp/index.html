@@ -9,6 +9,20 @@ window.addEventListener('message', e => { if (e.data && e.data.type === 'streaml
 window.parent.postMessage({ isStreamlitMessage: true, type: 'streamlit:componentReady', apiVersion: 1 }, '*');
 </script>
 <style id="estilo-tema"></style>
+<style>
+#ps-carr{position:fixed;inset:0;z-index:200;display:grid;place-items:center;pointer-events:none;opacity:0;transition:opacity .25s}
+#ps-carr.on{opacity:1;background:color-mix(in srgb,var(--canvas,#fff) 35%,transparent);backdrop-filter:blur(3px)}
+#ps-carr>div{position:absolute;left:50%;top:50%;border-radius:50%;transform:translate(-50%,-50%)}
+#ps-carr .pc-anel{width:76px;height:76px;background:conic-gradient(from 0deg,transparent 0 20%,var(--primary,#2D4BFF) 55%,var(--up,#16A34A) 80%,#7A3FD1 100%);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 4.5px));mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 4.5px));
+  filter:drop-shadow(0 0 14px var(--primary,#2D4BFF));animation:pcg 1s linear infinite}
+#ps-carr .pc-volta{width:50px;height:50px;border:2px dashed var(--up,#16A34A);opacity:.75;animation:pcv 2.6s linear infinite}
+#ps-carr .pc-nucleo{width:12px;height:12px;background:var(--primary,#2D4BFF);box-shadow:0 0 0 5px color-mix(in srgb,var(--primary,#2D4BFF) 25%,transparent),0 0 18px var(--primary,#2D4BFF);animation:pcn 1.2s ease-in-out infinite}
+#ps-carr span{position:absolute;left:50%;top:calc(50% + 54px);transform:translateX(-50%);font:600 11px 'Geist Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--muted,#64748b)}
+@keyframes pcg{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes pcv{to{transform:translate(-50%,-50%) rotate(-360deg)}}
+@keyframes pcn{0%,100%{transform:translate(-50%,-50%) scale(.75)}50%{transform:translate(-50%,-50%) scale(1.1)}}
+</style>
 <style id="css-price" media="not all">
 @import url('__FONTE__');
 :root{__TOKENS__}
@@ -309,6 +323,8 @@ body.foco .kpis,body.foco .linha2{display:grid}
 .bkp-banner svg{width:16px;height:16px}.bkp-banner span{flex:1}
 .bkp-banner button{border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.14);color:#fff;border-radius:9px;height:30px;padding:0 12px;font:600 12px 'Geist',sans-serif;cursor:pointer}
 .bkp-banner button:hover{background:rgba(255,255,255,.26)}
+.at-pill{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;margin-left:10px;border-radius:999px;font-size:11px;color:var(--muted);border:1px solid var(--line);background:var(--surface);white-space:nowrap}
+.at-pill i{width:7px;height:7px;border-radius:50%;background:var(--up);box-shadow:0 0 0 3px color-mix(in srgb,var(--up) 22%,transparent)}
 #chOpt em{font-style:normal;font-family:'Geist Mono',monospace;font-size:11px;opacity:.7;margin-left:2px}
 #root{display:block} #app{height:100%}
 </style>
@@ -2451,6 +2467,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
 
   const comPesq = D.orig.some(o => o === 0), nRegra = D.pobj.filter(v => v != null).length;
   $('escopo').textContent = `${nf0.format(N)} itens ${comPesq ? 'com pesquisa' : 'sem pesquisa'}, ${D.filiais.length} filiais`;
+  if (A.atualizado) $('escopo').insertAdjacentHTML('afterend', `<span class="at-pill" data-tip="Base atualizada em ${esc(A.atualizado)}"><i></i>Atualizado ${esc(A.atualizado)}</span>`);
   $('escopo').dataset.tip = `${nf0.format(D.produtos.length)} produtos. ${nRegra ? nf0.format(nRegra) + ' itens com regra do Profimetrics.' : 'Sem regras do Profimetrics: margem objetiva 10% e máxima 30%.'} ${A.info || ''}`;
   aplicaColunas(); calcTudo();
   if (!HIST && (GUARD.v || 0) < 3) {                       // aceites dados em massa por versões antigas em itens da regra de corte saem (uma vez)
@@ -3329,7 +3346,10 @@ return montar;
     document.getElementById('css-bot').media = app === 'bot' ? 'all' : 'not all';
     document.getElementById('css-market').media = app === 'market' ? 'all' : 'not all';
     document.getElementById('css-home').media = app === 'home' ? 'all' : 'not all';
-    ({ promo: APP_PROMO, bot: APP_BOT, market: APP_MARKET, home: APP_HOME }[app] || APP_PRICE)(a);
+    let carr = document.getElementById('ps-carr');
+    if (!carr) { carr = document.createElement('div'); carr.id = 'ps-carr'; carr.innerHTML = '<div class="pc-anel"></div><div class="pc-volta"></div><div class="pc-nucleo"></div><span>Carregando</span>'; document.body.appendChild(carr); }
+    carr.className = 'on';
+    Promise.resolve(({ promo: APP_PROMO, bot: APP_BOT, market: APP_MARKET, home: APP_HOME }[app] || APP_PRICE)(a)).finally(() => { carr.className = ''; });
   };
   window.addEventListener('message', ev => { const d = ev.data; if (d && d.type === 'streamlit:render') desenhar(d); });
   if (window.__psRender) desenhar(window.__psRender);
