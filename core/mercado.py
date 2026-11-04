@@ -13,6 +13,9 @@ import pandas as pd
 import streamlit as st
 
 
+PAINEIS: dict = {}          # painel da tela inicial já calculado, por versão (abre o início sem esperar)
+
+
 def base_padrao():
     """(df, meta, relatório) do Competitividade Pricing GMAT mais recente, ou None."""
     from views import regular
@@ -28,7 +31,11 @@ def painel_estados(versao: str, _df: pd.DataFrame, _meta: dict, _regras: pd.Data
     """Indicadores por estado: IP, oportunidade de captura de margem, investimento abaixo do custo e margens fora das regras."""
     from core import profimetrics as pf
     df = _df[(_df["cu"] > 0.09) & (_df["vm"] > 0)]
-    cod = lambda s: s.astype(str).str.split(" - ").str[0].str.strip()
+    def cod(s):                                   # código pela categoria (rápido em 478 mil linhas)
+        if hasattr(s, "cat"):
+            cats = pd.Series(s.cat.categories.astype(str)).str.split(" - ").str[0].str.strip().to_numpy()
+            return pd.Series(cats[s.cat.codes.to_numpy()], index=s.index)
+        return s.astype(str).str.split(" - ").str[0].str.strip()
     r = pf.regras_por_item(cod(df["Filial"]), cod(df["Produto"]), _regras) if _regras is not None and len(_regras) else None
     cu, vm, mk = df["cu"].to_numpy(float), df["vm"].to_numpy(float), df["mk"].to_numpy(float)
     venda = df["venda"].to_numpy(float)
