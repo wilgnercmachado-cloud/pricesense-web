@@ -253,12 +253,61 @@ def _uploads(rel: dict, meta_base: dict) -> None:
     """Um único botão de upload: pesquisa 1067, regras de margem (Profimetrics) e base PROP%."""
     with st.popover("", icon=":material/cloud_upload:", help="Uploads: pesquisa 1067, regras de margem e proporções"):
         ui.gaveta_topo("Uploads", "Pesquisa do dia, regras de margem e proporcionais")
-        aba = st.segmented_control("Upload", ["Pesquisa 1067", "Regras de margem", "Proporções"], default="Pesquisa 1067", required=True,
+        aba = st.segmented_control("Upload", ["Pesquisa 1067", "Regras de margem", "Proporções", "Trava mínima (acordo)"], default="Pesquisa 1067", required=True,
                                    key="reg_up_aba", label_visibility="collapsed", width="stretch")
         if aba == "Pesquisa 1067":
             _pesquisa_1067(rel, meta_base)
+        elif aba == "Trava mínima (acordo)":
+            _trava()
         else:
             _profimetrics(aba)
+
+
+def _trava() -> None:
+    """Trava mínima (acordo): margem mínima por filial e produto, acima da cesta e do Profimetrics."""
+    from core import trava as tv
+    atual = tv.carregar()
+    st.caption("Margem mínima acordada por filial e produto. Vale acima do piso da cesta e da mínima do Profimetrics: o varejo nunca fica "
+               "abaixo dela e, quando o preço bate nessa mínima, o atacado sai do varejo com a base de redução.")
+    if len(atual):
+        st.caption(f"Na base: {ui.numero(len(atual))} travas em {atual['filial'].nunique()} filiais e {ui.numero(atual['produto'].nunique())} produtos. "
+                   f"Última atualização: {str(atual['atualizado_em'].max())[:16].replace('T', ' ')}, por {atual.sort_values('atualizado_em')['atualizado_por'].iloc[-1]}.")
+    else:
+        st.caption("Nenhuma trava cadastrada.")
+    st.caption("Colunas: ID filial | ID Produto | Margem Mínima (em %, ex.: 10). Aceita XLSX ou CSV. Um envio substitui a trava da mesma filial e produto; as outras continuam.")
+    admin = auth.eh_admin()
+    if not admin:
+        _meus_pedidos("trava")
+    arq = st.file_uploader("Trava mínima", type=["xlsx", "xls", "csv", "txt"], key="reg_trava_arq", label_visibility="collapsed")
+    if st.button("Salvar trava mínima" if admin else "Enviar trava para aprovação", type="primary", width="stretch",
+                 icon=":material/lock:", disabled=arq is None, key="reg_trava_ok"):
+        if not admin:
+            try:
+                lido = tv.ler_planilha(arq)
+                arq.seek(0)
+                from core import aprovacoes as ap
+                ap.enviar("trava", st.session_state.get("usuario_login", ""), getattr(arq, "name", "trava"), arq.getvalue(),
+                          {"travas": int(len(lido)), "filiais": int(lido["filial"].nunique())})
+                st.toast("Trava enviada para aprovação do administrador. Só entra na precificação depois de aprovada.", icon=":material/pending:")
+            except tv.ErroTrava as exc:
+                st.error(str(exc), icon=":material/error:")
+            except Exception as exc:
+                st.error(f"Não foi possível enviar: {exc}", icon=":material/error:")
+            return
+        try:
+            with st.spinner("Gravando a trava mínima"):
+                r = tv.salvar(tv.ler_planilha(arq), st.session_state.get("usuario_login", ""))
+            st.toast(f"{ui.numero(r['linhas'])} travas mínimas gravadas.", icon=":material/lock:")
+            st.rerun()
+        except tv.ErroTrava as exc:
+            st.error(str(exc), icon=":material/error:")
+        except Exception as exc:
+            st.error(f"Não foi possível gravar: {exc}. Confira a tabela trava_minima (supabase/migrations.sql).", icon=":material/error:")
+    if admin and len(atual):
+        with st.popover("Apagar todas as travas", icon=":material/delete:", width="stretch"):
+            st.caption("Remove todas as travas mínimas cadastradas. A precificação volta a usar a cesta e o Profimetrics.")
+            if st.button("Confirmar exclusão", type="primary", key="reg_trava_rm"):
+                tv.limpar(); st.rerun()
 
 
 def _profimetrics(secao: str) -> None:
@@ -332,14 +381,14 @@ def _tokens_css() -> str:
 
 
 @st.cache_resource(show_spinner=False, max_entries=3)
-def _dados_mesa(filtros: str, versao: str, _df_all, _meta, _regras, _props) -> tuple[str | None, int, str]:
+def _dados_mesa(filtros: str, versao: str, _df_all, _meta, _regras, _props, _travas=None) -> tuple[str | None, int, str]:
     """Pacote da mesa guardado por filtro + versão da base e das regras: reabrir a página não refaz o cálculo."""
     f = json.loads(filtros)
     mask = np.ones(len(_df_all), dtype=bool)
     for col in FILTROS:
         if f.get(col):
             mask &= _df_all[col].isin(f[col]).to_numpy()
-    b = pr.base(_df_all[mask], so_cesta=f["cesta"], ignorar_acoes=False, regras=_regras, com_pesquisa=f["pesquisa"] == "Com pesquisa", props=_props)
+    b = pr.base(_df_all[mask], so_cesta=f["cesta"], ignorar_acoes=False, regras=_regras, com_pesquisa=f["pesquisa"] == "Com pesquisa", props=_props, travas=_travas)
     if b.empty:
         return None, 0, ""
     if len(b) > LIMITE:
@@ -377,11 +426,14 @@ def render() -> None:
             + (f" Pesquisa 1067 somada: {', '.join(d[:5] for d in meta['p1067']['dias'])}." if meta.get("p1067") else ""))
 
     props = pp.carregar()
+    from core import trava as tv
+    travas = tv.carregar()
     _, pf_meta = pf.carregar()
     versao = "|".join([str(rel.get("id")), str(rel.get("atualizado_em")), gr.VERSAO, str((meta.get("p1067") or {}).get("em")), str(pf_meta.get("atualizado_em")), str(pf_meta.get("linhas")),
-                       str(len(props)), str(float(props["proporcao"].sum()) if len(props) else 0)])
+                       str(len(props)), str(float(props["proporcao"].sum()) if len(props) else 0),
+                       str(len(travas)), str(float(travas["margem_min"].sum()) if len(travas) else 0), str(travas["atualizado_em"].max() if len(travas) else "")])
     filtros = json.dumps({k: (sorted(v) if isinstance(v, list) else v) for k, v in f.items()}, sort_keys=True, ensure_ascii=False)
-    dados, n, chave = _dados_mesa(filtros, versao, df_all, meta, regras, props)
+    dados, n, chave = _dados_mesa(filtros, versao, df_all, meta, regras, props, travas)
     if n == 0:
         ui.vazio("Nada para precificar com esses filtros", "Abra os filtros e amplie a seleção.")
         return
