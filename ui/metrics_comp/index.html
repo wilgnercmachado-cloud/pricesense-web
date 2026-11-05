@@ -93,7 +93,8 @@ h3 small{color:var(--faint);font-weight:400;overflow:hidden;text-overflow:ellips
   background:var(--surface-solid);border:1px solid var(--line);box-shadow:0 18px 40px -18px rgba(15,23,42,.45);animation:pin .18s ease-out}
 .hdrop.on{display:block}
 .hd-t{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--muted);margin:0 2px 6px}
-.hd-todos{border:0;background:none;color:var(--primary);font:600 11px 'Geist',sans-serif;cursor:pointer}
+.hd-todos{border:0;background:none;color:var(--primary);font:600 11px 'Geist',sans-serif;cursor:pointer;padding:0 0 0 8px}
+.hd-todos:disabled{color:var(--faint);cursor:default}
 .hd-i{display:grid;grid-template-columns:16px 1fr auto;gap:7px;align-items:center;padding:5px 6px;border-radius:7px;font-size:12px;cursor:pointer}
 .hd-i:hover{background:var(--raised)} .hd-i input{accent-color:var(--primary);margin:0}
 .hd-i em{font-style:normal;font-family:'Geist Mono',monospace;font-size:10.5px;color:var(--faint)}
@@ -1741,7 +1742,8 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   function calc(i){
     const c = D.cu[i], vmk = D.vmk[i], amk = D.amk[i] || 0, merch = D.merch[i] || 0;
     const mobj = D.pobj[i] ?? MOBJ, mmax = (D.pmax[i] > 0 ? D.pmax[i] : MMAX), ps = PISO[D.ui[i]] || { cesta: -15, sem: 0 };
-    const umin = D.cesta[i] ? ps.cesta : (D.pmin[i] ?? ps.sem);
+    const trv = D.trava && D.trava[i] != null ? D.trava[i] : null;            // trava mínima (acordo): vale acima da cesta e do Profimetrics
+    const umin = trv != null ? trv : D.cesta[i] ? ps.cesta : (D.pmin[i] ?? ps.sem);
     const mn = c / (1 - umin / 100), mx = c / (1 - mmax / 100), obj = c / (1 - mobj / 100), red = 1 - merch / 100;
     let sug, rg, teto = false;
     if (semPesq(i)) { sug = obj; rg = 4; } else if (vmk > mx) { sug = mx; rg = 2; teto = true; } else { sug = vmk - CENT; rg = 0; }
@@ -1749,7 +1751,9 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     let nv = rg === 0 && pf === sug ? arredMercado(pf, vmk, mn) : roundVarejo(pf);
     if (OV.has(i)) { nv = OV.get(i); rg = OPT.has(i) ? 6 : 5; }
     let sa; if (rg === 4 || (OV.has(i) && semPesq(i))) sa = obj * red; else if (teto) sa = mx * red; else sa = amk > 0 ? amk - CENT : nv * red;
-    const pa = Math.max(Math.min(sa, mx * red), mn);
+    const naTrava = trv != null && rg === 3 && !OV.has(i);                 // bateu na trava: atacado sai do varejo com a base de redução
+    if (naTrava) sa = nv * red;
+    const pa = naTrava ? Math.min(sa, mx * red) : Math.max(Math.min(sa, mx * red), mn);
     let na = roundAtacado(pa, nv);
     if (OVA.has(i)) { na = OVA.get(i); rg = OPT.has(i) ? 6 : 5; }
     else na = piso15(na, nv);                                   // padrão da companhia: atacado com no máximo 15% de desconto
@@ -1805,7 +1809,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     el.onclick = fecha; el._t = setTimeout(fecha, o.premium ? 4200 : 2600); }
   function toast(t){ const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('on'), 2600); }
   const optInfo = i => { const o = OPT.get(i); return typeof o === 'string' ? { m: o } : (o || {}); };
-  const rotRegra = i => RG[i] === 6 ? 'Optimus: ' + (optInfo(i).m || 'ajustado') : RG[i] === 2 ? `Aplicado máxima ${nf1.format(UMAX[i])}%` : RG[i] === 3 ? (D.cesta[i] ? `Aplicado mínima cesta ${nf1.format(UMIN[i])}%` : `Aplicado mínima ${nf1.format(UMIN[i])}%`)
+  const rotRegra = i => RG[i] === 6 ? 'Optimus: ' + (optInfo(i).m || 'ajustado') : RG[i] === 2 ? `Aplicado máxima ${nf1.format(UMAX[i])}%` : RG[i] === 3 ? (D.trava && D.trava[i] != null ? `Trava mínima ${nf1.format(UMIN[i])}%` : D.cesta[i] ? `Aplicado mínima cesta ${nf1.format(UMIN[i])}%` : `Aplicado mínima ${nf1.format(UMIN[i])}%`)
     : RG[i] === 4 ? `Aplicado objetiva ${nf1.format(UOBJ[i])}%` : REGRAS[RG[i]][0];
   const tagRegra = i => { const [, n, c] = REGRAS[RG[i]]; return `<span class="tag" style="color:${c}" data-tip="${esc(explicaRegra(i))}">${ic(n, c)}${rotRegra(i)}</span>`; };
   const tagCorte = i => { const t = esc(explicaCorte(i));
@@ -1815,7 +1819,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     const l = CORTES.filter((_, k) => CT[i] & (1 << k)); return `<span class="tag" style="color:var(--down)" data-tip="${t}">${ic(l[0][1])}${l[0][0]}${l.length > 1 ? ' +' + (l.length - 1) : ''}</span>`; };
   /* ---------- explicações detalhadas (caixa ao passar o mouse) ---------- */
   const R$ = v => v == null || !isFinite(v) ? '–' : 'R$ ' + nf2.format(v), P1 = v => v == null || !isFinite(v) ? '–' : nf1.format(v * 100) + '%';
-  const origemMin = i => D.cesta[i] ? `piso da cesta do estado, ${nf1.format(UMIN[i])}%` : D.pmin[i] != null ? `margem mínima do Profimetrics, ${nf1.format(UMIN[i])}%` : `piso do estado, ${nf1.format(UMIN[i])}%`;
+  const origemMin = i => D.trava && D.trava[i] != null ? `trava mínima (acordo), ${nf1.format(UMIN[i])}%` : D.cesta[i] ? `piso da cesta do estado, ${nf1.format(UMIN[i])}%` : D.pmin[i] != null ? `margem mínima do Profimetrics, ${nf1.format(UMIN[i])}%` : `piso do estado, ${nf1.format(UMIN[i])}%`;
   const origemMax = i => (D.pmax[i] > 0 ? 'Profimetrics, ' : 'padrão, ') + nf1.format(UMAX[i]) + '%';
   const coleta = i => D.orig[i] ? 'moda do mercado (sem pesquisa direta)' : `${titulo_(curto(D.concs[D.ki[i]]).split(' - ')[0])}, ${D.datas[D.dti[i]] || 'sem data'}${D.tcol[i] ? ', ' + ['', 'regular', 'promoção', 'ponto extra'][D.tcol[i]] : ''}`;
   const resultado = i => `Resultado: varejo ${R$(NV[i])} (margem ${P1((NV[i] - D.cu[i]) / NV[i])}${D.vmk[i] > 0 ? ', IP ' + nf1.format(NV[i] / D.vmk[i] * 100) : ''}) e atacado ${R$(NA[i])}${NA[i] > 0 ? ' (desconto de ' + P1(1 - NA[i] / NV[i]) + ')' : ''}.`;
@@ -1825,6 +1829,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     if (RG[i] === 0) L.push('MERCADO − R$ 0,01', `Menor preço do mercado: ${R$(D.vmk[i])} (${coleta(i)}).`, `Novo varejo = ${R$(D.vmk[i])} − 0,01, arredondado pela regra ${REGRA_RND[RND].nome.toLowerCase()}.`, faixa(i));
     if (RG[i] === 2) L.push('APLICADO MÁXIMA', `O mercado (${R$(D.vmk[i])}, ${coleta(i)}) está acima do preço máximo de ${R$(MX[i])}.`, `Varejo fica no máximo (margem ${origemMax(i)}); o atacado sai do máximo com a base de redução de ${nf1.format(D.merch[i] || 0)}%.`);
     if (RG[i] === 3) L.push('APLICADO MÍNIMA', `Seguir o mercado (${R$(D.vmk[i])} − 0,01) deixaria a margem em ${P1((D.vmk[i] - CENT - D.cu[i]) / (D.vmk[i] - CENT))}, abaixo do mínimo.`, `O preço vai para o mínimo de ${R$(MN[i])} (${origemMin(i)}).`);
+    if (RG[i] === 3 && D.trava && D.trava[i] != null) L.push(`Trava mínima (acordo) de ${nf1.format(UMIN[i])}% para esta filial e produto: o atacado sai do varejo com a base de redução de ${nf1.format(D.merch[i] || 0)}%.`);
     if (RG[i] === 4) L.push('APLICADO OBJETIVA', 'Item sem pesquisa direta do concorrente.', `Varejo pela margem objetiva de ${nf1.format(UOBJ[i])}% sobre o custo de ${R$(D.cu[i])}; atacado com a base de redução de ${nf1.format(D.merch[i] || 0)}%.`);
     if (RG[i] === 5) L.push('AJUSTE MANUAL', `Preço definido na mesa. A sugestão do motor seria seguir o mercado de ${R$(D.vmk[i])}.`, faixa(i));
     if (RG[i] !== 6 && !semPesq(i)) { const a = analisar(i);
@@ -2097,13 +2102,13 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     const nFil = rows.filter(j => fil.has(D.dk[j])).length;
     if (HSEL === 'fil' && !nFil) HSEL = 'uf';
     if (HSEL !== 'fil' && HSEL !== 'uf') HSEL = nFil ? 'fil' : 'uf';
-    for (const e of [...HCONC]) if (!daFil.has(e)) HCONC.delete(e);
+    for (const e of [...HCONC]) if (e !== '__nenhum__' && !daFil.has(e)) HCONC.delete(e);
     const contFil = new Map(); for (const j of rows) if (fil.has(D.dk[j])) { const e = empresa(D.dk[j]); contFil.set(e, (contFil.get(e) || 0) + 1); }
     /* duas bandeiras: Filial (com a lista dos concorrentes dela para filtrar) e Estado */
-    const rotFil = HCONC.size ? `Filial: ${HCONC.size} de ${contFil.size}` : 'Filial';
+    const rotFil = HCONC.has('__nenhum__') ? `Filial: 0 de ${contFil.size}` : HCONC.size ? `Filial: ${HCONC.size} de ${contFil.size}` : 'Filial';
     chips.innerHTML = `<button class="hchip hflag${HSEL === 'fil' ? ' on' : ''}" data-hs="fil" ${nFil ? '' : 'disabled'} data-tip="${nFil ? 'Concorrentes associados à filial: clique para escolher quais entram' : 'A filial não tem concorrentes associados com coleta deste item'}">${rotFil}<span class="hcar">▾</span></button>`
       + `<button class="hchip hflag${HSEL === 'uf' ? ' on' : ''}" data-hs="uf" data-tip="Todos os concorrentes do estado: ${nf0.format(rows.length)} coletas">Estado</button>`
-      + `<div class="hdrop${HABRE && HSEL === 'fil' ? ' on' : ''}" id="hDrop"><div class="hd-t">Concorrentes da filial<button class="hd-todos" data-hc="*">${HCONC.size ? 'todos' : 'todos marcados'}</button></div>`
+      + `<div class="hdrop${HABRE && HSEL === 'fil' ? ' on' : ''}" id="hDrop"><div class="hd-t">Concorrentes da filial<span><button class="hd-todos" data-hc="*" ${!HCONC.size ? 'disabled' : ''}>marcar todos</button><button class="hd-todos hd-nenhum" ${HCONC.has('__nenhum__') ? 'disabled' : ''}>desmarcar todos</button></span></div>`
       + [...contFil.entries()].sort((x, y) => y[1] - x[1]).map(([e, n]) => `<label class="hd-i"><input type="checkbox" data-hc="${esc(e)}" ${!HCONC.size || HCONC.has(e) ? 'checked' : ''}><span>${esc(e)}</span><em>${nf0.format(n)}</em></label>`).join('') + '</div>';
     { const dd = $('hDrop'), bf = chips.querySelector('[data-hs=fil]'); if (dd && bf) { const r = bf.getBoundingClientRect(); dd.style.left = r.left + 'px'; dd.style.top = (r.bottom + 6) + 'px'; } }
     const ok = HSEL === 'fil' ? (k => fil.has(k) && (!HCONC.size || HCONC.has(empresa(k)))) : (() => true);
@@ -2148,14 +2153,16 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     tp.style.display = 'block'; const px = HDADOS.X(n) * r.width / HDADOS.Wd; tp.style.left = (px > r.width * 0.6 ? px - tp.offsetWidth - 14 : px + 14) + 'px'; tp.style.top = '10px'; });
   on($('hist'), 'mouseleave', () => { const tp = $('hTip'), gl = $('hGuia'); if (tp) tp.style.display = 'none'; if (gl) gl.style.display = 'none'; });
   on($('hChips'), 'click', e => { if (SEL < 0) return;
-    const t = e.target.closest('.hd-todos'); if (t) { HCONC.clear(); historico(SEL); return; }
+    const n = e.target.closest('.hd-nenhum'); if (n) { if (!n.disabled) { HCONC.clear(); HCONC.add('__nenhum__'); historico(SEL); } return; }
+    const t = e.target.closest('.hd-todos'); if (t) { if (!t.disabled) { HCONC.clear(); historico(SEL); } return; }
     if (e.target.closest('#hDrop')) return;
     const b = e.target.closest('[data-hs]'); if (!b || b.disabled) return;
     if (b.dataset.hs === 'fil') HABRE = HSEL === 'fil' ? !HABRE : true; else HABRE = false;
     HSEL = b.dataset.hs; historico(SEL); });
   on($('hChips'), 'change', e => { const c = e.target.dataset.hc; if (!c || SEL < 0) return;
     const todos = [...$('hDrop').querySelectorAll('input[data-hc]')].map(x => x.dataset.hc);
-    if (!HCONC.size) todos.forEach(x => HCONC.add(x));               // estava em "todos": passa a valer a escolha
+    HCONC.delete('__nenhum__');
+    if (!HCONC.size && !e.target.checked) todos.forEach(x => HCONC.add(x));   // estava em "todos": passa a valer a escolha
     if (e.target.checked) HCONC.add(c); else HCONC.delete(c);
     if (HCONC.size === todos.length) HCONC.clear();
     if (!HCONC.size && !e.target.checked) HCONC.add('__nenhum__');
