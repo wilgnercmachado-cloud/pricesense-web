@@ -374,13 +374,30 @@ const d = window.parent.document, w = window.parent;
 /* ilha dinâmica: a largura acompanha os itens do menu (medidos uma vez por mudança) */
 {
   const ajustaIlha = () => { const nav = d.querySelector('[data-testid="stTopNav"]'); if (!nav) return;
-    const itens = [...nav.children].filter(c => c.offsetWidth > 0 && !String(c.className).includes('rest'));
-    const assinatura = itens.map(c => c.textContent).join('|'); if (!itens.length || nav.dataset.ilha === assinatura) return;
-    nav.style.removeProperty('width'); nav.style.setProperty('width', 'auto');
-    const w = itens.reduce((a, c) => a + (c.firstElementChild || c).scrollWidth + 4, 0) + 8 * (itens.length - 1) + 20;
-    nav.style.setProperty('width', Math.ceil(w) + 'px', 'important'); nav.dataset.ilha = assinatura; };
-  let tentativas = 0; const t = setInterval(() => { ajustaIlha(); const nav = d.querySelector('[data-testid="stTopNav"]'); if ((nav && nav.dataset.ilha) || ++tentativas > 25) clearInterval(t); }, 200);
-  if (!w.__psIlha) { w.__psIlha = true; w.addEventListener('resize', () => { const nav = d.querySelector('[data-testid="stTopNav"]'); if (nav) nav.dataset.ilha = ''; setTimeout(ajustaIlha, 80); }); }
+    /* largura natural = soma dos itens clicáveis (Início, Ferramentas, ...), medidos direto, sem depender da estrutura interna */
+    const els = [...nav.querySelectorAll('[data-testid="stTopNavLink"], [data-testid="stTopNavSection"]')].filter(e => e.getClientRects().length);
+    if (!els.length) return;
+    let alvo = els.reduce((a, e) => a + Math.ceil(e.getBoundingClientRect().width), 0) + 6 * (els.length - 1) + 26;
+    /* nunca encosta na logo nem nos botões da direita (filtros, upload, tela cheia, tema) */
+    const W = w.innerWidth, meio = W / 2;
+    const logo = d.querySelector('[data-testid="stLogo"], [data-testid="stHeaderLogo"], header img');
+    const esq = logo ? logo.getBoundingClientRect().right : 180;
+    let dir = W;
+    d.querySelectorAll('.st-key-ps_tema, #ps-fs, [class*="st-key-reg_topo"], [class*="st-key-promo_topo"], [class*="st-key-mk_topo"]').forEach(el => {
+      const r = el.getBoundingClientRect(); if (r.width > 0 && r.top < 70) dir = Math.min(dir, r.left); });
+    const maximo = Math.max(240, 2 * Math.min(meio - esq, dir - meio) - 40);
+    alvo = Math.min(alvo, maximo);
+    if (Math.abs((parseFloat(nav.style.width) || 0) - alvo) > 1) { nav.style.setProperty('width', alvo + 'px', 'important'); nav.style.setProperty('max-width', maximo + 'px', 'important'); }
+    nav.dataset.ilha = '1'; };
+  /* o selo "Atualizado" nunca encosta na ilha: encolhe (só a data) e, se ainda faltar espaço, sai do topo */
+  const ajustaSelo = () => { const nav = d.querySelector('[data-testid="stTopNav"]'), selo = d.querySelector('.ps-atualizado'); if (!nav || !selo) return;
+    const b = d.body; b.classList.remove('ps-selo-curto', 'ps-selo-oculto');
+    const livre = () => { const topo = selo.closest('[class*="st-key-reg_topo"]') || selo; return topo.getBoundingClientRect().left - nav.getBoundingClientRect().right; };
+    if (livre() < 14) { b.classList.add('ps-selo-curto'); if (livre() < 14) b.classList.add('ps-selo-oculto'); } };
+  if (!w.__psSelo) { w.__psSelo = true; w.addEventListener('resize', () => setTimeout(ajustaSelo, 120)); }
+  let tentSelo = 0; const ts = setInterval(() => { ajustaSelo(); if (++tentSelo > 20) clearInterval(ts); }, 300);
+  setTimeout(ajustaIlha, 60); setTimeout(ajustaIlha, 400);
+  if (!w.__psIlha) { w.__psIlha = true; w.addEventListener('resize', () => setTimeout(ajustaIlha, 60)); w.setInterval(ajustaIlha, 1000); }   /* confere sempre: troca de página, botões novos no topo, fonte carregada */
 }
 if (!d.__psGaveta) { d.__psGaveta = true;            /* botão ✕ das gavetas: fecha como o Esc */
   d.addEventListener('click', e => { if (e.target.closest('.ps-gaveta-x')) { e.preventDefault();

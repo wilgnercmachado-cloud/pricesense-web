@@ -315,7 +315,7 @@ body.ps-selo-oculto .st-key-reg_topo [data-testid="stHtml"]:has(.ps-atualizado) 
 ::-webkit-scrollbar-thumb {{ background: color-mix(in srgb, var(--ps-ink) 20%, transparent); border-radius: 9px; border: 2px solid transparent; background-clip: padding-box; }}
 ::-webkit-scrollbar-thumb:hover {{ background-color: color-mix(in srgb, var(--ps-primary) 55%, transparent); }}
 @media (prefers-reduced-motion: reduce) {{ *:not(.stApp), *:not(.stApp)::before {{ animation: none !important; transition: none !important; }} }}
-@media (max-width: 900px) {{ [data-testid="stTopNav"] {{ position: static !important; transform: none; max-width: none; }} }}
+
 
 header[data-testid="stHeader"] {{
   background: color-mix(in srgb, var(--ps-canvas) 62%, transparent);
