@@ -68,7 +68,7 @@ def so_pais(b: pd.DataFrame, props: pd.DataFrame | None) -> pd.DataFrame:
 
 
 def base(df: pd.DataFrame, so_cesta: bool = True, ignorar_acoes: bool = False, regras: pd.DataFrame | None = None,
-         com_pesquisa: bool = True, props: pd.DataFrame | None = None) -> pd.DataFrame:
+         com_pesquisa: bool = True, props: pd.DataFrame | None = None, travas: pd.DataFrame | None = None) -> pd.DataFrame:
     """com_pesquisa=True: só itens com pesquisa direta (menor preço). False: os sem pesquisa, que vão para o objetivo."""
     b = so_pais(df, props)                                                   # presença do PAI medida na base inteira da filial
     b = b[b["cu"] > 0.09]
@@ -86,6 +86,14 @@ def base(df: pd.DataFrame, so_cesta: bool = True, ignorar_acoes: bool = False, r
         r = profimetrics.regras_por_item(_codigo(b["Filial"]), _codigo(b["Produto"]), regras)
         b = b.assign(pf_obj=r["mrg_obj"].to_numpy(), pf_min=r["mrg_min"].to_numpy(), pf_max=r["mrg_max"].to_numpy(),
                      pf_merch=r["merch"].to_numpy())
+    if travas is not None and len(travas) and len(b):
+        # trava mínima (acordo) por filial + produto: vale acima da cesta e do Profimetrics
+        t = pd.Series(travas["margem_min"].to_numpy(dtype=float),
+                      index=pd.MultiIndex.from_arrays([travas["filial"].astype("int64").to_numpy(), travas["produto"].astype("int64").to_numpy()]))
+        t = t[~t.index.duplicated(keep="last")]
+        fc = pd.to_numeric(_codigo(b["Filial"]), errors="coerce").fillna(-1).astype("int64").to_numpy()
+        pc = pd.to_numeric(_codigo(b["Produto"]), errors="coerce").fillna(-1).astype("int64").to_numpy()
+        b = b.assign(trava_min=t.reindex(pd.MultiIndex.from_arrays([fc, pc])).to_numpy())
     return b
 
 
@@ -174,6 +182,7 @@ def payload(b: pd.DataFrame, hist: dict | None = None, props: pd.DataFrame | Non
         "mo": r2(b["mo"]), "ma": r2(b["ma"]),
         "merch": [float(x) if x == x else 0.0 for x in merch],
         "pobj": r2(col("pf_obj")), "pmin": r2(col("pf_min")), "pmax": r2(col("pf_max")),
+        "trava": r2(col("trava_min")),
         "cesta": [1 if str(x) == "CESTA" else 0 for x in col("Cesta")],
         "dfim": [int(x) for x in col("data_fim").fillna(0)],
         "un": [round(float(x), 1) for x in un], "venda": [round(float(x)) for x in venda],
