@@ -263,6 +263,79 @@ def _uploads(rel: dict, meta_base: dict) -> None:
             _profimetrics(aba)
 
 
+def _formacao(df: pd.DataFrame) -> str:
+    """Botão de controle da formação do novo preço: formato (por usuário), percentuais por curva e delta seguro por estado ou filial."""
+    from core import parametros as pm
+    ss = st.session_state
+    usuario = ss.get("usuario_login", "")
+    if "reg_formato" not in ss:
+        ss.reg_formato = ((db.carregar_visao(usuario, "formacao_preco") or {}).get("formato")) or "Mercado − 0,01"
+    params = pm.carregar(usuario)
+    admin = auth.eh_admin()
+    with st.popover("", icon=":material/tune:", help="Formação do novo preço: formato, curvas de venda e delta seguro"):
+        ui.gaveta_topo("Formação do preço", ss.reg_formato)
+        novo = st.segmented_control("Formato", ["Mercado − 0,01", "Curva de venda"], default=ss.reg_formato, required=True,
+                                    key="reg_formato_sel", width="stretch",
+                                    help="Mercado − 0,01: o novo preço fica 1 centavo abaixo do concorrente. Curva de venda: o novo preço fica no "
+                                         "percentual da curva (A, B ou C) do item na filial em relação ao concorrente.")
+        if novo != ss.reg_formato:
+            ss.reg_formato = novo
+            try:
+                db.salvar_visao(usuario, "formacao_preco", {"formato": novo})
+            except Exception:
+                pass
+            st.rerun()
+        st.caption("Os parâmetros abaixo são seus. Valem para um estado inteiro ou para filiais do estado; a filial tem prioridade sobre o estado."
+                   + ("" if admin else " Sua mudança vai para aprovação do administrador."))
+        ufs = sorted({str(e).split(" - ")[0].strip() for e in df["Estado"].astype(str).unique() if str(e).strip()})
+        c1, c2 = st.columns([1, 2])
+        uf = c1.selectbox("Estado", ufs, key="reg_par_uf")
+        fils = sorted({str(x) for x in df.loc[df["Estado"].astype(str).str.startswith(str(uf) + " "), "Filial"].astype(str).unique()},
+                      key=lambda x: int(x.split(" - ")[0]) if x.split(" - ")[0].isdigit() else 0)
+        escolhidas = c2.multiselect("Filiais", fils, key="reg_par_fil", placeholder="Todas as filiais do estado")
+        cods = [x.split(" - ")[0].strip() for x in escolhidas]
+        atual = params[(params["estado"] == uf) & (params["filial"].astype(str) == (cods[0] if len(cods) == 1 else ""))]
+        base = atual.iloc[0].to_dict() if len(atual) else pm.PADRAO
+        st.markdown("**Curva de venda** <span style='color:var(--ps-muted);font-size:.8rem'>% do preço do concorrente</span>", unsafe_allow_html=True)
+        a1, a2, a3 = st.columns(3)
+        va = a1.number_input("Curva A (%)", 50.0, 150.0, float(base["curva_a"]), 0.5, key=f"reg_par_a_{uf}_{'-'.join(cods)}")
+        vb = a2.number_input("Curva B (%)", 50.0, 150.0, float(base["curva_b"]), 0.5, key=f"reg_par_b_{uf}_{'-'.join(cods)}")
+        vc = a3.number_input("Curva C (%)", 50.0, 150.0, float(base["curva_c"]), 0.5, key=f"reg_par_c_{uf}_{'-'.join(cods)}")
+        st.markdown("**Delta seguro** <span style='color:var(--ps-muted);font-size:.8rem'>distância máxima entre a pesquisa e a moda</span>", unsafe_allow_html=True)
+        d1, d2 = st.columns(2)
+        da = d1.number_input("Acima do custo (±%)", 1.0, 100.0, float(base["delta_acima"]), 0.5, key=f"reg_par_da_{uf}_{'-'.join(cods)}",
+                             help="Quando o preço da pesquisa fica acima do custo: se ele se afastar da moda mais do que isso, o novo preço sai da moda.")
+        db_ = d2.number_input("Abaixo do custo (±%)", 1.0, 100.0, float(base["delta_abaixo"]), 0.5, key=f"reg_par_db_{uf}_{'-'.join(cods)}",
+                              help="Quando a pesquisa levaria o preço para baixo do custo: se ela se afastar da moda mais do que isso, o novo preço sai da moda.")
+        valores = {"curva_a": va, "curva_b": vb, "curva_c": vc, "delta_acima": da, "delta_abaixo": db_}
+        alvo = f"{len(cods)} filial(is) de {uf}" if cods else f"todo o estado {uf}"
+        if st.button(f"Aplicar para {alvo}" if admin else f"Enviar para aprovação ({alvo})", type="primary", width="stretch",
+                     icon=":material/check:" if admin else ":material/send:", key="reg_par_ok"):
+            try:
+                if admin:
+                    pm.salvar(usuario, uf, cods, valores, usuario)
+                    st.toast(f"Parâmetros aplicados para {alvo}.", icon=":material/tune:")
+                    st.rerun()
+                else:
+                    pm.pedir(usuario, uf, cods, valores)
+                    st.toast("Pedido enviado. Os parâmetros entram na sua mesa depois da aprovação do administrador.", icon=":material/pending:")
+            except Exception as exc:
+                st.error(f"Não foi possível gravar: {exc}. Confira a tabela parametros_preco (supabase/migrations.sql).", icon=":material/error:")
+        if not admin:
+            _meus_pedidos("parametros")
+        if len(params):
+            st.markdown("**Seus parâmetros em uso**")
+            for _, r in params.sort_values(["estado", "filial"]).iterrows():
+                q1, q2 = st.columns([5, 1], vertical_alignment="center")
+                q1.caption(f"{r['estado']} {('filial ' + str(r['filial'])) if str(r['filial']) else '(estado inteiro)'}: "
+                           f"A {r['curva_a']:g}%, B {r['curva_b']:g}%, C {r['curva_c']:g}%, delta +{r['delta_acima']:g}% / −{r['delta_abaixo']:g}%")
+                if admin and q2.button("", icon=":material/delete:", key=f"reg_par_rm_{r['estado']}_{r['filial']}", help="Remover"):
+                    pm.remover(usuario, r["estado"], str(r["filial"])); st.rerun()
+        else:
+            st.caption("Sem parâmetros próprios: curvas a 100% e delta de ±25% (acima do custo) e ±15% (abaixo do custo).")
+    return "curva" if ss.reg_formato == "Curva de venda" else "mercado"
+
+
 def _trava() -> None:
     """Trava mínima (acordo): margem mínima por filial e produto, acima da cesta e do Profimetrics."""
     from core import trava as tv
@@ -381,7 +454,7 @@ def _tokens_css() -> str:
 
 
 @st.cache_resource(show_spinner=False, max_entries=3)
-def _dados_mesa(filtros: str, versao: str, _df_all, _meta, _regras, _props, _travas=None) -> tuple[str | None, int, str]:
+def _dados_mesa(filtros: str, versao: str, _df_all, _meta, _regras, _props, _travas=None, _params=None) -> tuple[str | None, int, str]:
     """Pacote da mesa guardado por filtro + versão da base e das regras: reabrir a página não refaz o cálculo."""
     f = json.loads(filtros)
     mask = np.ones(len(_df_all), dtype=bool)
@@ -393,7 +466,8 @@ def _dados_mesa(filtros: str, versao: str, _df_all, _meta, _regras, _props, _tra
         return None, 0, ""
     if len(b) > LIMITE:
         return None, len(b), ""
-    dados = pr.payload(b, _meta.get("hist"), _props)
+    from core import parametros as pm
+    dados = pr.payload(b, _meta.get("hist"), _props, extra=pm.por_linha(b, _params))
     return dados, len(b), hashlib.md5((dados[:4000] + dados[-4000:] + str(len(dados))).encode()).hexdigest()[:12]
 
 
@@ -416,6 +490,7 @@ def render() -> None:
 
     with st.container(horizontal=True, vertical_alignment="center", gap="small", key="reg_topo"):
         f = _filtros(df_all)
+        formato = _formacao(df_all)
         _uploads(rel, meta)
     regras, _ = pf.carregar()
     dtfim = meta.get("com_data_fim", 0)
@@ -426,14 +501,16 @@ def render() -> None:
             + (f" Pesquisa 1067 somada: {', '.join(d[:5] for d in meta['p1067']['dias'])}." if meta.get("p1067") else ""))
 
     props = pp.carregar()
-    from core import trava as tv
+    from core import trava as tv, parametros as pm
     travas = tv.carregar()
+    params = pm.carregar(st.session_state.get("usuario_login", ""))
     _, pf_meta = pf.carregar()
     versao = "|".join([str(rel.get("id")), str(rel.get("atualizado_em")), gr.VERSAO, str((meta.get("p1067") or {}).get("em")), str(pf_meta.get("atualizado_em")), str(pf_meta.get("linhas")),
                        str(len(props)), str(float(props["proporcao"].sum()) if len(props) else 0),
-                       str(len(travas)), str(float(travas["margem_min"].sum()) if len(travas) else 0), str(travas["atualizado_em"].max() if len(travas) else "")])
+                       str(len(travas)), str(float(travas["margem_min"].sum()) if len(travas) else 0), str(travas["atualizado_em"].max() if len(travas) else ""),
+                       st.session_state.get("usuario_login", ""), str(params.drop(columns=["atualizado_em", "atualizado_por"]).to_dict("records")) if len(params) else ""])
     filtros = json.dumps({k: (sorted(v) if isinstance(v, list) else v) for k, v in f.items()}, sort_keys=True, ensure_ascii=False)
-    dados, n, chave = _dados_mesa(filtros, versao, df_all, meta, regras, props, travas)
+    dados, n, chave = _dados_mesa(filtros, versao, df_all, meta, regras, props, travas, params)
     if n == 0:
         ui.vazio("Nada para precificar com esses filtros", "Abra os filtros e amplie a seleção.")
         return
@@ -459,7 +536,7 @@ def render() -> None:
         except Exception as exc:
             st.session_state.pop("reg_backup", None)
             st.error(f"Não foi possível abrir o backup: {exc}", icon=":material/error:")
-    retorno = _MESA(app="price", dados=dados, chave=chave, tokens=_tokens_css(), fonte=theme.FONTE_URL, visao=st.session_state.reg_visao,
+    retorno = _MESA(app="price", dados=dados, chave=f"{chave}-{formato}", formato=formato, tokens=_tokens_css(), fonte=theme.FONTE_URL, visao=st.session_state.reg_visao,
                     altura=900, info=info, usuario=usuario, base=base_id, atualizado=_data_base(rel, meta), backups=backups, historico=historico, estado=estado,
                     key="mesa_regular", default=None)
     if isinstance(retorno, dict) and retorno.get("ts") != st.session_state.get("_reg_ts") and retorno.get("acao") in ("backup", "abrir_backup", "sair_backup"):
