@@ -8,7 +8,7 @@ import uuid
 
 from core import db
 
-TIPOS = {"profimetrics": "Regras de margem (Profimetrics)", "proporcoes": "Base PROP% (proporcionais)", "trava": "Trava mínima (acordo)"}
+TIPOS = {"profimetrics": "Regras de margem (Profimetrics)", "proporcoes": "Base PROP% (proporcionais)", "trava": "Trava mínima (acordo)", "parametros": "Formação de preço (curvas e delta)"}
 
 
 def enviar(tipo: str, usuario: str, nome_arquivo: str, conteudo: bytes, resumo: dict) -> str:
@@ -47,6 +47,9 @@ def aprovar(pedido: dict, admin: str, progresso=None) -> str:
     if pedido["tipo"] == "profimetrics":
         r = pf.salvar(pf.ler_planilha(bruto), pedido["usuario"])
         msg = f"{r['novas']} novas, {r['substituidas']} substituídas, {r['mantidas']} mantidas"
+    elif pedido["tipo"] == "parametros":
+        from core import parametros as pm
+        msg = pm.aplicar_pedido(bruto.getvalue(), admin)
     elif pedido["tipo"] == "trava":
         from core import trava as tv
         bruto.name = pedido.get("nome_arquivo") or "trava.xlsx"

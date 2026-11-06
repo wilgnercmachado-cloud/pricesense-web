@@ -152,7 +152,7 @@ def _proporcionais(b: pd.DataFrame, props: pd.DataFrame | None) -> list:
     return [[int(r.id_pai), int(r.id_produto), float(r.proporcao), str(getattr(r, "nome", "") or "")] for r in p.itertuples()]
 
 
-def payload(b: pd.DataFrame, hist: dict | None = None, props: pd.DataFrame | None = None) -> str:
+def payload(b: pd.DataFrame, hist: dict | None = None, props: pd.DataFrame | None = None, extra: dict | None = None) -> str:
     """Base compacta (colunas + dicionários) em JSON, compactada com gzip e em base64."""
     def dic(col):
         cat = pd.Categorical(b[col].astype(str))
@@ -194,5 +194,7 @@ def payload(b: pd.DataFrame, hist: dict | None = None, props: pd.DataFrame | Non
         "props": _proporcionais(b, props),
         **_historico(b, hist, filiais, produtos, ufs),
     }
+    if extra:
+        dados.update(extra)
     bruto = json.dumps(dados, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     return base64.b64encode(gzip.compress(bruto, 6)).decode("ascii")
