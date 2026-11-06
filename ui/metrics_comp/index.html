@@ -1696,8 +1696,11 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
       gravar(); } catch (e) {} };
 
   const REGRAS = [['Mercado − R$ 0,01', 'merc', 'var(--primary)'], null, ['Aplicado máxima (teto)', 'teto', 'var(--down)'],
-    ['Aplicado mínima (piso)', 'piso', 'var(--up)'], ['Aplicado objetiva (sem pesquisa)', 'obj', 'var(--amber)'], ['Ajuste manual', 'mao', '#B794FF'], ['Optimus', 'robo', '#7A3FD1']];
-  const ORDEM_R = [0, 2, 3, 4, 6, 5];
+    ['Aplicado mínima (piso)', 'piso', 'var(--up)'], ['Aplicado objetiva (sem pesquisa)', 'obj', 'var(--amber)'], ['Ajuste manual', 'mao', '#B794FF'], ['Optimus', 'robo', '#7A3FD1'], ['Moda (pesquisa fora do delta)', 'moda', '#B794FF']];
+  const ORDEM_R = [0, 7, 2, 3, 4, 6, 5];
+  const FORMATO = A.formato === 'curva' ? 'curva' : 'mercado';               // formato do usuário: Mercado − 0,01 ou Curva de venda
+  const PCT = i => FORMATO === 'curva' && D.cp && D.cp[i] != null ? D.cp[i] : null;   // % da curva da linha (sem parâmetro: mercado − 0,01)
+  const DLA = i => (D.dla && D.dla[i] != null ? D.dla[i] : 25) / 100, DLB = i => (D.dlb && D.dlb[i] != null ? D.dlb[i] : 15) / 100;
   const CORTES = [['Encarte, mídia ou app vigente', 'tagi'], ['Promoção comercial com IP até 100%', 'alerta'], ['Delta entre −1,5% e +1,5%', 'pct']];
   const NV = new Float64Array(N), NA = new Float64Array(N), RG = new Uint8Array(N), MN = new Float64Array(N), MX = new Float64Array(N), OB = new Float64Array(N);
   const UMIN = new Float64Array(N), UMAX = new Float64Array(N), UOBJ = new Float64Array(N), CT = new Uint8Array(N), MUD = new Uint8Array(N), REAP = new Uint8Array(N);
@@ -1739,6 +1742,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   }
   const FONTE_MODA = ['sem moda consistente (nenhum preço repetido em 3 dias ou mais)', 'moda do concorrente vencedor', 'maior moda da filial: o vencedor não tem pesquisa consistente', 'moda de maior frequência do relatório'];
   const modaDe_ = i => D.mcs && D.mcs.length ? `${curto(D.mcs[D.mci[i]] || '')}${D.mfd && D.mfd[i] ? ', ' + D.mfd[i] + ' dias' : ''}` : '';
+  const PCTL = new Float64Array(N).fill(NaN), REFL = new Float64Array(N);
   function calc(i){
     const c = D.cu[i], vmk = D.vmk[i], amk = D.amk[i] || 0, merch = D.merch[i] || 0;
     const mobj = D.pobj[i] ?? MOBJ, mmax = (D.pmax[i] > 0 ? D.pmax[i] : MMAX), ps = PISO[D.ui[i]] || { cesta: -15, sem: 0 };
@@ -1746,11 +1750,16 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     const umin = trv != null ? trv : D.cesta[i] ? ps.cesta : (D.pmin[i] ?? ps.sem);
     const mn = c / (1 - umin / 100), mx = c / (1 - mmax / 100), obj = c / (1 - mobj / 100), red = 1 - merch / 100;
     let sug, rg, teto = false;
-    if (semPesq(i)) { sug = obj; rg = 4; } else if (vmk > mx) { sug = mx; rg = 2; teto = true; } else { sug = vmk - CENT; rg = 0; }
+    /* referência: o preço vencedor; fora do delta seguro em relação à moda, a referência passa a ser a moda (motor e Optimus) */
+    let ref = vmk, refA = amk, fora = false;
+    if (!semPesq(i)) { const [mv_, ma_] = modaItem(i);
+      if (mv_ > 0) { const lim = (vmk - CENT) < c ? DLB(i) : DLA(i); if (Math.abs(vmk / mv_ - 1) > lim + 1e-9) { ref = mv_; refA = ma_ > 0 ? ma_ : mv_; fora = true; } } }
+    const pct = PCT(i), alvo = pct != null ? ref * pct / 100 : ref - CENT;      // curva de venda: % do concorrente; padrão: concorrente − 0,01
+    if (semPesq(i)) { sug = obj; rg = 4; } else if (alvo > mx) { sug = mx; rg = 2; teto = true; } else { sug = alvo; rg = fora ? 7 : 0; }
     const pf = Math.max(Math.min(sug, mx), mn); if (rg !== 4 && sug < mn) rg = 3;
-    let nv = rg === 0 && pf === sug ? arredMercado(pf, vmk, mn) : roundVarejo(pf);
+    let nv = (rg === 0 || rg === 7) && pf === sug ? (pct != null ? arredMercado(pf, pf, mn) : arredMercado(pf, ref, mn)) : roundVarejo(pf);   // nunca passa do alvo
     if (OV.has(i)) { nv = OV.get(i); rg = OPT.has(i) ? 6 : 5; }
-    let sa; if (rg === 4 || (OV.has(i) && semPesq(i))) sa = obj * red; else if (teto) sa = mx * red; else sa = amk > 0 ? amk - CENT : nv * red;
+    let sa; if (rg === 4 || (OV.has(i) && semPesq(i))) sa = obj * red; else if (teto) sa = mx * red; else sa = refA > 0 ? (pct != null ? refA * pct / 100 : refA - CENT) : nv * red;
     const naTrava = trv != null && rg === 3 && !OV.has(i);                 // bateu na trava: atacado sai do varejo com a base de redução
     if (naTrava) sa = nv * red;
     const pa = naTrava ? Math.min(sa, mx * red) : Math.max(Math.min(sa, mx * red), mn);
@@ -1758,7 +1767,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     if (OVA.has(i)) { na = OVA.get(i); rg = OPT.has(i) ? 6 : 5; }
     else na = piso15(na, nv);                                   // padrão da companhia: atacado com no máximo 15% de desconto
     if (na > nv) na = nv;
-    NV[i] = nv; NA[i] = na; RG[i] = rg; MN[i] = mn; MX[i] = mx; OB[i] = obj; UMIN[i] = umin; UMAX[i] = mmax; UOBJ[i] = mobj;
+    NV[i] = nv; NA[i] = na; RG[i] = rg; PCTL[i] = pct != null ? pct : NaN; REFL[i] = ref; MN[i] = mn; MX[i] = mx; OB[i] = obj; UMIN[i] = umin; UMAX[i] = mmax; UOBJ[i] = mobj;
     const fimHoje = D.dfim[i] > 0 && D.dfim[i] === HOJE, tp = (D.tipos[D.ti[i]] || '').toUpperCase(), ip = vmk > 0 ? D.vm[i] / vmk : NaN;
     let ct = 0;
     /* REGRA DE CORTE (só quando o preço vigente não termina hoje nem no próximo sábado ou domingo):
@@ -1810,7 +1819,8 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   function toast(t){ const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('on'), 2600); }
   const optInfo = i => { const o = OPT.get(i); return typeof o === 'string' ? { m: o } : (o || {}); };
   const rotRegra = i => RG[i] === 6 ? 'Optimus: ' + (optInfo(i).m || 'ajustado') : RG[i] === 2 ? `Aplicado máxima ${nf1.format(UMAX[i])}%` : RG[i] === 3 ? (D.trava && D.trava[i] != null ? `Trava mínima ${nf1.format(UMIN[i])}%` : D.cesta[i] ? `Aplicado mínima cesta ${nf1.format(UMIN[i])}%` : `Aplicado mínima ${nf1.format(UMIN[i])}%`)
-    : RG[i] === 4 ? `Aplicado objetiva ${nf1.format(UOBJ[i])}%` : REGRAS[RG[i]][0];
+    : RG[i] === 4 ? `Aplicado objetiva ${nf1.format(UOBJ[i])}%` : RG[i] === 7 ? (isNaN(PCTL[i]) ? 'Moda − R$ 0,01 (fora do delta)' : `Moda × ${nf1.format(PCTL[i])}% (fora do delta)`)
+    : RG[i] === 0 && !isNaN(PCTL[i]) ? `Curva ${'ABC'[D.curva[i]] || ''} ${nf1.format(PCTL[i])}% do mercado` : REGRAS[RG[i]][0];
   const tagRegra = i => { const [, n, c] = REGRAS[RG[i]]; return `<span class="tag" style="color:${c}" data-tip="${esc(explicaRegra(i))}">${ic(n, c)}${rotRegra(i)}</span>`; };
   const tagCorte = i => { const t = esc(explicaCorte(i));
     if (!MUD[i] && REAP[i]) return `<span class="tag" style="color:var(--amber)" data-tip="${t}">${ic('cal')}Reaplicar: vigência termina ${D.dfim[i] === HOJE ? 'hoje' : dfTxt(D.dfim[i]).slice(0, 5)}</span>`;
@@ -1826,7 +1836,11 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   const faixa = i => `Faixa permitida: mínimo ${R$(MN[i])} (${origemMin(i)}) até máximo ${R$(MX[i])} (margem máxima ${origemMax(i)}).`;
   function explicaRegra(i){
     const L = [];
-    if (RG[i] === 0) L.push('MERCADO − R$ 0,01', `Menor preço do mercado: ${R$(D.vmk[i])} (${coleta(i)}).`, `Novo varejo = ${R$(D.vmk[i])} − 0,01, arredondado pela regra ${REGRA_RND[RND].nome.toLowerCase()}.`, faixa(i));
+    if (RG[i] === 0 && !isNaN(PCTL[i])) L.push(`CURVA DE VENDA: ${nf1.format(PCTL[i])}% DO MERCADO`, `Menor preço do mercado: ${R$(D.vmk[i])} (${coleta(i)}).`, `Novo varejo = ${R$(D.vmk[i])} × ${nf1.format(PCTL[i])}% = ${R$(D.vmk[i] * PCTL[i] / 100)}, arredondado sem passar desse alvo.`, faixa(i));
+    if (RG[i] === 7) { const [mv_] = modaItem(i), lim = (D.vmk[i] - CENT) < D.cu[i] ? DLB(i) : DLA(i);
+      L.push('PESQUISA FORA DO DELTA SEGURO: PREÇO PELA MODA', `O menor preço (${R$(D.vmk[i])}, ${coleta(i)}) está ${P1(D.vmk[i] / mv_ - 1)} da moda de ${R$(mv_)}; o limite é ±${nf1.format(lim * 100)}% (${(D.vmk[i] - CENT) < D.cu[i] ? 'abaixo' : 'acima'} do custo).`,
+        isNaN(PCTL[i]) ? `Novo varejo = moda ${R$(mv_)} − 0,01, arredondado.` : `Novo varejo = moda ${R$(mv_)} × ${nf1.format(PCTL[i])}% (curva de venda), arredondado.`, faixa(i)); }
+    if (RG[i] === 0 && isNaN(PCTL[i])) L.push('MERCADO − R$ 0,01', `Menor preço do mercado: ${R$(D.vmk[i])} (${coleta(i)}).`, `Novo varejo = ${R$(D.vmk[i])} − 0,01, arredondado pela regra ${REGRA_RND[RND].nome.toLowerCase()}.`, faixa(i));
     if (RG[i] === 2) L.push('APLICADO MÁXIMA', `O mercado (${R$(D.vmk[i])}, ${coleta(i)}) está acima do preço máximo de ${R$(MX[i])}.`, `Varejo fica no máximo (margem ${origemMax(i)}); o atacado sai do máximo com a base de redução de ${nf1.format(D.merch[i] || 0)}%.`);
     if (RG[i] === 3) L.push('APLICADO MÍNIMA', `Seguir o mercado (${R$(D.vmk[i])} − 0,01) deixaria a margem em ${P1((D.vmk[i] - CENT - D.cu[i]) / (D.vmk[i] - CENT))}, abaixo do mínimo.`, `O preço vai para o mínimo de ${R$(MN[i])} (${origemMin(i)}).`);
     if (RG[i] === 3 && D.trava && D.trava[i] != null) L.push(`Trava mínima (acordo) de ${nf1.format(UMIN[i])}% para esta filial e produto: o atacado sai do varejo com a base de redução de ${nf1.format(D.merch[i] || 0)}%.`);
@@ -2309,7 +2323,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     const fonte = propria != null ? `moda do próprio ${nomeV}` : modasFil.length ? `menor moda entre os concorrentes ${usaFil ? 'da filial' : 'do estado'}` : 'moda do relatório';
     const comum = { venc, nomeV, tpV, diaV, fonte, menorModa, filial: usaFil };
     if (!(moda > 0)) return { ...comum, alvo: venc - CENT, motivo: 'sem moda para comparar', moda: null, delta: null, lim: null, tipo: 'ok', decisao: 'segue o preço vencedor − 0,01' };
-    const delta = venc / moda - 1, abaixoCusto = venc < c, lim = abaixoCusto ? 0.15 : 0.25;
+    const delta = venc / moda - 1, abaixoCusto = venc < c, lim = abaixoCusto ? DLB(i) : DLA(i);
     if (Math.abs(delta) <= lim) return { ...comum, alvo: venc - CENT, motivo: abaixoCusto ? 'abaixo do custo, consistente' : 'pesquisa consistente', moda, delta, lim, abaixoCusto, tipo: abaixoCusto ? 'custo' : 'ok', decisao: 'dentro do limite: segue o preço vencedor − 0,01' };
     const base = menorModa != null ? Math.min(moda, menorModa) : moda;
     return { ...comum, alvo: base - CENT, motivo: 'possível erro de pesquisa', moda, delta, lim, abaixoCusto, base, tipo: 'erro',
