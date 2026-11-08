@@ -1849,12 +1849,15 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     if (RG[i] !== 6 && !semPesq(i)) { const a = analisar(i);
       if (a) { L.push('', 'DIAGNÓSTICO DA PESQUISA');
         L.push(`Vencedor: ${a.nomeV} a ${R$(a.venc)}${a.tpV ? ' (' + a.tpV.toLowerCase() + ')' : ''}${a.diaV ? ' em ' + a.diaV : ''}.`);
+        if (a.tipo === 'encarte') L.push(`Possível erro de tipo de coleta: o mesmo preço foi coletado como ${a.enc.tipo.toLowerCase()} em ${a.enc.dia}. Veja o histórico; o Optimus usaria o concorrente secundário ${a.sec.nome} a ${R$(a.sec.v)} (${a.sec.tipo.toLowerCase()}, ${a.sec.dia}) − 0,01. Clique com o botão direito para aplicar.`);
         if (a.moda != null) {
           L.push(`Comparado com a ${a.fonte}: ${R$(a.moda)}. Diferença de ${(a.delta > 0 ? '+' : '') + P1(a.delta)}; limite de ±${nf0.format(a.lim * 100)}% (vencedor ${a.abaixoCusto ? 'abaixo' : 'acima'} do custo).`);
           L.push(a.tipo === 'erro' ? `Possível erro de pesquisa: o Optimus usaria ${R$(a.alvo)} (${a.decisao.replace('fora do limite: ', '')}). Clique com o botão direito para aplicar.` : 'Pesquisa consistente: o preço vencedor é confiável.');
         } else L.push('Sem moda confiável do concorrente para comparar.'); } }
     if (RG[i] === 6) { const o = optInfo(i);
-      L.push(`OPTIMUS: ${(o.t === 'erro' ? 'POSSÍVEL ERRO DE PESQUISA' : o.t === 'custo' ? 'PESQUISA ABAIXO DO CUSTO, CONSISTENTE' : 'PESQUISA CONSISTENTE')}`);
+      L.push(`OPTIMUS: ${(o.t === 'encarte' ? 'POSSÍVEL ERRO DE TIPO DE COLETA' : o.t === 'erro' ? 'POSSÍVEL ERRO DE PESQUISA' : o.t === 'custo' ? 'PESQUISA ABAIXO DO CUSTO, CONSISTENTE' : 'PESQUISA CONSISTENTE')}`);
+      if (o.t === 'encarte' && o.enc && o.sec) { L.push(`1. O concorrente vencedor ${o.n} está a ${R$(o.v)} como ${String(o.tp).toLowerCase()} em ${o.dia}, mas o mesmo preço (diferença de até 1%) foi coletado como ${o.enc.tipo.toUpperCase()} em ${o.enc.dia}, dentro da janela de ${o.enc.janela} dias da curva ${'ABC'[D.curva[i]]}. É um possível erro de tipo de coleta: veja o histórico do concorrente no gráfico.`,
+        `2. Por isso o Optimus tirou ${o.n} e usou o concorrente secundário: ${o.sec.nome} a ${R$(o.sec.v)} (${o.sec.tipo.toLowerCase()}, ${o.sec.dia}) − 0,01.`, faixa(i)); return L.join('\n'); }
       if (o.v != null) L.push(`1. Preço vencedor da linha: ${o.n} a ${R$(o.v)}${o.tp ? ' (' + o.tp.toLowerCase() + ')' : ''}${o.dia ? ' em ' + o.dia : ''}, o mesmo menor preço do mercado usado na mesa.`);
       if (o.mo != null) L.push(`2. Comparado com a ${o.f}: ${R$(o.mo)}. Diferença de ${(o.d > 0 ? '+' : '') + P1(o.d)}; o limite é ±${nf0.format((o.lim || 0) * 100)}% porque o vencedor está ${o.ac ? 'abaixo' : 'acima'} do custo (${R$(D.cu[i])}).`);
       else L.push('2. Sem moda confiável para comparar.');
@@ -2006,9 +2009,12 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
       if (f < MN[i] - 0.004 && !(await confirmar('Preço abaixo da margem mínima', `R$ ${nf2.format(f)} fica abaixo do mínimo de R$ ${nf2.format(MN[i])} (margem ${nf1.format(UMIN[i])}%). Deseja seguir mesmo assim?`))) { desfaz(); return; }
       if (f > MX[i] + 0.004 && !(await confirmar('Preço acima da margem máxima', `R$ ${nf2.format(f)} passa do máximo de R$ ${nf2.format(MX[i])} (margem ${nf1.format(UMAX[i])}%). Deseja seguir mesmo assim?`))) { desfaz(); return; }
       OV.set(i, f); OPT.delete(i);
-      if (OVA.has(i) && OVA.get(i) > f) OVA.set(i, f);
+      /* ajuste manual do varejo: o atacado sai do novo varejo com a base de redução padrão (Merch L7), até 15% de desconto */
+      const red = Math.max(1 - (D.merch[i] || 0) / 100, 1 - DESC_MAX);
+      OVA.set(i, Math.min(f, roundAtacado(f * red, f)));
       if (Math.abs(f - v) > 0.001 && t.dataset.e === 'v') toast(`Arredondado pela regra: ${brl(v)} → ${brl(f)}`);
-      if (t.dataset.e === 'm') toast(`Margem ${nf1.format(v)}% → varejo ${brl(f)} (margem real ${pct((f - D.cu[i]) / f)})`);
+      if (t.dataset.e === 'm') toast(`Margem ${nf1.format(v)}% → varejo ${brl(f)} (margem real ${pct((f - D.cu[i]) / f)}); atacado ${brl(OVA.get(i))} pela base de redução`);
+      else if (Math.abs(f - v) <= 0.001) toast(`Varejo ${brl(f)}; atacado ${brl(OVA.get(i))} pela base de redução de ${nf1.format(D.merch[i] || 0)}%`);
     }
     if (t.dataset.e === 'a') {
       if (!(v > 0)) OVA.delete(i);
@@ -2025,7 +2031,22 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     m.classList.add('on'); const fim = r => { m.classList.remove('on'); ok(r); };
     m.querySelector('[data-r="1"]').onclick = () => fim(true); m.querySelector('[data-r="0"]').onclick = () => fim(false);
     setTimeout(() => m.querySelector('[data-r="0"]').focus(), 120); }); }
-  on(body, 'keydown', e => { if (e.key === 'Enter' && e.target.dataset.e) { e.preventDefault(); e.target.blur(); } });
+  /* Enter grava e desce para a mesma coluna na linha de baixo; clicar em qualquer parte da célula já abre a edição */
+  function focarCelula(campo, pos, tentativas = 0){
+    if ($('modal').classList.contains('on')) { if (tentativas < 200) setTimeout(() => focarCelula(campo, pos, tentativas + 1), 100); return; }
+    if (pos < 0 || pos >= VIS.length) return;
+    const y = pos * H; if (y < sc.scrollTop + H || y > sc.scrollTop + sc.clientHeight - 2 * H) { sc.scrollTop = Math.max(0, y - sc.clientHeight / 2); render(); }
+    const el = body.querySelector(`input[data-e="${campo}"][data-i="${VIS[pos]}"]`);
+    if (el) { el.focus(); el.select(); } else if (tentativas < 5) setTimeout(() => focarCelula(campo, pos, tentativas + 1), 60);
+  }
+  on(body, 'keydown', e => { const t = e.target; if (!t.dataset.e) return;
+    if (e.key === 'Enter' || (e.key === 'ArrowDown' && !e.altKey) || e.key === 'ArrowUp') { e.preventDefault();
+      const pos = VIS.indexOf(+t.dataset.i) + (e.key === 'ArrowUp' ? -1 : 1), campo = t.dataset.e;
+      t.blur(); setTimeout(() => focarCelula(campo, pos), 80); }
+    if (e.key === 'Escape') { t.value = t.defaultValue; t.blur(); } });
+  on(body, 'mousedown', e => { if (e.target.tagName === 'INPUT') return; const c = e.target.closest('.edc'); if (!c) return;
+    const inp = c.querySelector('input[type=text]'); if (inp) { e.preventDefault(); inp.focus(); inp.select(); } });
+  on(body, 'focusin', e => { if (e.target.tagName === 'INPUT' && e.target.type === 'text' && e.target.dataset.e) setTimeout(() => e.target.select(), 0); });
   document.querySelectorAll('.ctx').forEach(x => x.remove());
   const cm = document.createElement('div'); cm.className = 'ctx glass'; document.body.appendChild(cm);
   const fechaCtx = () => cm.classList.remove('on');
@@ -2050,7 +2071,10 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   on(document, 'keydown', e => { if (e.key === 'Escape') fechaCtx(); });
   on(sc, 'scroll', fechaCtx);
   on(body, 'click', e => { const ok = e.target.closest('[data-ok]'); if (ok) { alternarAceite(+ok.dataset.ok); return; }
-    if (e.target.tagName === 'INPUT') return; const r = e.target.closest('.row'); if (!r) return; selecionar(+r.dataset.i); sc.focus({ preventScroll: true }); });
+    if (e.target.tagName === 'INPUT') return; const r = e.target.closest('.row'); if (!r) return;
+    const cel = e.target.closest('.edc'), inp = cel && cel.querySelector('input[type=text]');
+    if (inp) { const campo = inp.dataset.e, i = +r.dataset.i; if (SEL !== i) { selecionar(i); focarCelula(campo, VIS.indexOf(i)); } return; }   // célula editável: seleciona a linha e já deixa digitando
+    selecionar(+r.dataset.i); sc.focus({ preventScroll: true }); });
   function proximoPendente(){ const k0 = VIS.indexOf(SEL);
     for (let d = 1; d <= VIS.length; d++) { const k = (Math.max(k0, -1) + d) % VIS.length, i = VIS[k]; if (MUD[i] && !aceito(i)) {
       const y = k * H; sc.scrollTop = Math.max(0, y - sc.clientHeight / 3); selecionar(i); return; } }
@@ -2305,6 +2329,42 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   const KPOS = new Map(D.hK.map((n, k) => [n, k]));
   /* O Optimus parte sempre do MESMO preço vencedor da linha (menor preço do mercado da mesa, com o mesmo
      concorrente, data e tipo). O histórico serve só para medir as modas e checar a consistência. */
+  /* ---------- encarte coletado com outro tipo (possível erro de tipo de coleta) ----------
+     O preço vencedor (regular, promoção ou ponto extra) já apareceu no mesmo concorrente como ENCARTE, MÍDIA ou VALIDADE,
+     com diferença de até 1%, nos últimos 15 dias (curva A) ou 30 dias (curvas B e C): o Optimus tira esse concorrente
+     e usa o concorrente secundário (o próximo menor preço válido da filial). */
+  const DIA_H = (() => { const hoje = new Date(), ano = hoje.getFullYear(), mes = hoje.getMonth() + 1;
+    return D.hT.map(l => { const [dd, mm] = String(l).split('/').map(Number); return Date.UTC(mm > mes + 1 ? ano - 1 : ano, mm - 1, dd) / 864e5; }); })();
+  const TIPO_ACAO = new Set([2, 3, 5]), NOME_TIPO = ['Regular', 'Promoção', 'Encarte', 'Mídia', 'Ponto extra', 'Validade', 'Outro'];
+  const nomeK = k => titulo_(curto(D.hK[k] || '').split(' - ')[0]) || 'concorrente';
+  function encarteSuspeito(i, k, preco, rows){
+    if (k == null || !(preco > 0)) return null;
+    const janela = D.curva[i] === 0 ? 15 : 30;
+    let ancora = -Infinity;                                   // dia da coleta de hoje desse preço
+    for (const j of rows) if (D.dk[j] === k && TIPO_OK.has(D.dtp[j]) && Math.abs(D.dv[j] / 100 - preco) < 0.005) ancora = Math.max(ancora, DIA_H[D.dt[j]]);
+    if (!isFinite(ancora)) return null;
+    let ach = null;
+    for (const j of rows) { if (D.dk[j] !== k || !TIPO_ACAO.has(D.dtp[j])) continue;
+      const d = DIA_H[D.dt[j]], v = D.dv[j] / 100; if (d > ancora || d < ancora - janela || !(v > 0)) continue;
+      if (Math.abs(preco / v - 1) <= 0.01 + 1e-9 && (!ach || d > ach.d)) ach = { d, dia: D.hT[D.dt[j]], v, tipo: NOME_TIPO[D.dtp[j]], janela }; }
+    return ach;
+  }
+  function secundario(i, kv, fil, rows){
+    const usar = k => k !== kv && (!fil.size || fil.has(k));
+    const dias = [...new Set(rows.filter(j => usar(D.dk[j]) && D.dv[j] > 0).map(j => DIA_H[D.dt[j]]))].sort((x, y) => y - x).slice(0, 3);
+    if (!dias.length) return null;
+    const corte = dias[dias.length - 1], ult = new Map();
+    for (const j of rows) { const k = D.dk[j]; if (!usar(k) || !(D.dv[j] > 0)) continue; const d = DIA_H[D.dt[j]]; if (d < corte) continue;
+      const u = ult.get(k); if (!u || d > u.d) ult.set(k, { d, js: [j] }); else if (d === u.d) u.js.push(j); }
+    let melhor = null;
+    for (const [k, u] of ult) {
+      if (u.js.some(j => !TIPO_OK.has(D.dtp[j]))) continue;                   // última coleta de tipo excluído: concorrente fora
+      const j = u.js.reduce((x, y) => D.dv[x] <= D.dv[y] ? x : y), v = D.dv[j] / 100;
+      if (encarteSuspeito(i, k, v, rows)) continue;                          // o secundário também não pode ser encarte disfarçado
+      if (!melhor || v < melhor.v) melhor = { k, v, a: D.da[j] > 0 ? D.da[j] / 100 : v, nome: nomeK(k), dia: D.hT[D.dt[j]], tipo: NOME_TIPO[D.dtp[j]] };
+    }
+    return melhor;
+  }
   function analisar(i){
     if (semPesq(i)) return null;
     const c = D.cu[i], venc = D.vmk[i], nomeRow = D.concs[D.ki[i]], wk = KPOS.has(nomeRow) ? KPOS.get(nomeRow) : null;
@@ -2322,6 +2382,10 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     const tpV = ['', 'Regular', 'Promoção', 'Ponto extra'][D.tcol[i]] || '', diaV = D.datas[D.dti[i]] || '';
     const fonte = propria != null ? `moda do próprio ${nomeV}` : modasFil.length ? `menor moda entre os concorrentes ${usaFil ? 'da filial' : 'do estado'}` : 'moda do relatório';
     const comum = { venc, nomeV, tpV, diaV, fonte, menorModa, filial: usaFil };
+    const sus = encarteSuspeito(i, wk, venc, rows);
+    if (sus) { const sec = secundario(i, wk, fil, rows);
+      if (sec) return { ...comum, alvo: sec.v - CENT, motivo: 'possível erro de tipo de coleta', moda, delta: null, lim: null, tipo: 'encarte', enc: sus, sec,
+        decisao: `${nomeV} a ${nf2.format(venc)} (${tpV.toLowerCase()}) parece o encarte de ${sus.dia} (${sus.tipo.toLowerCase()} a ${nf2.format(sus.v)}): usa o concorrente secundário ${sec.nome} a ${nf2.format(sec.v)} (${sec.tipo.toLowerCase()}, ${sec.dia}) − 0,01` }; }
     if (!(moda > 0)) return { ...comum, alvo: venc - CENT, motivo: 'sem moda para comparar', moda: null, delta: null, lim: null, tipo: 'ok', decisao: 'segue o preço vencedor − 0,01' };
     const delta = venc / moda - 1, abaixoCusto = venc < c, lim = abaixoCusto ? DLB(i) : DLA(i);
     if (Math.abs(delta) <= lim) return { ...comum, alvo: venc - CENT, motivo: abaixoCusto ? 'abaixo do custo, consistente' : 'pesquisa consistente', moda, delta, lim, abaixoCusto, tipo: abaixoCusto ? 'custo' : 'ok', decisao: 'dentro do limite: segue o preço vencedor − 0,01' };
@@ -2338,7 +2402,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     let nv = nota === 'teto' ? roundAbaixo(alvo) : nota === 'piso' ? arredMercado(alvo, alvo, MN[i]) : arredMercado(alvo, a.alvo + CENT, MN[i]);
     const red = 1 - (D.merch[i] || 0) / 100;
     const viaMerc = D.amk[i] > 0 && D.vmk[i] > 0;
-    let sa = viaMerc ? nv * Math.min(1, D.amk[i] / D.vmk[i]) : nv * red;
+    let sa = a.sec ? nv * Math.min(1, a.sec.a / a.sec.v) : viaMerc ? nv * Math.min(1, D.amk[i] / D.vmk[i]) : nv * red;
     sa = Math.min(nv, Math.max(sa, MN[i]));
     let na = piso15(roundAtacado(sa, nv), nv); if (na > nv) na = nv;
     return { nv, na, motivo: a.motivo, dde, nota, viaMerc, alvoBruto: a.alvo };
@@ -2346,17 +2410,17 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   let PREVIA = null;
   function gravaOptimus(x){ OV.set(x.i, x.nv); OVA.set(x.i, x.na);
     OPT.set(x.i, { m: x.motivo, t: x.tipo, v: x.venc, n: x.nomeV, tp: x.tpV, dia: x.diaV, mo: x.moda, f: x.fonte, d: x.delta, lim: x.lim, ac: !!x.abaixoCusto,
-      dec: x.decisao, al: x.alvoBruto, nota: x.nota, dde: x.dde ? D.dde[x.i] : null, vm: x.viaMerc, fil: x.filial }); calc(x.i); }
+      dec: x.decisao, al: x.alvoBruto, nota: x.nota, dde: x.dde ? D.dde[x.i] : null, vm: x.viaMerc, fil: x.filial, enc: x.enc || null, sec: x.sec || null }); calc(x.i); }
   function optimusItem(i){ const a = analisar(i); if (!a) { toast('Item sem pesquisa direta: o Optimus não se aplica'); return; }
     gravaOptimus({ i, ...a, ...precoOptimus(i, a) }); salvar(); atualizar(false); if (SEL === i) { resumo(i); historico(i); } toast(`Optimus: ${a.motivo}, novo varejo R$ ${nf2.format(NV[i])}`); }
   function rodarOptimus(){
     const b = $('bOpt'); b.classList.add('rodando');
     setTimeout(() => {
-      const itens = []; let erros = 0, custo = 0, ddeN = 0, manuais = 0;
+      const itens = []; let erros = 0, custo = 0, ddeN = 0, manuais = 0, encN = 0;
       for (const i of VIS) {
         if (OV.has(i) && !OPT.has(i)) { manuais++; continue; }
         const a = analisar(i); if (!a) continue; const r = precoOptimus(i, a);
-        if (a.tipo === 'erro') erros++; if (a.tipo === 'custo') custo++; if (r.dde) ddeN++;
+        if (a.tipo === 'erro') erros++; if (a.tipo === 'custo') custo++; if (a.tipo === 'encarte') encN++; if (r.dde) ddeN++;
         itens.push({ i, ...a, ...r });
       }
       const mud = itens.filter(x => Math.abs(x.nv - NV[x.i]) >= 0.005 || Math.abs(x.na - NA[x.i]) >= 0.005);
@@ -2366,11 +2430,11 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
         <div class="regras-opt">Para cada item, o Optimus parte do mesmo preço vencedor da linha (o menor preço do mercado da mesa) e compara com a moda do próprio concorrente vencedor (coletas regulares, de promoção e de ponto extra), ou com a menor moda dos concorrentes da filial quando faltam dados. Acima do custo, tolera ±25%; abaixo do custo, ±15%. Dentro da faixa, segue o menor preço − R$ 0,01; fora, usa a menor moda confiável (do vencedor ou de outro concorrente da filial) − R$ 0,01. O arredondamento nunca passa do preço de referência: quando o centavo abaixo não é válido, fica igual ao mercado. Respeita mínima, máxima, piso da cesta, arredondamento e o limite de 15% no atacado. Com DDE acima de ${DDE_META} dias, mantém o IP no máximo em 100%. Itens ajustados à mão não são alterados.</div>
         <div class="oresumo"><div><span>Analisados</span><b>${nf0.format(itens.length)}</b></div><div><span>Mudam de preço</span><b>${nf0.format(mud.length)}</b></div>
           <div><span>Possíveis erros de pesquisa</span><b class="neg">${nf0.format(erros)}</b></div><div><span>DDE acima de ${DDE_META}</span><b>${nf0.format(ddeN)}</b></div>
-          <div><span>Abaixo do custo (consistente)</span><b>${nf0.format(custo)}</b></div><div><span>Ajustados à mão (mantidos)</span><b>${nf0.format(manuais)}</b></div>
+          <div><span>Encarte coletado com outro tipo</span><b class="neg">${nf0.format(encN)}</b></div><div><span>Abaixo do custo (consistente)</span><b>${nf0.format(custo)}</b></div><div><span>Ajustados à mão (mantidos)</span><b>${nf0.format(manuais)}</b></div>
           <div><span>Impacto/mês hoje</span><b class="${imp0 < 0 ? 'neg' : 'pos'}">R$ ${nf0.format(imp0)}</b></div><div><span>Impacto/mês com Optimus</span><b class="${imp1 < 0 ? 'neg' : 'pos'}">R$ ${nf0.format(imp1)}</b></div></div>
         <div class="olist"><table><tr><th>Produto</th><th>Filial</th><th>Vencedor</th><th>Moda</th><th>Δ</th><th>Atual</th><th>Optimus</th><th>Motivo</th></tr>
-          ${mud.sort((a, b) => Math.abs(b.delta || 0) - Math.abs(a.delta || 0)).slice(0, 150).map(x => `<tr><td>${esc(curto(D.produtos[D.pi[x.i]]).slice(0, 34))}</td><td>${esc(curto(D.filiais[D.fi[x.i]]))}</td>
-            <td title="${esc(x.nomeV)}">${nf2.format(x.venc)}</td><td>${x.moda ? nf2.format(x.moda) : '–'}</td><td class="${x.tipo === 'erro' ? 'neg' : ''}">${x.delta == null ? '–' : (x.delta > 0 ? '+' : '') + nf1.format(x.delta * 100) + '%'}</td>
+          ${mud.sort((a, b) => Math.abs(b.delta || (b.tipo === 'encarte' ? 1 : 0)) - Math.abs(a.delta || (a.tipo === 'encarte' ? 1 : 0))).slice(0, 150).map(x => `<tr><td>${esc(curto(D.produtos[D.pi[x.i]]).slice(0, 34))}</td><td>${esc(curto(D.filiais[D.fi[x.i]]))}</td>
+            <td title="${esc(x.nomeV)}">${nf2.format(x.venc)}</td><td>${x.moda ? nf2.format(x.moda) : '–'}</td><td class="${x.tipo === 'erro' || x.tipo === 'encarte' ? 'neg' : ''}">${x.delta == null ? '–' : (x.delta > 0 ? '+' : '') + nf1.format(x.delta * 100) + '%'}</td>
             <td>${nf2.format(NV[x.i])}</td><td><b>${nf2.format(x.nv)}</b></td><td>${esc(x.motivo)}</td></tr>`).join('')}</table></div>
         <div class="cm-acts"><button class="tx" id="optDesfaz">${ic('undo')}Desfazer Optimus no filtro</button><button class="tx pri" id="optAplica">${ic('robo')}Aplicar ${nf0.format(mud.length)} ajustes</button></div>`;
       abrir('pOpt', b);
@@ -2380,7 +2444,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     if (e.target.closest('#optAplica') && PREVIA) { let n = 0;
       for (const x of PREVIA) { if (Math.abs(x.nv - NV[x.i]) < 0.005 && Math.abs(x.na - NA[x.i]) < 0.005) continue; gravaOptimus(x); n++; }
       salvar(); atualizar(); if (SEL >= 0) { resumo(SEL); historico(SEL); } $('pOpt').classList.remove('on');
-      const feitos = PREVIA.filter(x => OPT.has(x.i)), erros = feitos.filter(x => x.tipo === 'erro').length, dde = feitos.filter(x => x.dde).length;
+      const feitos = PREVIA.filter(x => OPT.has(x.i)), erros = feitos.filter(x => x.tipo === 'erro' || x.tipo === 'encarte').length, dde = feitos.filter(x => x.dde).length;
       const imp = feitos.reduce((t, x) => t + (NV[x.i] - D.vm[x.i]) * D.un[x.i], 0);
       anuncio({ premium: true, icone: 'robo', cor: '#7A3FD1', titulo: 'Optimus aplicado', texto: 'Pesquisa conferida item a item, dentro das margens, do piso e da régua da companhia.',
         numeros: [['preços ajustados', nf0.format(n)], ['erros de pesquisa tratados', nf0.format(erros), 'var(--down)'], ['itens com DDE alto', nf0.format(dde), 'var(--amber)'],
