@@ -1849,14 +1849,14 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     if (RG[i] !== 6 && !semPesq(i)) { const a = analisar(i);
       if (a) { L.push('', 'DIAGNÓSTICO DA PESQUISA');
         L.push(`Vencedor: ${a.nomeV} a ${R$(a.venc)}${a.tpV ? ' (' + a.tpV.toLowerCase() + ')' : ''}${a.diaV ? ' em ' + a.diaV : ''}.`);
-        if (a.tipo === 'encarte') L.push(`Possível erro de tipo de coleta: o mesmo preço foi coletado como ${a.enc.tipo.toLowerCase()} em ${a.enc.dia}. Veja o histórico; o Optimus usaria o concorrente secundário ${a.sec.nome} a ${R$(a.sec.v)} (${a.sec.tipo.toLowerCase()}, ${a.sec.dia}) − 0,01. Clique com o botão direito para aplicar.`);
+        if (a.tipo === 'encarte') L.push(`Possível erro de tipo de coleta: o mesmo preço foi coletado como ${a.enc.tipo.toLowerCase()} em ${a.enc.dia}${a.enc.outra ? ' em outra loja da mesma empresa (' + a.enc.outra + ')' : ''}. Veja o histórico; o Optimus usaria o concorrente secundário ${a.sec.nome} a ${R$(a.sec.v)} (${a.sec.tipo.toLowerCase()}, ${a.sec.dia}) − 0,01. Clique com o botão direito para aplicar.`);
         if (a.moda != null) {
           L.push(`Comparado com a ${a.fonte}: ${R$(a.moda)}. Diferença de ${(a.delta > 0 ? '+' : '') + P1(a.delta)}; limite de ±${nf0.format(a.lim * 100)}% (vencedor ${a.abaixoCusto ? 'abaixo' : 'acima'} do custo).`);
           L.push(a.tipo === 'erro' ? `Possível erro de pesquisa: o Optimus usaria ${R$(a.alvo)} (${a.decisao.replace('fora do limite: ', '')}). Clique com o botão direito para aplicar.` : 'Pesquisa consistente: o preço vencedor é confiável.');
         } else L.push('Sem moda confiável do concorrente para comparar.'); } }
     if (RG[i] === 6) { const o = optInfo(i);
       L.push(`OPTIMUS: ${(o.t === 'encarte' ? 'POSSÍVEL ERRO DE TIPO DE COLETA' : o.t === 'erro' ? 'POSSÍVEL ERRO DE PESQUISA' : o.t === 'custo' ? 'PESQUISA ABAIXO DO CUSTO, CONSISTENTE' : 'PESQUISA CONSISTENTE')}`);
-      if (o.t === 'encarte' && o.enc && o.sec) { L.push(`1. O concorrente vencedor ${o.n} está a ${R$(o.v)} como ${String(o.tp).toLowerCase()} em ${o.dia}, mas o mesmo preço (diferença de até 1%) foi coletado como ${o.enc.tipo.toUpperCase()} em ${o.enc.dia}, dentro da janela de ${o.enc.janela} dias da curva ${'ABC'[D.curva[i]]}. É um possível erro de tipo de coleta: veja o histórico do concorrente no gráfico.`,
+      if (o.t === 'encarte' && o.enc && o.sec) { L.push(`1. O concorrente vencedor ${o.n} está a ${R$(o.v)} como ${String(o.tp).toLowerCase()} em ${o.dia}, mas o mesmo preço (diferença de até 1%) foi coletado como ${o.enc.tipo.toUpperCase()} em ${o.enc.dia}${o.enc.outra ? ` em outra loja da mesma empresa no estado (${o.enc.outra})` : ''}, dentro da janela de ${o.enc.janela} dias da curva ${'ABC'[D.curva[i]]}. É um possível erro de tipo de coleta: veja o histórico do concorrente no gráfico.`,
         `2. Por isso o Optimus tirou ${o.n} e usou o concorrente secundário: ${o.sec.nome} a ${R$(o.sec.v)} (${o.sec.tipo.toLowerCase()}, ${o.sec.dia}) − 0,01.`, faixa(i)); return L.join('\n'); }
       if (o.v != null) L.push(`1. Preço vencedor da linha: ${o.n} a ${R$(o.v)}${o.tp ? ' (' + o.tp.toLowerCase() + ')' : ''}${o.dia ? ' em ' + o.dia : ''}, o mesmo menor preço do mercado usado na mesa.`);
       if (o.mo != null) L.push(`2. Comparado com a ${o.f}: ${R$(o.mo)}. Diferença de ${(o.d > 0 ? '+' : '') + P1(o.d)}; o limite é ±${nf0.format((o.lim || 0) * 100)}% porque o vencedor está ${o.ac ? 'abaixo' : 'acima'} do custo (${R$(D.cu[i])}).`);
@@ -2337,17 +2337,22 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     return D.hT.map(l => { const [dd, mm] = String(l).split('/').map(Number); return Date.UTC(mm > mes + 1 ? ano - 1 : ano, mm - 1, dd) / 864e5; }); })();
   const TIPO_ACAO = new Set([2, 3, 5]), NOME_TIPO = ['Regular', 'Promoção', 'Encarte', 'Mídia', 'Ponto extra', 'Validade', 'Outro'];
   const nomeK = k => titulo_(curto(D.hK[k] || '').split(' - ')[0]) || 'concorrente';
+  const lojaK = k => titulo_(curto(D.hK[k] || '').split(' - ').slice(0, 2).join(' - ')) || 'outra loja';
+  const empK = k => String((D.hE && D.hE[k]) || curto(D.hK[k] || '').split(' - ')[0]).toUpperCase().trim();
   function encarteSuspeito(i, k, preco, rows){
     if (k == null || !(preco > 0)) return null;
     const janela = D.curva[i] === 0 ? 15 : 30;
     let ancora = -Infinity;                                   // dia da coleta de hoje desse preço
     for (const j of rows) if (D.dk[j] === k && TIPO_OK.has(D.dtp[j]) && Math.abs(D.dv[j] / 100 - preco) < 0.005) ancora = Math.max(ancora, DIA_H[D.dt[j]]);
     if (!isFinite(ancora)) return null;
-    let ach = null;
-    for (const j of rows) { if (D.dk[j] !== k || !TIPO_ACAO.has(D.dtp[j])) continue;
-      const d = DIA_H[D.dt[j]], v = D.dv[j] / 100; if (d > ancora || d < ancora - janela || !(v > 0)) continue;
-      if (Math.abs(preco / v - 1) <= 0.01 + 1e-9 && (!ach || d > ach.d)) ach = { d, dia: D.hT[D.dt[j]], v, tipo: NOME_TIPO[D.dtp[j]], janela }; }
-    return ach;
+    /* 1º no próprio concorrente; 2º em outra loja da MESMA EMPRESA no estado (ex.: Atacadão Juazeiro x Atacadão Ilhéus) */
+    const procura = mesma => { let ach = null; const emp = empK(k);
+      for (const j of rows) { const k2 = D.dk[j]; if (!TIPO_ACAO.has(D.dtp[j])) continue;
+        if (mesma ? k2 !== k : (k2 === k || !emp || empK(k2) !== emp)) continue;
+        const d = DIA_H[D.dt[j]], v = D.dv[j] / 100; if (d > ancora || d < ancora - janela || !(v > 0)) continue;
+        if (Math.abs(preco / v - 1) <= 0.01 + 1e-9 && (!ach || d > ach.d)) ach = { d, dia: D.hT[D.dt[j]], v, tipo: NOME_TIPO[D.dtp[j]], janela, outra: mesma ? null : lojaK(k2) }; }
+      return ach; };
+    return procura(true) || procura(false);
   }
   function secundario(i, kv, fil, rows){
     const usar = k => k !== kv && (!fil.size || fil.has(k));
@@ -2385,7 +2390,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     const sus = encarteSuspeito(i, wk, venc, rows);
     if (sus) { const sec = secundario(i, wk, fil, rows);
       if (sec) return { ...comum, alvo: sec.v - CENT, motivo: 'possível erro de tipo de coleta', moda, delta: null, lim: null, tipo: 'encarte', enc: sus, sec,
-        decisao: `${nomeV} a ${nf2.format(venc)} (${tpV.toLowerCase()}) parece o encarte de ${sus.dia} (${sus.tipo.toLowerCase()} a ${nf2.format(sus.v)}): usa o concorrente secundário ${sec.nome} a ${nf2.format(sec.v)} (${sec.tipo.toLowerCase()}, ${sec.dia}) − 0,01` }; }
+        decisao: `${nomeV} a ${nf2.format(venc)} (${tpV.toLowerCase()}) parece o encarte de ${sus.dia} (${sus.tipo.toLowerCase()} a ${nf2.format(sus.v)}${sus.outra ? ', ' + sus.outra : ''}): usa o concorrente secundário ${sec.nome} a ${nf2.format(sec.v)} (${sec.tipo.toLowerCase()}, ${sec.dia}) − 0,01` }; }
     if (!(moda > 0)) return { ...comum, alvo: venc - CENT, motivo: 'sem moda para comparar', moda: null, delta: null, lim: null, tipo: 'ok', decisao: 'segue o preço vencedor − 0,01' };
     const delta = venc / moda - 1, abaixoCusto = venc < c, lim = abaixoCusto ? DLB(i) : DLA(i);
     if (Math.abs(delta) <= lim) return { ...comum, alvo: venc - CENT, motivo: abaixoCusto ? 'abaixo do custo, consistente' : 'pesquisa consistente', moda, delta, lim, abaixoCusto, tipo: abaixoCusto ? 'custo' : 'ok', decisao: 'dentro do limite: segue o preço vencedor − 0,01' };
