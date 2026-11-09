@@ -217,7 +217,7 @@ body.foco .kpis,body.foco .linha2{display:none}
 .marca h1 .logo{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;background:linear-gradient(135deg,var(--primary),var(--up));box-shadow:0 6px 16px -8px var(--primary)}
 .marca h1 .logo svg{width:14px;height:14px}
 .marca small{color:var(--muted);font-size:11.5px;cursor:help}
-.kstrip{display:flex;gap:6px;flex:1;overflow-x:auto;scrollbar-width:none;justify-content:safe flex-end}
+.kstrip{display:flex;gap:6px;flex:1;flex-wrap:wrap;row-gap:6px;justify-content:flex-end;min-width:0}   /* nunca corta: quebra em duas linhas quando falta espaço */
 .kc span{font-size:11px;color:var(--muted)}
 .kc{flex:none;display:flex;align-items:center;gap:7px;padding:6px 11px;border-radius:11px;background:var(--surface);border:1px solid var(--line);backdrop-filter:blur(14px);white-space:nowrap}
 .kc svg{width:14px;height:14px}
@@ -2090,25 +2090,29 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   });
 
   /* ---------- indicadores e painel de regras ---------- */
+  const mil = v => Math.abs(v) >= 1e6 ? nf2.format(v / 1e6) + ' mi' : Math.abs(v) >= 1e4 ? nf1.format(v / 1e3) + ' mil' : nf0.format(v);   // valores compactos nos cartões
   function kpis(){
     let sobe = 0, baixa = 0, aceitos = 0, sem = 0, a = 0, b = 0, c_ = 0, m0n = 0, m0d = 0, m1n = 0, m1d = 0, ganho = 0, inv = 0;
     const rc = new Array(REGRAS.length).fill(0), cc = new Array(CORTES.length).fill(0);
+    /* os cartões contam só o que o usuário ACEITOU (o que vai para a importação): começam em zero e crescem a cada aceite */
     for (let i = 0; i < N; i++) { const un = D.un[i], w = un > 0 ? un : 1, nv = NV[i], vm = D.vm[i], cu = D.cu[i];
-      if (nv > vm + 0.004) sobe++; else if (nv < vm - 0.004) baixa++;
       if (MUD[i]) { if (aceito(i)) aceitos++; else sem++; for (let k = 0; k < CORTES.length; k++) if (CT[i] & (1 << k)) cc[k]++; }
       else if (REAP[i]) { if (aceito(i)) aceitos++; else sem++; }
+      rc[RG[i]]++;
+      if (!aceito(i)) continue;
+      if (nv > vm + 0.004) sobe++; else if (nv < vm - 0.004) baixa++;
       if (D.vmk[i] > 0) { a += vm * w; b += D.vmk[i] * w; c_ += nv * w; }
       if (un > 0) { m0n += (vm - cu) * un; m0d += vm * un; m1n += (nv - cu) * un; m1d += nv * un; }
-      const d = (nv - vm) * un; if (d > 0) ganho += d; else inv -= d; rc[RG[i]]++; }
-    const ip0 = b ? a / b : NaN, ip1 = b ? c_ / b : NaN, mg0 = m0n / m0d, mg1 = m1n / m1d, saldo = ganho - inv;
+      const d = (nv - vm) * un; if (d > 0) ganho += d; else inv -= d; }
+    const ip0 = b ? a / b : NaN, ip1 = b ? c_ / b : NaN, mg0 = m0d ? m0n / m0d : NaN, mg1 = m1d ? m1n / m1d : NaN, saldo = ganho - inv;
     const K = [['Aceitos', nf0.format(aceitos), `<i>${nf0.format(sem)} sem aceite</i>`, 'var(--up)', 'check'],
-      ['Sobem', nf0.format(sobe), `<i>${pct(sobe / N)} dos itens</i>`, 'var(--up)', 'tdUp'],
-      ['Baixam', nf0.format(baixa), `<i>${pct(baixa / N)} dos itens</i>`, 'var(--down)', 'tdDn'],
+      ['Sobem', nf0.format(sobe), `<i>${aceitos ? pct(sobe / aceitos) : '0%'} dos aceitos</i>`, 'var(--up)', 'tdUp'],
+      ['Baixam', nf0.format(baixa), `<i>${aceitos ? pct(baixa / aceitos) : '0%'} dos aceitos</i>`, 'var(--down)', 'tdDn'],
       ['IP novo', isFinite(ip1) ? nf1.format(ip1 * 100) : '–', `<i class="${ip1 < ip0 ? 'pos' : ip1 > ip0 ? 'neg' : ''}">hoje ${isFinite(ip0) ? nf1.format(ip0 * 100) : '–'}</i>`, 'var(--primary)', 'merc'],
-      ['Margem nova', vneg(mg1, pct(mg1)), `<i class="${mg1 >= mg0 ? 'pos' : 'neg'}">hoje ${pct(mg0)}</i>`, 'var(--amber)', 'pct'],
-      ['Lucro adicional/mês', 'R$ ' + nf0.format(ganho), '<i>ganho com as subidas de preço</i>', 'var(--up)', 'cash'],
-      ['Investimento/mês', 'R$ ' + nf0.format(inv), '<i>custo das baixas de preço</i>', 'var(--down)', 'tdDn'],
-      ['Saldo/mês', vneg(saldo, `${saldo >= 0 ? '+' : '−'}R$ ${nf0.format(Math.abs(saldo))}`), `<i>${nf0.format(N)} itens</i>`, saldo >= 0 ? 'var(--up)' : 'var(--down)', 'cash']];
+      ['Margem nova', isFinite(mg1) ? vneg(mg1, pct(mg1)) : '–', `<i class="${mg1 >= mg0 ? 'pos' : 'neg'}">hoje ${isFinite(mg0) ? pct(mg0) : '–'} nos aceitos</i>`, 'var(--amber)', 'pct'],
+      ['Lucro adicional/mês', 'R$ ' + mil(ganho), `<i>R$ ${nf0.format(ganho)}: ganho com as subidas de preço</i>`, 'var(--up)', 'cash'],
+      ['Investimento/mês', 'R$ ' + mil(inv), `<i>R$ ${nf0.format(inv)}: custo das baixas de preço</i>`, 'var(--down)', 'tdDn'],
+      ['Saldo/mês', vneg(saldo, `${saldo >= 0 ? '+' : '−'}R$ ${mil(Math.abs(saldo))}`), `<i>${saldo >= 0 ? '+' : '−'}R$ ${nf0.format(Math.abs(saldo))} nos ${nf0.format(aceitos)} itens aceitos</i>`, saldo >= 0 ? 'var(--up)' : 'var(--down)', 'cash']];
     $('kpis').innerHTML = K.map(([t, v, sub, c, n]) => `<div class="kc" style="--t:${c}" data-tip="${t}: ${sub.replace(/<[^>]+>/g, '')}">${ic(n, c)}<span>${t}</span><b>${v}</b></div>`).join('');
     const rm = Math.max(...rc, 1), cm = Math.max(...cc, sem, 1);
     $('pRegras').innerHTML = `<div class="regp"><h4>Regra de negócio</h4><p>Motivo da formação do novo preço. Clique para filtrar a grade.</p><div class="lista">`
