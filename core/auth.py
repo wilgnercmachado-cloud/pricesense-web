@@ -134,3 +134,24 @@ def solicitar_acesso(nome: str, usuario: str, matricula: str, cargo: str, senha:
     except Exception:
         return False, "Não foi possível enviar a solicitação. Tente novamente em instantes."
     return True, "Solicitação enviada. Você poderá entrar assim que um administrador aprovar."
+
+
+NOMES_EXIBIDOS = {"Preço Bot": "PriceBot", "Pricing Regular": "PriceMetrics", "Pricing Promo": "Metrics Promo"}
+
+
+def nome_exibido(permissao: str) -> str:
+    """Nome que aparece na tela; a permissão gravada no banco continua a mesma."""
+    return NOMES_EXIBIDOS.get(permissao, permissao)
+
+
+def estados_permitidos() -> list[str] | None:
+    """Siglas dos estados que o usuário pode ver na PriceMetrics e no PriceBot. None = todos (administrador ou "Todos (Brasil)")."""
+    if eh_admin():
+        return None
+    from core import reports
+    ests = reports.estados_do_usuario(st.session_state.get("usuario_estado"))
+    return None if "TODOS" in ests else sorted(set(ests))
+
+
+def sigla_estado(valor) -> str:
+    return str(valor or "").split(" - ")[0].strip().upper()
