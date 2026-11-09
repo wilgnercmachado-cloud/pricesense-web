@@ -1849,7 +1849,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     if (RG[i] !== 6 && !semPesq(i)) { const a = analisar(i);
       if (a) { L.push('', 'DIAGNÓSTICO DA PESQUISA');
         L.push(`Vencedor: ${a.nomeV} a ${R$(a.venc)}${a.tpV ? ' (' + a.tpV.toLowerCase() + ')' : ''}${a.diaV ? ' em ' + a.diaV : ''}.`);
-        if (a.tipo === 'encarte') L.push(`Possível erro de tipo de coleta: o mesmo preço foi coletado como ${a.enc.tipo.toLowerCase()} em ${a.enc.dia}${a.enc.outra ? ' em outra loja da mesma empresa (' + a.enc.outra + ')' : ''}. Veja o histórico; o Optimus usaria o concorrente secundário ${a.sec.nome} a ${R$(a.sec.v)} (${a.sec.tipo.toLowerCase()}, ${a.sec.dia}) − 0,01. Clique com o botão direito para aplicar.`);
+        if (a.tipo === 'encarte') L.push(`Possível erro de tipo de coleta: o mesmo preço foi coletado como ${a.enc.tipo.toLowerCase()} em ${a.enc.dia}${a.enc.outra ? ' em outra loja da mesma empresa (' + a.enc.outra + ')' : ''}. Veja o histórico; ${a.secFora ? `o secundário ${a.sec.nome} (${R$(a.sec.v)}) ${a.secFora}, então o Optimus usaria ${a.mm ? `a menor moda consistente da filial, ${a.mm.nome} a ${R$(a.mm.v)} − 0,01` : 'o preço objetivo'}` : `o Optimus usaria o concorrente secundário ${a.sec.nome} a ${R$(a.sec.v)} (${a.sec.tipo.toLowerCase()}, ${a.sec.dia}) − 0,01`}. Clique com o botão direito para aplicar.`);
         if (a.moda != null) {
           L.push(`Comparado com a ${a.fonte}: ${R$(a.moda)}. Diferença de ${(a.delta > 0 ? '+' : '') + P1(a.delta)}; limite de ±${nf0.format(a.lim * 100)}% (vencedor ${a.abaixoCusto ? 'abaixo' : 'acima'} do custo).`);
           L.push(a.tipo === 'erro' ? `Possível erro de pesquisa: o Optimus usaria ${R$(a.alvo)} (${a.decisao.replace('fora do limite: ', '')}). Clique com o botão direito para aplicar.` : 'Pesquisa consistente: o preço vencedor é confiável.');
@@ -1857,7 +1857,10 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     if (RG[i] === 6) { const o = optInfo(i);
       L.push(`OPTIMUS: ${(o.t === 'encarte' ? 'POSSÍVEL ERRO DE TIPO DE COLETA' : o.t === 'erro' ? 'POSSÍVEL ERRO DE PESQUISA' : o.t === 'custo' ? 'PESQUISA ABAIXO DO CUSTO, CONSISTENTE' : 'PESQUISA CONSISTENTE')}`);
       if (o.t === 'encarte' && o.enc && o.sec) { L.push(`1. O concorrente vencedor ${o.n} está a ${R$(o.v)} como ${String(o.tp).toLowerCase()} em ${o.dia}, mas o mesmo preço (diferença de até 1%) foi coletado como ${o.enc.tipo.toUpperCase()} em ${o.enc.dia}${o.enc.outra ? ` em outra loja da mesma empresa no estado (${o.enc.outra})` : ''}, dentro da janela de ${o.enc.janela} dias da curva ${'ABC'[D.curva[i]]}. É um possível erro de tipo de coleta: veja o histórico do concorrente no gráfico.`,
-        `2. Por isso o Optimus tirou ${o.n} e usou o concorrente secundário: ${o.sec.nome} a ${R$(o.sec.v)} (${o.sec.tipo.toLowerCase()}, ${o.sec.dia}) − 0,01.`, faixa(i)); return L.join('\n'); }
+        ...(o.sf ? [`2. O concorrente secundário ${o.sec.nome} a ${R$(o.sec.v)} (${o.sec.tipo.toLowerCase()}, ${o.sec.dia}) também foi descartado: ${o.sf}.`,
+            o.mm ? `3. Por isso o Optimus usou a menor moda consistente entre os concorrentes da filial: ${o.mm.nome} a ${R$(o.mm.v)} (${o.mm.n} dias) − 0,01; o atacado segue a moda de atacado das mesmas coletas.`
+                 : `3. Nenhum concorrente da filial tem moda consistente (3 dias ou mais): o Optimus aplicou o preço objetivo (margem ${nf1.format(UOBJ[i])}%) e o atacado com a base de redução de ${nf1.format(D.merch[i] || 0)}%.`]
+          : [`2. Por isso o Optimus tirou ${o.n} e usou o concorrente secundário: ${o.sec.nome} a ${R$(o.sec.v)} (${o.sec.tipo.toLowerCase()}, ${o.sec.dia}) − 0,01.`]), faixa(i)); return L.join('\n'); }
       if (o.v != null) L.push(`1. Preço vencedor da linha: ${o.n} a ${R$(o.v)}${o.tp ? ' (' + o.tp.toLowerCase() + ')' : ''}${o.dia ? ' em ' + o.dia : ''}, o mesmo menor preço do mercado usado na mesa.`);
       if (o.mo != null) L.push(`2. Comparado com a ${o.f}: ${R$(o.mo)}. Diferença de ${(o.d > 0 ? '+' : '') + P1(o.d)}; o limite é ±${nf0.format((o.lim || 0) * 100)}% porque o vencedor está ${o.ac ? 'abaixo' : 'acima'} do custo (${R$(D.cu[i])}).`);
       else L.push('2. Sem moda confiável para comparar.');
@@ -2358,6 +2361,23 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
       return ach; };
     return procura(true) || procura(false);
   }
+  /* moda consistente de um concorrente: varejo praticado em mais dias (mínimo 3), só regular/promoção/ponto extra;
+     empate: o menor; atacado das mesmas coletas desse varejo */
+  function modaConc(k, rows){
+    const dias = new Map(), at = new Map();
+    for (const j of rows) { if (D.dk[j] !== k || !TIPO_OK.has(D.dtp[j]) || !(D.dv[j] > 0)) continue;
+      const v = D.dv[j]; let s_ = dias.get(v); if (!s_) dias.set(v, s_ = new Set()); s_.add(D.dt[j]);
+      if (D.da[j] > 0) { let m = at.get(v); if (!m) at.set(v, m = new Map()); let q = m.get(D.da[j]); if (!q) m.set(D.da[j], q = new Set()); q.add(D.dt[j]); } }
+    let best = null; for (const [v, s_] of dias) { const n = s_.size; if (n >= 3 && (!best || n > best.n || (n === best.n && v < best.v))) best = { v, n }; }
+    if (!best) return null;
+    let av = best.v, an = 0; const m = at.get(best.v); if (m) for (const [x, q] of m) if (q.size > an || (q.size === an && x < av)) { av = x; an = q.size; }
+    return { k, v: best.v / 100, a: av / 100, n: best.n, nome: nomeK(k) };
+  }
+  function menorModaFilial(fil, rows){
+    const ks = new Set(); for (const j of rows) if (!fil.size || fil.has(D.dk[j])) ks.add(D.dk[j]);
+    let best = null; for (const k of ks) { const m = modaConc(k, rows); if (m && (!best || m.v < best.v || (m.v === best.v && m.n > best.n))) best = m; }
+    return best;
+  }
   function secundario(i, kv, fil, rows){
     const usar = k => k !== kv && (!fil.size || fil.has(k));
     const dias = [...new Set(rows.filter(j => usar(D.dk[j]) && D.dv[j] > 0).map(j => DIA_H[D.dt[j]]))].sort((x, y) => y - x).slice(0, 3);
@@ -2393,6 +2413,17 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     const comum = { venc, nomeV, tpV, diaV, fonte, menorModa, filial: usaFil };
     const sus = encarteSuspeito(i, wk, venc, rows);
     if (sus) { const sec = secundario(i, wk, fil, rows);
+      /* o secundário também é conferido: cai se estiver abaixo do encarte suspeito OU fora do delta seguro da própria moda */
+      let fora = null;
+      if (sec) { if (sec.v < sus.v - 1e-9) fora = `está abaixo do próprio encarte suspeito (${nf2.format(sus.v)})`;
+        else { const ms = modaConc(sec.k, rows); if (ms) { const lim = (sec.v - CENT) < c ? DLB(i) : DLA(i), dv = sec.v / ms.v - 1;
+          if (Math.abs(dv) > lim + 1e-9) fora = `se afasta ${(dv > 0 ? '+' : '') + nf1.format(dv * 100)}% da própria moda de ${nf2.format(ms.v)} (${ms.n} dias), além do delta de ±${nf0.format(lim * 100)}%`; } } }
+      if (sec && fora) { const mm = menorModaFilial(fil, rows);
+        if (mm) return { ...comum, alvo: mm.v - CENT, motivo: 'possível erro de tipo de coleta', moda, delta: null, lim: null, tipo: 'encarte', enc: sus, sec, secFora: fora, mm, razaoA: mm.a / mm.v,
+          decisao: `${nomeV} parece encarte e o secundário ${sec.nome} (${nf2.format(sec.v)}) ${fora}: usa a menor moda consistente da filial, ${mm.nome} a ${nf2.format(mm.v)} (${mm.n} dias) − 0,01` };
+        const objP = D.cu[i] / (1 - UOBJ[i] / 100);
+        return { ...comum, alvo: objP, motivo: 'possível erro de tipo de coleta', moda, delta: null, lim: null, tipo: 'encarte', enc: sus, sec, secFora: fora, objetivo: true, baseRed: true,
+          decisao: `${nomeV} parece encarte, o secundário ${sec.nome} ${fora} e nenhum concorrente tem moda consistente: preço objetivo (margem ${nf1.format(UOBJ[i])}%)` }; }
       if (sec) return { ...comum, alvo: sec.v - CENT, motivo: 'possível erro de tipo de coleta', moda, delta: null, lim: null, tipo: 'encarte', enc: sus, sec,
         decisao: `${nomeV} a ${nf2.format(venc)} (${tpV.toLowerCase()}) parece o encarte de ${sus.dia} (${sus.tipo.toLowerCase()} a ${nf2.format(sus.v)}${sus.outra ? ', ' + sus.outra : ''}): usa o concorrente secundário ${sec.nome} a ${nf2.format(sec.v)} (${sec.tipo.toLowerCase()}, ${sec.dia}) − 0,01` }; }
     if (!(moda > 0)) return { ...comum, alvo: venc - CENT, motivo: 'sem moda para comparar', moda: null, delta: null, lim: null, tipo: 'ok', decisao: 'segue o preço vencedor − 0,01' };
@@ -2411,7 +2442,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     let nv = nota === 'teto' ? roundAbaixo(alvo) : nota === 'piso' ? arredMercado(alvo, alvo, MN[i]) : arredMercado(alvo, a.alvo + CENT, MN[i]);
     const red = 1 - (D.merch[i] || 0) / 100;
     const viaMerc = D.amk[i] > 0 && D.vmk[i] > 0;
-    let sa = a.sec ? nv * Math.min(1, a.sec.a / a.sec.v) : viaMerc ? nv * Math.min(1, D.amk[i] / D.vmk[i]) : nv * red;
+    let sa = a.baseRed ? nv * red : a.razaoA != null ? nv * Math.min(1, a.razaoA) : a.sec ? nv * Math.min(1, a.sec.a / a.sec.v) : viaMerc ? nv * Math.min(1, D.amk[i] / D.vmk[i]) : nv * red;
     sa = Math.min(nv, Math.max(sa, MN[i]));
     let na = piso15(roundAtacado(sa, nv), nv); if (na > nv) na = nv;
     return { nv, na, motivo: a.motivo, dde, nota, viaMerc, alvoBruto: a.alvo };
@@ -2419,7 +2450,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   let PREVIA = null;
   function gravaOptimus(x){ OV.set(x.i, x.nv); OVA.set(x.i, x.na);
     OPT.set(x.i, { m: x.motivo, t: x.tipo, v: x.venc, n: x.nomeV, tp: x.tpV, dia: x.diaV, mo: x.moda, f: x.fonte, d: x.delta, lim: x.lim, ac: !!x.abaixoCusto,
-      dec: x.decisao, al: x.alvoBruto, nota: x.nota, dde: x.dde ? D.dde[x.i] : null, vm: x.viaMerc, fil: x.filial, enc: x.enc || null, sec: x.sec || null }); calc(x.i); }
+      dec: x.decisao, al: x.alvoBruto, nota: x.nota, dde: x.dde ? D.dde[x.i] : null, vm: x.viaMerc, fil: x.filial, enc: x.enc || null, sec: x.sec || null, sf: x.secFora || null, mm: x.mm || null, obj: !!x.objetivo }); calc(x.i); }
   function optimusItem(i){ const a = analisar(i); if (!a) { toast('Item sem pesquisa direta: o Optimus não se aplica'); return; }
     gravaOptimus({ i, ...a, ...precoOptimus(i, a) }); salvar(); atualizar(false); if (SEL === i) { resumo(i); historico(i); } toast(`Optimus: ${a.motivo}, novo varejo R$ ${nf2.format(NV[i])}`); }
   function rodarOptimus(){
