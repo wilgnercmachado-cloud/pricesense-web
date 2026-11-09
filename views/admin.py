@@ -27,7 +27,7 @@ def _linha_usuario(u: dict) -> None:
             c2.html("<span class='ps-chip promo'>Administrador: acesso total</span>")
         else:
             atuais = auth.normalizar_permissoes(u.get("permissoes"))
-            novas = c2.multiselect("Permissões", auth.TODAS_PERMISSOES, default=atuais, key=f"perm_{u['usuario']}",
+            novas = c2.multiselect("Permissões", auth.TODAS_PERMISSOES, default=atuais, key=f"perm_{u['usuario']}", format_func=auth.nome_exibido,
                                    label_visibility="collapsed", placeholder="Somente relatórios")
             if novas != atuais:
                 try:
@@ -139,7 +139,7 @@ def render() -> None:
                 c1, c2, c3, c4 = st.columns([1.6, 1.8, 0.8, 0.8], vertical_alignment="center")
                 c1.html(f"<b>{ui.esc(u.get('nome') or '')}</b><br><span style='color:var(--ps-muted);font-size:.86rem'>"
                         f"{ui.esc(u['usuario'])}, matrícula {ui.esc(u.get('matricula') or '-')}, {ui.esc(u.get('cargo') or 'sem cargo')}</span>")
-                perms = c2.multiselect("Liberar", auth.TODAS_PERMISSOES, default=["Preço Bot"], key=f"apr_perm_{u['usuario']}",
+                perms = c2.multiselect("Liberar", auth.TODAS_PERMISSOES, default=["Preço Bot"], key=f"apr_perm_{u['usuario']}", format_func=auth.nome_exibido,
                                        label_visibility="collapsed")
                 if c3.button("Aprovar", type="primary", key=f"apr_{u['usuario']}", width="stretch"):
                     db.atualizar_usuario(u["usuario"], {"status": "Aprovado", "permissoes": perms})

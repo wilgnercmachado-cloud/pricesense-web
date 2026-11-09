@@ -458,6 +458,8 @@ def _dados_mesa(filtros: str, versao: str, _df_all, _meta, _regras, _props, _tra
     """Pacote da mesa guardado por filtro + versão da base e das regras: reabrir a página não refaz o cálculo."""
     f = json.loads(filtros)
     mask = np.ones(len(_df_all), dtype=bool)
+    if f.get("_ufs"):
+        mask &= _df_all["Estado"].astype(str).map(auth.sigla_estado).isin(f["_ufs"]).to_numpy()
     for col in FILTROS:
         if f.get(col):
             mask &= _df_all[col].isin(f[col]).to_numpy()
@@ -487,6 +489,20 @@ def render() -> None:
     if fonte is None:
         return
     df_all, meta, rel = fonte
+    permitidos = auth.estados_permitidos()
+    if permitidos is not None:
+        if not permitidos:
+            ui.vazio("Nenhum estado atribuído ao seu usuário", "Peça ao administrador para definir seus estados na Administração.")
+            return
+        cats = pd.Series(df_all["Estado"].cat.categories.astype(str)) if hasattr(df_all["Estado"], "cat") else None
+        if cats is not None:
+            ok = cats.map(auth.sigla_estado).isin(permitidos).to_numpy()
+            df_all = df_all[ok[df_all["Estado"].cat.codes.to_numpy()]]
+        else:
+            df_all = df_all[df_all["Estado"].map(auth.sigla_estado).isin(permitidos)]
+        if df_all.empty:
+            ui.vazio("Sem lojas nos seus estados", f"A base não tem lojas de {', '.join(permitidos)}.")
+            return
 
     with st.container(horizontal=True, vertical_alignment="center", gap="small", key="reg_topo"):
         f = _filtros(df_all)
@@ -509,7 +525,8 @@ def render() -> None:
                        str(len(props)), str(float(props["proporcao"].sum()) if len(props) else 0),
                        str(len(travas)), str(float(travas["margem_min"].sum()) if len(travas) else 0), str(travas["atualizado_em"].max() if len(travas) else ""),
                        st.session_state.get("usuario_login", ""), str(params.drop(columns=["atualizado_em", "atualizado_por"]).to_dict("records")) if len(params) else ""])
-    filtros = json.dumps({k: (sorted(v) if isinstance(v, list) else v) for k, v in f.items()}, sort_keys=True, ensure_ascii=False)
+    filtros = json.dumps({**{k: (sorted(v) if isinstance(v, list) else v) for k, v in f.items()}, "_ufs": permitidos or []},
+                         sort_keys=True, ensure_ascii=False)          # os estados do usuário entram na chave do pacote guardado
     dados, n, chave = _dados_mesa(filtros, versao, df_all, meta, regras, props, travas, params)
     if n == 0:
         ui.vazio("Nada para precificar com esses filtros", "Abra os filtros e amplie a seleção.")

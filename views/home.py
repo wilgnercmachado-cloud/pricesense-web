@@ -12,7 +12,7 @@ from ui import theme
 
 RAIZ = Path(__file__).resolve().parent.parent
 _HOME = components.declare_component("home_metrics", path=str(RAIZ / "ui" / "metrics_comp"))
-DESCR = {"preco_bot": ("Preço Bot", "sell", "Cole preços, aplique a régua e gere a importação"),
+DESCR = {"preco_bot": ("PriceBot", "sell", "Cole preços, aplique a régua e gere a importação"),
          "promo": ("Metrics Promo", "campaign", "Valide encartes, conflitos e o calendário de campanhas"),
          "pesquisa": ("Pesquisa de Mercado", "query_stats", "30 dias de coletas, ranking e tendência por estado"),
          "regular": ("PriceMetrics", "price_change", "Precificação regular com Optimus, aceite e importação"),
