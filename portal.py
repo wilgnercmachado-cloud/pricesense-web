@@ -208,8 +208,17 @@ def _chat() -> None:
                 c1, c2 = st.columns([5, 1], vertical_alignment="bottom")
                 texto = c1.text_input("Mensagem", placeholder="Escreva... (@nome para marcar)", label_visibility="collapsed")
                 if c2.form_submit_button("", icon=":material/send:", type="primary", width="stretch") and texto.strip():
-                    chat.enviar(canal, eu, texto, todos)
-                    st.rerun(scope="fragment")
+                    try:
+                        chat.enviar(canal, eu, texto, todos)
+                        st.rerun(scope="fragment")
+                    except Exception as exc:
+                        st.session_state.chat_erro = str(exc)[:300]
+            if st.session_state.get("chat_erro"):
+                st.error("A mensagem não foi gravada. Confira no Supabase se as tabelas chat_mensagens e chat_leituras existem "
+                         "(bloco 16 do supabase/migrations.sql).", icon=":material/error:")
+                st.caption(f"Detalhe técnico: {st.session_state.chat_erro}")
+                if st.button("Fechar aviso", key="chat_erro_ok"):
+                    st.session_state.pop("chat_erro", None); st.rerun(scope="fragment")
             # a janela do chat é desenhada mesmo fechada: a conversa só conta como lida quando o usuário age nela
             if nao.get(canal) and st.button(f"Marcar {nao[canal]} mensagem(ns) como lida(s)", key="chat_lido", width="stretch", icon=":material/done_all:"):
                 chat.marcar_lido(login, canal); st.rerun(scope="fragment")
