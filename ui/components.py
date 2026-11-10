@@ -518,3 +518,27 @@ if (dl) dl.onclick = async () => {{
 </script></body></html>""", height=46, width=largura)
 
 
+
+
+def pasta_telas() -> str:
+    """Pasta das telas HTML (Início, PriceMetrics, Metrics Promo, PriceBot, Pesquisa de Mercado).
+
+    O arquivo tem nome único, ui/metrics_comp/pricesense_telas.html, e é copiado como index.html para uma pasta temporária:
+    assim, subir por engano outro "index.html" no GitHub nunca mais troca as telas do site.
+    """
+    import shutil
+    import tempfile
+    from pathlib import Path as _P
+    origem = _P(__file__).resolve().parent / "metrics_comp"
+    fonte = origem / "pricesense_telas.html"
+    if not fonte.exists():
+        return str(origem)                                   # versão antiga do repositório: usa o index.html que estiver lá
+    destino = _P(tempfile.gettempdir()) / "pricesense_telas"
+    destino.mkdir(parents=True, exist_ok=True)
+    alvo = destino / "index.html"
+    if not alvo.exists() or alvo.stat().st_size != fonte.stat().st_size or alvo.stat().st_mtime < fonte.stat().st_mtime:
+        shutil.copyfile(fonte, alvo)
+    for extra in ("xlsx.mini.min.js", "LICENSE-sheetjs.txt"):
+        if (origem / extra).exists() and not (destino / extra).exists():
+            shutil.copyfile(origem / extra, destino / extra)
+    return str(destino)
