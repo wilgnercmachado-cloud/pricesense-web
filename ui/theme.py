@@ -232,7 +232,7 @@ iframe[data-testid="stCustomComponentV1"] {{ width: 100% !important; }}
 .st-key-chat_anexo [data-testid="stFileUploaderDropzone"] {{ padding: 6px 10px !important; min-height: 0 !important; border-radius: 12px !important;
   border: 1px dashed color-mix(in srgb, var(--ps-primary) 35%, var(--ps-line)) !important; background: transparent !important; }}
 .st-key-chat_anexo [data-testid="stFileUploaderDropzoneInstructions"] {{ display: none !important; }}
-.st-key-chat_anexo [data-testid="stFileUploaderDropzone"]::before {{ content: "Anexar arquivos: imagem, texto, Excel, CSV, ZIP ou PDF"; font-size: 12px; color: var(--ps-muted); margin-right: auto; align-self: center; }}
+.st-key-chat_anexo [data-testid="stFileUploaderDropzone"]::before {{ content: "Ctrl + V cola um print • ou anexe imagem, texto, Excel, CSV, ZIP, PDF"; font-size: 12px; color: var(--ps-muted); margin-right: auto; align-self: center; }}
 [data-testid="stPopoverBody"]:has(.ps-chat-hd) [data-testid="stTextInputRootElement"] {{ border-radius: 999px !important; }}
 [data-testid="stPopoverBody"]:has(.ps-chat-hd) [data-testid="stFormSubmitButton"] button {{ border-radius: 999px !important; background: linear-gradient(135deg, var(--ps-primary), #7A3FD1) !important; border: 0 !important; }}
 .st-key-ps_notif {{ position: fixed !important; right: 22px; bottom: 150px; z-index: 1000001; width: 340px !important; padding: 12px 14px; border-radius: 16px; background: var(--ps-surface-solid); border: 1px solid var(--ps-line); box-shadow: 0 18px 48px -18px rgba(15,23,42,.5); animation: ps-entra .35s ease-out; }}

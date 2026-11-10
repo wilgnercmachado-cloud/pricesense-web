@@ -404,6 +404,21 @@ const d = window.parent.document, w = window.parent;
 if (!d.__psGaveta) { d.__psGaveta = true;            /* botão ✕ das gavetas: fecha como o Esc */
   d.addEventListener('click', e => { if (e.target.closest('.ps-gaveta-x')) { e.preventDefault();
     d.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true })); setTimeout(() => d.body.click(), 30); } }, true); }
+/* Ctrl+V com o chat aberto: o print colado entra no campo de anexo do chat */
+if (!d.__psColar) { d.__psColar = true;
+  d.addEventListener('paste', e => {
+    const corpo = [...d.querySelectorAll('[data-testid="stPopoverBody"]')].find(b => b.querySelector('.ps-chat-hd') && b.getClientRects().length);
+    if (!corpo) return;
+    const arqs = [...((e.clipboardData || {}).items || [])].filter(x => x.kind === 'file').map(x => x.getAsFile()).filter(Boolean);
+    if (!arqs.length) return;
+    const inp = corpo.querySelector('input[type="file"]'); if (!inp) return;
+    e.preventDefault();
+    const dt = new DataTransfer(), agora = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
+    arqs.forEach((f, n) => { const ext = (f.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+      dt.items.add(!f.name || f.name === 'image.png' ? new File([f], `print_${agora}${n ? '_' + n : ''}.${ext}`, { type: f.type }) : f); });
+    inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true }));
+  }, true);
+}
 if (!d.__psHover && w.matchMedia('(hover: hover)').matches) {
   d.__psHover = true;
   let aberto = null, timer = null, abertoEm = 0;
@@ -503,69 +518,3 @@ if (dl) dl.onclick = async () => {{
 </script></body></html>""", height=46, width=largura)
 
 
-# campo de colar (Ctrl+V) e arrastar arquivos do chat.
-# O HTML fica aqui dentro e é gravado numa pasta temporária: o site nunca quebra por falta da pasta ui/colar_comp.
-_COLAR_HTML = r"""<!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8">
-<style>
-  html,body{margin:0;background:transparent;font-family:Geist,system-ui,sans-serif}
-  .zona{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border:1px dashed var(--borda,#a5b4fc);border-radius:12px;
-    color:var(--texto,#64748b);font-size:12px;cursor:pointer;transition:background .2s,border-color .2s;user-select:none;box-sizing:border-box}
-  .zona.on{background:rgba(45,75,255,.08);border-color:#2D4BFF;color:#2D4BFF}
-  .zona b{font-weight:600}
-  .ic{width:16px;height:16px;flex:none}
-</style></head><body>
-<div class="zona" id="z" tabindex="0"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
-<span><b>Ctrl + V</b> para colar um print, ou arraste arquivos aqui</span></div>
-<script>
-/* colar (Ctrl+V) e arrastar arquivos para o chat: o arquivo vai para o Python como base64 */
-const enviar = (type, extra) => window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type }, extra || {}), '*');
-enviar('streamlit:componentReady', { apiVersion: 1 });
-enviar('streamlit:setFrameHeight', { height: 36 });
-const TXT0 = '<b>Ctrl + V</b> para colar um print, ou arraste arquivos aqui';
-window.addEventListener('message', e => { const d = e.data; if (!d || d.type !== 'streamlit:render' || !d.args) return;
-  if (d.args.tema) { document.documentElement.style.setProperty('--texto', d.args.tema.texto); document.documentElement.style.setProperty('--borda', d.args.tema.borda); }
-  if (!d.args.limpo) z.querySelector('span').innerHTML = TXT0; });          /* depois de enviar (ou remover), volta ao texto inicial */
-const z = document.getElementById('z');
-const LIMITE = 15 * 1024 * 1024;
-async function mandar(files){
-  const lista = [];
-  for (const f of files) { if (f.size > LIMITE) { alert(`${f.name || 'arquivo'} passa de 15 MB`); continue; }
-    const b64 = await new Promise(r => { const rd = new FileReader(); rd.onload = () => r(String(rd.result).split(',')[1]); rd.readAsDataURL(f); });
-    let nome = f.name || ''; if (!nome || nome === 'image.png') { const d = new Date(); nome = `print_${d.toISOString().slice(0, 19).replace(/[-:T]/g, '')}.${(f.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`; }
-    lista.push({ nome, tipo: f.type || 'application/octet-stream', tamanho: f.size, b64 }); }
-  if (lista.length) { enviar('streamlit:setComponentValue', { value: { arquivos: lista, ts: Date.now() }, dataType: 'json' });
-    z.querySelector('span').innerHTML = `<b>${lista.length} arquivo(s) anexado(s)</b>: envie com a mensagem`; }
-}
-const doColar = e => { const it = [...(e.clipboardData || {}).items || []].filter(x => x.kind === 'file').map(x => x.getAsFile()).filter(Boolean);
-  if (it.length) { e.preventDefault(); mandar(it); } };
-document.addEventListener('paste', doColar);
-/* Ctrl+V com o cursor na caixa de mensagem do chat (no site) também cola o print */
-try { const pd = window.parent.document; window.parent.__psColar = doColar;
-  if (!window.parent.__psColarOuvindo) { window.parent.__psColarOuvindo = true;
-    pd.addEventListener('paste', e => { if (!pd.querySelector('.ps-chat-hd')) return; const alvo = e.target;
-      if (alvo && alvo.closest && !alvo.closest('[data-testid="stPopoverBody"]')) return; if (window.parent.__psColar) window.parent.__psColar(e); }, true); } } catch (e) {}
-z.addEventListener('click', () => z.focus());
-['dragenter', 'dragover'].forEach(ev => z.addEventListener(ev, e => { e.preventDefault(); z.classList.add('on'); }));
-['dragleave', 'drop'].forEach(ev => z.addEventListener(ev, e => { e.preventDefault(); z.classList.remove('on'); }));
-z.addEventListener('drop', e => mandar([...e.dataTransfer.files]));
-</script></body></html>
-"""
-
-
-def _declarar_colar():
-    import tempfile
-    from pathlib import Path as _Path
-    import streamlit.components.v1 as _cv1
-    try:
-        pasta = _Path(tempfile.gettempdir()) / "pricesense_colar_comp"
-        pasta.mkdir(parents=True, exist_ok=True)
-        arq = pasta / "index.html"
-        if not arq.exists() or arq.read_text(encoding="utf-8") != _COLAR_HTML:
-            arq.write_text(_COLAR_HTML, encoding="utf-8")
-        return _cv1.declare_component("chat_colar", path=str(pasta))
-    except Exception:
-        return None                                    # sem o campo de colar, o chat continua funcionando (anexo pelo upload)
-
-
-CHAT_COLAR = _declarar_colar()
