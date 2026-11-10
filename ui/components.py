@@ -404,6 +404,23 @@ const d = window.parent.document, w = window.parent;
 if (!d.__psGaveta) { d.__psGaveta = true;            /* botão ✕ das gavetas: fecha como o Esc */
   d.addEventListener('click', e => { if (e.target.closest('.ps-gaveta-x')) { e.preventDefault();
     d.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true })); setTimeout(() => d.body.click(), 30); } }, true); }
+/* zoom do site (80%): menus suspensos e janelas são posicionados pelo Streamlit em pixels da tela, mas aplicados antes do zoom;
+   aqui a posição é convertida (divide pelo zoom) para o menu abrir exatamente embaixo de onde foi chamado */
+if (!d.__psZoomFix) { d.__psZoomFix = true;
+  const SEL = '[data-testid="stTopNavPopoverBody"], [data-testid="stPopoverBody"], [data-testid$="Dropdown"]';
+  const corrige = el => { const z = parseFloat(w.getComputedStyle(d.documentElement).zoom) || 1; if (z === 1) return;
+    const tr = el.style.transform || ''; const m = tr.match(/translate(?:3d)?\(\s*(-?[\d.]+)px\s*,\s*(-?[\d.]+)px/); if (!m) return;
+    const x = (parseFloat(m[1]) / z).toFixed(1) + 'px', y = (parseFloat(m[2]) / z).toFixed(1) + 'px';
+    if (el.style.getPropertyValue('--ps-zx') !== x) el.style.setProperty('--ps-zx', x);
+    if (el.style.getPropertyValue('--ps-zy') !== y) el.style.setProperty('--ps-zy', y);
+    el.classList.add('ps-zfix'); };
+  const varre = () => d.querySelectorAll(SEL).forEach(corrige);
+  new w.MutationObserver(ms => { for (const mu of ms) { const t = mu.target;
+      if (mu.type === 'attributes' && t.matches && t.matches(SEL)) corrige(t);
+      else if (mu.type === 'childList' && mu.addedNodes.length) { varre(); break; } } })
+    .observe(d.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['style'] });
+  varre();
+}
 /* Ctrl+V com o chat aberto: o print colado entra no campo de anexo do chat */
 if (!d.__psColar) { d.__psColar = true;
   d.addEventListener('paste', e => {

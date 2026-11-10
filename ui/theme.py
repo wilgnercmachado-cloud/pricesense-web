@@ -93,6 +93,7 @@ def _css(t: dict) -> str:
 html, body, .stApp, button, input, textarea, select, [data-testid="stMarkdownContainer"] {{ font-family: var(--ps-font); }}
 html {{ zoom: var(--ps-zoom, .8); }}
 iframe[data-testid="stCustomComponentV1"] {{ width: 100% !important; }}
+.ps-zfix {{ transform: translate(var(--ps-zx), var(--ps-zy)) !important; }}   /* menus abrem embaixo de onde foram chamados, mesmo com o zoom de 80% */
 [data-testid="stMain"] {{ height: calc(100vh / var(--ps-zoom, .8)) !important; max-height: calc(100vh / var(--ps-zoom, .8)) !important; }}   /* área rolável ocupa a tela inteira mesmo com o zoom */   /* com o zoom do site, o Streamlit mede a largura das telas HTML a menos */   /* o site abre em 80% em qualquer máquina; o zoom do navegador continua funcionando por cima */
 [data-testid="stIconMaterial"], .ms {{ font-family: 'Material Symbols Rounded' !important; font-weight: 400; }}
 .stApp {{
@@ -250,7 +251,12 @@ iframe[data-testid="stCustomComponentV1"] {{ width: 100% !important; }}
 .ps-aviso span {{ color: var(--ps-muted); font-size: .86rem; }}
 
 /* menus do topo: vidro e abertura suave */
-[data-testid="stTopNavPopover"] {{ animation: ps-drop .22s cubic-bezier(.2,.8,.2,1) both; transform-origin: top left; }}
+[data-testid="stTopNavPopover"] {{ animation: ps-drop .26s cubic-bezier(.16,1,.3,1) both; transform-origin: top center; }}
+[data-testid="stTopNavPopover"] a, [data-testid="stTopNavPopover"] [data-testid="stTopNavLink"] {{ animation: ps-drop-item .3s cubic-bezier(.16,1,.3,1) both; }}
+[data-testid="stTopNavPopover"] li:nth-child(2) a, [data-testid="stTopNavPopover"] li:nth-child(2) [data-testid="stTopNavLink"] {{ animation-delay: .04s; }}
+[data-testid="stTopNavPopover"] li:nth-child(3) a, [data-testid="stTopNavPopover"] li:nth-child(3) [data-testid="stTopNavLink"] {{ animation-delay: .08s; }}
+[data-testid="stTopNavPopover"] li:nth-child(4) a, [data-testid="stTopNavPopover"] li:nth-child(4) [data-testid="stTopNavLink"] {{ animation-delay: .12s; }}
+@keyframes ps-drop-item {{ from {{ opacity: 0; transform: translateY(-4px); }} to {{ opacity: 1; transform: none; }} }}
 [data-testid="stTopNavPopoverBody"] {{
   background: color-mix(in srgb, var(--ps-surface-solid) 82%, transparent) !important;
   backdrop-filter: var(--ps-glass); -webkit-backdrop-filter: var(--ps-glass);
@@ -260,7 +266,7 @@ iframe[data-testid="stCustomComponentV1"] {{ width: 100% !important; }}
 [data-testid="stTopNavDropdownLink"]:hover {{ background: var(--ps-primary-soft) !important; color: var(--ps-primary) !important; }}
 [data-testid="stTopNavSection"], [data-testid="stTopNavLink"] {{ transition: background-color .2s ease, color .2s ease; border-radius: 9px; }}
 [data-testid="stTopNavSection"]:hover, [data-testid="stTopNavLink"]:hover {{ background: var(--ps-raised) !important; }}
-@keyframes ps-drop {{ from {{ opacity: 0; transform: translateY(-6px) scale(.98); }} to {{ opacity: 1; transform: none; }} }}
+@keyframes ps-drop {{ from {{ opacity: 0; transform: translateY(-8px) scale(.96); filter: blur(2px); }} to {{ opacity: 1; transform: none; filter: none; }} }}
 
 /* ---------- ilha dinâmica: menu das ferramentas centralizado no topo ---------- */
 [data-testid="stTopNav"] {{
