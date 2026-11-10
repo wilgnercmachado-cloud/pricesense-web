@@ -130,4 +130,91 @@ if admin_on and pagina.url_path != "admin":
 
     _aviso_solicitacoes()
 
+
+@st.fragment(run_every="30s")
+def _notificacoes() -> None:
+    """Pop-up das notificações do usuário (sugestões do comprador, respostas do Pricing...), verificado a cada 30 s."""
+    from core import notificacoes as nt
+    lista = nt.nao_lidas(st.session_state.get("usuario_login", ""))
+    if not lista:
+        return
+    with st.container(key="ps_notif"):
+        n = lista[0]
+        extra = f" (+{len(lista) - 1})" if len(lista) > 1 else ""
+        st.html(f"<div class='ps-aviso'><i class='ps-live'></i><div><b>{ui.esc(n.get('titulo') or 'Notificação')}{extra}</b>"
+                f"<span>{ui.esc(n.get('texto') or '')}</span></div></div>")
+        c1, c2 = st.columns(2)
+        if c1.button("Ok", type="primary", width="stretch", key=f"notif_ok_{n['id']}"):
+            nt.marcar_lidas([n["id"]]); st.rerun(scope="fragment")
+        if len(lista) > 1 and c2.button("Ok para todas", width="stretch", key=f"notif_todas_{n['id']}"):
+            nt.marcar_lidas([x["id"] for x in lista]); st.rerun(scope="fragment")
+
+
+_notificacoes()
+
+
+@st.fragment(run_every="15s")
+def _chat() -> None:
+    """Chat flutuante (canal público por estado e privados), em todas as telas."""
+    from core import chat
+    login = st.session_state.get("usuario_login", "")
+    try:
+        from views.regular import estados_atuacao
+        todos = estados_atuacao()
+    except Exception:
+        todos = []
+    eu = next((u for u in chat.usuarios() if u["usuario"] == login), None)
+    if not eu:
+        return
+    lista = chat.canais(eu, todos)
+    if not lista:
+        return
+    lidos, rec = chat.leituras(login), chat.recentes([c for c, _ in lista])
+    nao = {}
+    for m in rec:
+        if m["autor"] != login and str(m["criado_em"]) > str(lidos.get(m["canal"], "")):
+            nao[m["canal"]] = nao.get(m["canal"], 0) + 1
+    total = sum(nao.values())
+    with st.container(key="ps_chat"):
+        with st.popover(f"{total}" if total else "", icon=":material/forum:", help="Chat da equipe"):
+            st.html("<div class='ps-chat-top'><b>Chat</b><span>Público por estado e conversas privadas. Use @nome para marcar alguém.</span></div>")
+            rotulos = {c: r + (f"  ({nao[c]})" if nao.get(c) else "") for c, r in lista}
+            atual = st.session_state.get("chat_canal")
+            if atual not in rotulos:
+                atual = max(rotulos, key=lambda c: (nao.get(c, 0), c.startswith("uf:")))
+            canal = st.selectbox("Conversa", list(rotulos), index=list(rotulos).index(atual), format_func=lambda c: rotulos[c],
+                                 key="chat_sel", label_visibility="collapsed",
+                                 on_change=lambda: chat.marcar_lido(login, st.session_state.chat_sel))     # abrir a conversa marca como lida
+            st.session_state.chat_canal = canal
+            msgs = chat.mensagens(canal)
+            html = []
+            for m in msgs:
+                meu = m["autor"] == login
+                import datetime as _dt
+                try:
+                    _t = _dt.datetime.fromisoformat(str(m["criado_em"]).replace("Z", "+00:00")).astimezone(_dt.timezone(_dt.timedelta(hours=-3)))
+                except Exception:
+                    _t = None
+                hora = _t.strftime("%H:%M") if _t else str(m["criado_em"])[11:16]
+                texto = ui.esc(m["texto"]).replace("\n", "<br>")
+                import re as _re
+                texto = _re.sub(r"(@[\wÀ-ÿ.\-]+)", r"<b class='ps-mencao'>\1</b>", texto)
+                autor_ = "" if meu else "<i>" + ui.esc(m.get("autor_nome") or m["autor"]) + "</i>"
+                quando = (_t.strftime("%d/%m ") if _t else "") + hora
+                html.append(f"<div class='ps-msg{' eu' if meu else ''}'>{autor_}<p>{texto}</p><small>{quando}</small></div>")
+            with st.container(height=330, key="ps_chat_msgs"):
+                st.html("<div class='ps-msgs'>" + ("".join(html) or "<div class='ps-msg-vazio'>Nenhuma mensagem ainda. Comece a conversa.</div>") + "</div>")
+            with st.form("chat_form", clear_on_submit=True, border=False):
+                c1, c2 = st.columns([5, 1], vertical_alignment="bottom")
+                texto = c1.text_input("Mensagem", placeholder="Escreva... (@nome para marcar)", label_visibility="collapsed")
+                if c2.form_submit_button("", icon=":material/send:", type="primary", width="stretch") and texto.strip():
+                    chat.enviar(canal, eu, texto, todos)
+                    st.rerun(scope="fragment")
+            # a janela do chat é desenhada mesmo fechada: a conversa só conta como lida quando o usuário age nela
+            if nao.get(canal) and st.button(f"Marcar {nao[canal]} mensagem(ns) como lida(s)", key="chat_lido", width="stretch", icon=":material/done_all:"):
+                chat.marcar_lido(login, canal); st.rerun(scope="fragment")
+
+
+_chat()
+
 pagina.run()
