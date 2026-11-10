@@ -8,6 +8,14 @@ from pathlib import Path
 
 import streamlit as st
 
+
+def _rerun_fragmento() -> None:
+    """Rerun só do fragmento; se o clique chegou numa execução completa da página, faz o rerun normal (sem erro)."""
+    try:
+        st.rerun(scope="fragment")
+    except st.errors.StreamlitAPIException:
+        st.rerun()
+
 st.set_page_config(page_title="PriceSense", page_icon=":material/sell:", layout="wide", initial_sidebar_state="collapsed")
 
 from core import auth, db, presenca, state  # noqa: E402
@@ -126,7 +134,7 @@ if admin_on and pagina.url_path != "admin":
                 st.switch_page(p["admin"])
             if c2.button("Depois", width="stretch", key="aviso_depois"):
                 st.session_state._aviso_dispensado = len(fila)
-                st.rerun(scope="fragment")
+                _rerun_fragmento()
 
     _aviso_solicitacoes()
 
@@ -145,9 +153,9 @@ def _notificacoes() -> None:
                 f"<span>{ui.esc(n.get('texto') or '')}</span></div></div>")
         c1, c2 = st.columns(2)
         if c1.button("Ok", type="primary", width="stretch", key=f"notif_ok_{n['id']}"):
-            nt.marcar_lidas([n["id"]]); st.rerun(scope="fragment")
+            nt.marcar_lidas([n["id"]]); _rerun_fragmento()
         if len(lista) > 1 and c2.button("Ok para todas", width="stretch", key=f"notif_todas_{n['id']}"):
-            nt.marcar_lidas([x["id"] for x in lista]); st.rerun(scope="fragment")
+            nt.marcar_lidas([x["id"] for x in lista]); _rerun_fragmento()
 
 
 _notificacoes()
@@ -246,7 +254,7 @@ def _chat() -> None:
                         if anexo is not None and anexo.size > 8 * 1024 * 1024:
                             raise ValueError("o print passa de 8 MB")
                         chat.enviar(canal, eu, texto, todos, anexo.getvalue() if anexo is not None else None)
-                        st.rerun(scope="fragment")
+                        _rerun_fragmento()
                     except Exception as exc:
                         st.session_state.chat_erro = str(exc)[:300]
             if st.session_state.get("chat_erro"):
@@ -254,10 +262,10 @@ def _chat() -> None:
                          "(blocos 16 e 16b do supabase/migrations.sql).", icon=":material/error:")
                 st.caption(f"Detalhe técnico: {st.session_state.chat_erro}")
                 if st.button("Fechar aviso", key="chat_erro_ok"):
-                    st.session_state.pop("chat_erro", None); st.rerun(scope="fragment")
+                    st.session_state.pop("chat_erro", None); _rerun_fragmento()
             # a janela do chat é desenhada mesmo fechada: a conversa só conta como lida quando o usuário age nela
             if nao.get(canal) and st.button(f"Marcar {nao[canal]} mensagem(ns) como lida(s)", key="chat_lido", width="stretch", icon=":material/done_all:"):
-                chat.marcar_lido(login, canal); st.rerun(scope="fragment")
+                chat.marcar_lido(login, canal); _rerun_fragmento()
 
 _chat()
 
