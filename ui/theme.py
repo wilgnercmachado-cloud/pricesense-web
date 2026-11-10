@@ -211,13 +211,28 @@ iframe[data-testid="stCustomComponentV1"] {{ width: 100% !important; }}
 .ps-msg.eu .ps-baixar {{ color: #fff !important; opacity: .9; }}
 .ps-chat-ic span {{ font-family: "Material Symbols Rounded"; font-size: 20px; line-height: 1; color: #fff; font-weight: 400; }}
 [data-testid="stPopoverBody"]:has(.ps-chat-hd) [data-testid="InputInstructions"] {{ display: none !important; }}
+.st-key-ps_chat_msgs {{ gap: 6px !important; }}
+.st-key-ps_chat_msgs [data-testid="stElementContainer"]:has([data-testid="stDownloadButton"]) {{ margin-top: -4px; }}
+.st-key-ps_chat_msgs [data-testid="stDownloadButton"] button {{ min-height: 0 !important; height: 26px; padding: 0 8px !important; font-size: 11.5px !important;
+  color: var(--ps-primary) !important; border-radius: 8px !important; }}
+.st-key-ps_chat_msgs [data-testid="stDownloadButton"] button:hover {{ background: var(--ps-primary-soft) !important; }}
+.ps-arq {{ display: flex; align-items: center; gap: 8px; margin: 4px 0 2px; padding: 6px 8px; border-radius: 10px; background: color-mix(in srgb, var(--ps-ink) 6%, transparent); }}
+.ps-msg.eu .ps-arq {{ background: rgba(255,255,255,.16); }}
+.ps-arq i {{ width: 30px; height: 30px; flex: none; border-radius: 8px; display: grid; place-items: center; font: 700 9px var(--ps-mono); font-style: normal; color: #fff;
+  background: linear-gradient(135deg, #0EA5A4, #2D4BFF); }}
+.ps-arq span {{ min-width: 0; display: flex; flex-direction: column; }}
+.ps-arq b {{ font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ps-ink); }}
+.ps-arq small {{ text-align: left !important; }}
+.ps-msg.eu .ps-arq b {{ color: #fff; }}
+.ps-pend {{ display: flex; flex-wrap: wrap; gap: 5px; }}
+.ps-pend span {{ font-size: 11px; padding: 3px 8px; border-radius: 999px; background: var(--ps-primary-soft); color: var(--ps-primary); }}
 .ps-msg-vazio {{ display: flex; flex-direction: column; gap: 4px; align-items: center; color: var(--ps-faint); font-size: 12px; text-align: center; padding: 70px 20px; }}
 .ps-msg-vazio b {{ color: var(--ps-muted); font-size: 13px; }}
 /* barra de envio: anexar print compacto + campo + enviar */
 .st-key-chat_anexo [data-testid="stFileUploaderDropzone"] {{ padding: 6px 10px !important; min-height: 0 !important; border-radius: 12px !important;
   border: 1px dashed color-mix(in srgb, var(--ps-primary) 35%, var(--ps-line)) !important; background: transparent !important; }}
 .st-key-chat_anexo [data-testid="stFileUploaderDropzoneInstructions"] {{ display: none !important; }}
-.st-key-chat_anexo [data-testid="stFileUploaderDropzone"]::before {{ content: "Anexar print (PNG ou JPG)"; font-size: 12px; color: var(--ps-muted); margin-right: auto; align-self: center; }}
+.st-key-chat_anexo [data-testid="stFileUploaderDropzone"]::before {{ content: "Anexar arquivos: imagem, texto, Excel, CSV, ZIP ou PDF"; font-size: 12px; color: var(--ps-muted); margin-right: auto; align-self: center; }}
 [data-testid="stPopoverBody"]:has(.ps-chat-hd) [data-testid="stTextInputRootElement"] {{ border-radius: 999px !important; }}
 [data-testid="stPopoverBody"]:has(.ps-chat-hd) [data-testid="stFormSubmitButton"] button {{ border-radius: 999px !important; background: linear-gradient(135deg, var(--ps-primary), #7A3FD1) !important; border: 0 !important; }}
 .st-key-ps_notif {{ position: fixed !important; right: 22px; bottom: 150px; z-index: 1000001; width: 340px !important; padding: 12px 14px; border-radius: 16px; background: var(--ps-surface-solid); border: 1px solid var(--ps-line); box-shadow: 0 18px 48px -18px rgba(15,23,42,.5); animation: ps-entra .35s ease-out; }}

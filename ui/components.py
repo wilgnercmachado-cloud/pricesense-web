@@ -501,3 +501,9 @@ if (dl) dl.onclick = async () => {{
   }} catch (err) {{ dl.disabled = false; s.textContent = 'Falha no download'; setTimeout(() => s.textContent = o, 2500); }}
 }};
 </script></body></html>""", height=46, width=largura)
+
+
+# campo de colar (Ctrl+V) e arrastar arquivos do chat
+from pathlib import Path as _Path
+import streamlit.components.v1 as _cv1
+CHAT_COLAR = _cv1.declare_component("chat_colar", path=str(_Path(__file__).resolve().parent / "colar_comp"))
