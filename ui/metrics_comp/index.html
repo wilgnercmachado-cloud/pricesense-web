@@ -1608,7 +1608,8 @@ async function montar(A){
   /* a PriceMetrics ocupa a janela inteira abaixo do topo: a grade rola por dentro e o menu lateral fica sempre à vista */
   let ALT = A.altura || 1200;
   const medirAltura = () => { try { const fe = window.frameElement, pw = window.parent; const main = pw.document.querySelector('[data-testid="stMain"]');
-      const topo = fe.getBoundingClientRect().top + (main ? main.scrollTop : 0); return Math.max(620, Math.round(pw.innerHeight - topo - 10)); } catch (e) { return A.altura || 1200; } };
+      const z = parseFloat(pw.getComputedStyle(pw.document.documentElement).zoom) || 1;      // zoom do site (abre em 80%)
+      const topo = fe.getBoundingClientRect().top + (main ? main.scrollTop * z : 0); return Math.max(560, Math.round((pw.innerHeight - topo - 10) / z)); } catch (e) { return A.altura || 1200; } };
   const ajustarAltura = () => { if (document.fullscreenElement) return; ALT = medirAltura(); document.getElementById('root').style.height = ALT + 'px'; ST.altura(ALT); };
   ajustarAltura(); try { on(window.parent, 'resize', () => { ajustarAltura(); }); } catch (e) {}
   document.getElementById('root').innerHTML = MARCACAO;
@@ -2763,7 +2764,8 @@ async function montar(A){
   const $ = id => document.getElementById(id);
   let ALT = A.altura || 900;
   const medir = () => { try { const fe = window.frameElement, pw = window.parent, main = pw.document.querySelector('[data-testid="stMain"]');
-    return Math.max(640, Math.round(pw.innerHeight - fe.getBoundingClientRect().top - (main ? main.scrollTop : 0) - 10)); } catch (e) { return ALT; } };
+    const z = parseFloat(pw.getComputedStyle(pw.document.documentElement).zoom) || 1;
+    return Math.max(640, Math.round((pw.innerHeight - fe.getBoundingClientRect().top - 10) / z)); } catch (e) { return ALT; } };
   const ajustar = () => { ALT = medir(); $('root').style.height = ALT + 'px'; ST.altura(ALT); };
   ajustar(); try { on(window.parent, 'resize', ajustar); } catch (e) {}
 
@@ -2949,7 +2951,8 @@ async function montar(A){
   const $ = id => document.getElementById(id);
   let ALT = A.altura || 900;
   const medir = () => { try { const fe = window.frameElement, pw = window.parent, main = pw.document.querySelector('[data-testid="stMain"]');
-    return Math.max(660, Math.round(pw.innerHeight - fe.getBoundingClientRect().top - (main ? main.scrollTop : 0) - 10)); } catch (e) { return ALT; } };
+    const z = parseFloat(pw.getComputedStyle(pw.document.documentElement).zoom) || 1;
+    return Math.max(660, Math.round((pw.innerHeight - fe.getBoundingClientRect().top - 10) / z)); } catch (e) { return ALT; } };
   const ajustar = () => { ALT = medir(); $('root').style.height = ALT + 'px'; ST.altura(ALT); };
   ajustar(); try { on(window.parent, 'resize', ajustar); } catch (e) {}
   const P_ = { check: '<path d="m5 12 5 5 9-10"/>', x: '<path d="M6 6l12 12M18 6 6 18"/>', undo: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
@@ -3237,7 +3240,8 @@ async function montar(A){
   const $ = id => document.getElementById(id);
   let ALT = A.altura || 900;
   const medirAltura = () => { try { const fe = window.frameElement, pw = window.parent, main = pw.document.querySelector('[data-testid="stMain"]');
-    return Math.max(620, Math.round(pw.innerHeight - fe.getBoundingClientRect().top - (main ? main.scrollTop : 0) - 10)); } catch (e) { return ALT; } };
+    const z = parseFloat(pw.getComputedStyle(pw.document.documentElement).zoom) || 1;
+    return Math.max(620, Math.round((pw.innerHeight - fe.getBoundingClientRect().top - 10) / z)); } catch (e) { return ALT; } };
   const ajustar = () => { if (document.fullscreenElement) return; ALT = medirAltura(); $('root').style.height = ALT + 'px'; ST.altura(ALT); };
   ajustar(); try { on(window.parent, 'resize', ajustar); } catch (e) {}
   const bin = atob(A.dados), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
