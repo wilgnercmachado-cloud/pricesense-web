@@ -120,3 +120,34 @@ def expirar_antigas() -> int:
         nt.enviar([s["usuario"]], "sugestao_expirada", "Sugestão expirada sem retorno",
                   f"Sua sugestão de {brl(s['varejo'])} para {s.get('produto_nome')} em {s.get('filial_nome')} ({s['dia']}) expirou sem retorno. {aplic}")
     return len(velhas)
+
+
+def criar_lote(itens: list[dict], usuario: str) -> int:
+    """Mesma sugestão para várias filiais de um produto (visão em cascata): uma linha por filial e um só aviso por analista."""
+    if not itens:
+        return 0
+    base = itens[0]
+    if base.get("motivo") not in MOTIVOS:
+        raise ValueError("Escolha o motivo da sugestão.")
+    if base["motivo"] == "Outros" and not str(base.get("observacao") or "").strip():
+        raise ValueError("Em \"Outros\", descreva o motivo na observação.")
+    dia, agora = hoje(), dt.datetime.now(dt.timezone.utc).isoformat()
+    linhas = []
+    for reg in itens:
+        linha = {"id": str(uuid.uuid4()), "dia": dia, "status": "pendente", "usuario": usuario, "criado_em": agora,
+                 **{k: reg.get(k) for k in ("filial", "produto", "estado", "varejo", "atacado", "motivo", "observacao", "fora_parametros",
+                                            "produto_nome", "filial_nome", "preco_vencedor", "novo_sugerido")}}
+        db.sb().table(TABELA).update({"status": "substituida"}).eq("dia", dia).eq("filial", linha["filial"]).eq("produto", linha["produto"]) \
+            .eq("status", "pendente").execute()
+        linhas.append(linha)
+    for k in range(0, len(linhas), 500):
+        db.sb().table(TABELA).insert(linhas[k:k + 500]).execute()
+    do_dia.clear()
+    por_estado: dict[str, list[dict]] = {}
+    for x in linhas:
+        por_estado.setdefault(str(x.get("estado") or ""), []).append(x)
+    for est, lst in por_estado.items():
+        nt.enviar(_analistas(est), "sugestao", "Nova sugestão do comprador",
+                  f"{usuario} sugeriu {brl(base['varejo'])} (atacado {brl(base['atacado'])}) para {base.get('produto_nome')} em "
+                  f"{len(lst)} filial(is): {base['motivo']}{' - ' + base['observacao'] if base.get('observacao') else ''}.")
+    return len(linhas)

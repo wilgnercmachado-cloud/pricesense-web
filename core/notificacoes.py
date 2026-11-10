@@ -28,3 +28,11 @@ def nao_lidas(usuario: str, limite: int = 6) -> list[dict]:
 def marcar_lidas(ids: list[str]) -> None:
     for i in ids:
         db.sb().table(TABELA).update({"lida": True}).eq("id", i).execute()
+
+
+def recentes(usuario: str, limite: int = 40) -> list[dict]:
+    """Últimas notificações (lidas e não lidas) para o sininho."""
+    try:
+        return (db.sb().table(TABELA).select("*").eq("usuario", usuario).order("criado_em", desc=True).limit(limite).execute().data or [])
+    except Exception:
+        return []
