@@ -153,17 +153,67 @@ html, body, .stApp, button, input, textarea, select, [data-testid="stMarkdownCon
   border: 0 !important; box-shadow: 0 14px 34px -12px var(--ps-primary); transition: transform .2s; }}
 .st-key-ps_chat [data-testid="stPopoverButton"]:hover {{ transform: translateY(-2px) scale(1.04); }}
 .st-key-ps_chat [data-testid="stPopoverButton"], .st-key-ps_chat [data-testid="stPopoverButton"] * {{ color: #fff !important; font-weight: 700; }}
-[data-testid="stPopoverBody"]:has(.ps-chat-top) {{ width: 420px !important; max-width: 92vw; }}
-.ps-chat-top b {{ display: block; font-size: 15px; }} .ps-chat-top span {{ font-size: 11.5px; color: var(--ps-muted); }}
-.ps-msgs {{ display: flex; flex-direction: column; gap: 6px; }}
-.ps-msg {{ max-width: 82%; align-self: flex-start; background: var(--ps-raised); border-radius: 12px 12px 12px 4px; padding: 6px 10px; }}
-.ps-msg.eu {{ align-self: flex-end; background: var(--ps-primary); border-radius: 12px 12px 4px 12px; }}
-.ps-msg.eu p, .ps-msg.eu small {{ color: #fff !important; }}
-.ps-msg i {{ font-style: normal; font-size: 11px; font-weight: 700; color: var(--ps-primary); }}
-.ps-msg p {{ margin: 2px 0; font-size: 13px; line-height: 1.4; color: var(--ps-ink); white-space: pre-wrap; word-break: break-word; }}
-.ps-msg small {{ font-size: 10px; color: var(--ps-faint); }}
-.ps-mencao {{ color: #7A3FD1; }} .ps-msg.eu .ps-mencao {{ color: #fff; text-decoration: underline; }}
-.ps-msg-vazio {{ color: var(--ps-faint); font-size: 12.5px; text-align: center; padding: 30px 0; }}
+/* ---------- chat: painel de vidro, mensagens com avatar, prints com zoom ---------- */
+[data-testid="stPopoverBody"]:has(.ps-chat-hd) {{ width: 440px !important; max-width: 94vw; padding: 0 !important; overflow: hidden;
+  background: radial-gradient(120% 60% at 0% 0%, color-mix(in srgb, var(--ps-primary) 14%, transparent), transparent 60%),
+              radial-gradient(90% 50% at 100% 100%, color-mix(in srgb, #7A3FD1 12%, transparent), transparent 60%), var(--ps-surface-solid) !important;
+  border: 1px solid color-mix(in srgb, var(--ps-primary) 25%, var(--ps-line)) !important; border-radius: 22px !important;
+  box-shadow: 0 30px 80px -30px rgba(15,23,42,.6), 0 0 0 1px rgba(255,255,255,.04) inset !important; }}
+[data-testid="stPopoverBody"]:has(.ps-chat-hd) > div {{ padding: 0 14px 12px !important; }}
+.ps-chat-hd {{ display: flex; align-items: center; gap: 10px; margin: 0 -14px 8px; padding: 14px 16px 12px;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--ps-primary) 18%, transparent), transparent 70%);
+  border-bottom: 1px solid var(--ps-line); }}
+.ps-chat-ic {{ width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; flex: none;
+  background: linear-gradient(135deg, var(--ps-primary), #7A3FD1); box-shadow: 0 10px 24px -10px var(--ps-primary); }}
+.ps-chat-tt {{ flex: 1; min-width: 0; }} .ps-chat-tt b {{ display: block; font-size: 15px; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+.ps-chat-tt span {{ display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ps-muted); }}
+.ps-chat-tt .ps-live {{ width: 7px; height: 7px; border-radius: 50%; background: var(--ps-up); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ps-up) 25%, transparent); }}
+.ps-chat-av {{ display: flex; }} .ps-chat-av i {{ width: 26px; height: 26px; margin-left: -7px; border-radius: 50%; display: grid; place-items: center;
+  font: 700 10px var(--ps-font); font-style: normal; color: #fff; border: 2px solid var(--ps-surface-solid); }}
+.st-key-ps_chat_msgs {{ border: 1px solid var(--ps-line) !important; border-radius: 16px !important;
+  background: linear-gradient(var(--ps-line) 1px, transparent 1px) 0 0 / 22px 22px, linear-gradient(90deg, var(--ps-line) 1px, transparent 1px) 0 0 / 22px 22px,
+              color-mix(in srgb, var(--ps-canvas) 70%, transparent) !important; background-blend-mode: soft-light; }}
+.ps-msgs {{ display: flex; flex-direction: column; gap: 8px; padding: 4px 2px; }}
+.ps-dia {{ display: flex; justify-content: center; margin: 6px 0 2px; }}
+.ps-dia span {{ font: 600 10px var(--ps-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ps-muted);
+  background: var(--ps-surface-solid); border: 1px solid var(--ps-line); border-radius: 999px; padding: 3px 10px; }}
+.ps-linha {{ display: flex; align-items: flex-end; gap: 7px; }} .ps-linha.eu {{ justify-content: flex-end; }}
+.ps-ava {{ width: 28px; height: 28px; flex: none; border-radius: 50%; display: grid; place-items: center; font: 700 10.5px var(--ps-font); font-style: normal; color: #fff;
+  box-shadow: 0 6px 14px -8px rgba(0,0,0,.5); }}
+.ps-msg {{ max-width: 78%; background: var(--ps-surface-solid); border: 1px solid var(--ps-line); border-radius: 14px 14px 14px 4px; padding: 7px 11px 5px;
+  box-shadow: 0 8px 20px -16px rgba(15,23,42,.5); animation: ps-msg-in .25s ease-out; }}
+.ps-msg.eu {{ background: linear-gradient(135deg, var(--ps-primary), #5B3FE0); border-color: transparent; border-radius: 14px 14px 4px 14px;
+  box-shadow: 0 10px 24px -14px var(--ps-primary); }}
+@keyframes ps-msg-in {{ from {{ opacity: 0; transform: translateY(4px); }} to {{ opacity: 1; transform: none; }} }}
+.ps-msg em {{ display: block; font-style: normal; font-size: 11px; font-weight: 700; color: var(--ps-primary); margin-bottom: 1px; }}
+.ps-msg p {{ margin: 1px 0; font-size: 13px; line-height: 1.45; color: var(--ps-ink); white-space: pre-wrap; word-break: break-word; }}
+.ps-msg small {{ display: block; text-align: right; font: 500 9.5px var(--ps-mono); color: var(--ps-faint); margin-top: 1px; }}
+.ps-msg.eu p, .ps-msg.eu small {{ color: #fff !important; }} .ps-msg.eu small {{ opacity: .75; }}
+.ps-mencao {{ color: #7A3FD1; background: color-mix(in srgb, #7A3FD1 12%, transparent); border-radius: 5px; padding: 0 3px; }}
+.ps-msg.eu .ps-mencao {{ color: #fff; background: rgba(255,255,255,.18); }}
+.ps-anexo {{ margin: 4px 0 3px; }}
+.ps-anexo summary {{ list-style: none; position: relative; display: block; border-radius: 10px; overflow: hidden; border: 1px solid var(--ps-line); cursor: zoom-in; }}
+.ps-anexo summary::-webkit-details-marker {{ display: none; }}
+.ps-anexo summary img {{ display: block; width: 100%; max-height: 190px; object-fit: cover; transition: max-height .35s ease, transform .25s; }}
+.ps-anexo:not([open]) summary:hover img {{ transform: scale(1.03); }}
+.ps-zoom {{ position: absolute; right: 8px; bottom: 8px; font: 600 10px var(--ps-mono); letter-spacing: .06em; text-transform: uppercase; color: #fff;
+  background: rgba(10,14,25,.6); backdrop-filter: blur(4px); padding: 3px 8px; border-radius: 999px; }}
+.ps-anexo[open] summary {{ cursor: zoom-out; }} .ps-anexo[open] summary img {{ max-height: 70vh; object-fit: contain; background: #0b1020; }}
+.ps-anexo[open] .ps-zoom::after {{ content: " / fechar"; }}
+.ps-linha:has(.ps-anexo[open]) .ps-msg {{ max-width: 100%; }}
+.ps-baixar {{ display: inline-block; margin-top: 5px; font-size: 11px; font-weight: 600; color: var(--ps-primary) !important; }}
+.ps-msg.eu .ps-baixar {{ color: #fff !important; opacity: .9; }}
+.ps-chat-ic span {{ font-family: "Material Symbols Rounded"; font-size: 20px; line-height: 1; color: #fff; font-weight: 400; }}
+[data-testid="stPopoverBody"]:has(.ps-chat-hd) [data-testid="InputInstructions"] {{ display: none !important; }}
+.ps-msg-vazio {{ display: flex; flex-direction: column; gap: 4px; align-items: center; color: var(--ps-faint); font-size: 12px; text-align: center; padding: 70px 20px; }}
+.ps-msg-vazio b {{ color: var(--ps-muted); font-size: 13px; }}
+/* barra de envio: anexar print compacto + campo + enviar */
+.st-key-chat_anexo [data-testid="stFileUploaderDropzone"] {{ padding: 6px 10px !important; min-height: 0 !important; border-radius: 12px !important;
+  border: 1px dashed color-mix(in srgb, var(--ps-primary) 35%, var(--ps-line)) !important; background: transparent !important; }}
+.st-key-chat_anexo [data-testid="stFileUploaderDropzoneInstructions"] {{ display: none !important; }}
+.st-key-chat_anexo [data-testid="stFileUploaderDropzone"]::before {{ content: "Anexar print (PNG ou JPG)"; font-size: 12px; color: var(--ps-muted); margin-right: auto; align-self: center; }}
+[data-testid="stPopoverBody"]:has(.ps-chat-hd) [data-testid="stTextInputRootElement"] {{ border-radius: 999px !important; }}
+[data-testid="stPopoverBody"]:has(.ps-chat-hd) [data-testid="stFormSubmitButton"] button {{ border-radius: 999px !important; background: linear-gradient(135deg, var(--ps-primary), #7A3FD1) !important; border: 0 !important; }}
 .st-key-ps_notif {{ position: fixed !important; right: 22px; bottom: 150px; z-index: 1000001; width: 340px !important; padding: 12px 14px; border-radius: 16px; background: var(--ps-surface-solid); border: 1px solid var(--ps-line); box-shadow: 0 18px 48px -18px rgba(15,23,42,.5); animation: ps-entra .35s ease-out; }}
 .st-key-ps_notif .ps-aviso span {{ white-space: normal; line-height: 1.4; }}
 .st-key-ps_aviso {{
