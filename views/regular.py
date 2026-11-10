@@ -493,7 +493,7 @@ def _abrir_backup(caminho: str, versao: str) -> dict:
 def render() -> None:
     st.html("<style>[data-testid='stMainBlockContainer']{max-width:none !important;padding:4.1rem 1rem 0 1rem !important}"
             # filtros e regras ficam na barra do topo, ao lado dos botões de tela cheia e tema
-            ".st-key-reg_topo{position:fixed !important;top:11px;right:122px;z-index:1000002;width:auto !important;gap:6px}"
+            ".st-key-reg_topo{position:fixed !important;top:11px;right:168px;z-index:1000002;width:auto !important;gap:6px}"
             ".st-key-reg_topo [data-testid='stPopover'] > div > button,.st-key-reg_topo [data-testid='stPopover'] button{height:38px;min-height:38px;"
             "border-radius:19px;padding:0 12px;background:var(--ps-surface);border:1px solid var(--ps-line)}"
             "[data-testid='stMainBlockContainer'] [data-testid='stVerticalBlock']{gap:.4rem}</style>")
@@ -587,11 +587,14 @@ def render() -> None:
                     motivos_sugestao=sg.MOTIVOS, tokens=_tokens_css(), fonte=theme.FONTE_URL, visao=st.session_state.reg_visao,
                     altura=900, info=info, usuario=usuario, base=base_id, atualizado=_data_base(rel, meta), backups=backups, historico=historico, estado=estado,
                     key="mesa_regular", default=None)
-    if isinstance(retorno, dict) and retorno.get("ts") != st.session_state.get("_reg_ts") and retorno.get("acao") in ("sugerir", "aceitar_sug", "rejeitar_sug", "aplicados"):
+    if isinstance(retorno, dict) and retorno.get("ts") != st.session_state.get("_reg_ts") and retorno.get("acao") in ("sugerir", "sugerir_lote", "aceitar_sug", "rejeitar_sug", "aplicados"):
         st.session_state._reg_ts = retorno.get("ts")
         try:
             a_ = retorno["acao"]
-            if a_ == "sugerir":
+            if a_ == "sugerir_lote":
+                n_ = sg.criar_lote(retorno.get("itens") or [], usuario)
+                st.toast(f"Sugestão enviada ao Pricing para {n_} filial(is).", icon=":material/send:")
+            elif a_ == "sugerir":
                 sg.criar(retorno, usuario)
                 st.toast("Sugestão enviada ao Pricing do estado.", icon=":material/send:")
             elif a_ == "aceitar_sug":

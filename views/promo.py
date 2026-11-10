@@ -172,7 +172,7 @@ def _vazio():
 
 def render() -> None:
     st.html("<style>[data-testid='stMainBlockContainer']{max-width:none !important;padding:4.1rem 1rem 0 1rem !important}"
-            ".st-key-promo_topo{position:fixed !important;top:11px;right:122px;z-index:1000002;width:auto !important;gap:6px}"
+            ".st-key-promo_topo{position:fixed !important;top:11px;right:168px;z-index:1000002;width:auto !important;gap:6px}"
             ".st-key-promo_topo [data-testid='stPopover'] button{height:38px;min-height:38px;border-radius:19px;padding:0 12px;"
             "background:var(--ps-surface);border:1px solid var(--ps-line)}"
             "[data-testid='stMainBlockContainer'] [data-testid='stVerticalBlock']{gap:.4rem}</style>")
