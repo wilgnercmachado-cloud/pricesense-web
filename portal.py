@@ -139,24 +139,52 @@ if admin_on and pagina.url_path != "admin":
     _aviso_solicitacoes()
 
 
-@st.fragment(run_every="30s")
+@st.fragment(run_every="20s")
 def _notificacoes() -> None:
-    """Pop-up das notificações do usuário (sugestões do comprador, respostas do Pricing...), verificado a cada 30 s."""
+    """Notificações: pop-up que some sozinho em ~7 s e sininho no topo com o histórico (sugestões, respostas do Pricing, chat)."""
+    import datetime as _dt
     from core import notificacoes as nt
-    lista = nt.nao_lidas(st.session_state.get("usuario_login", ""))
-    if not lista:
-        return
-    with st.container(key="ps_notif"):
-        n = lista[0]
-        extra = f" (+{len(lista) - 1})" if len(lista) > 1 else ""
-        st.html(f"<div class='ps-aviso'><i class='ps-live'></i><div><b>{ui.esc(n.get('titulo') or 'Notificação')}{extra}</b>"
-                f"<span>{ui.esc(n.get('texto') or '')}</span></div></div>")
-        c1, c2 = st.columns(2)
-        if c1.button("Ok", type="primary", width="stretch", key=f"notif_ok_{n['id']}"):
-            nt.marcar_lidas([n["id"]]); _rerun_fragmento()
-        if len(lista) > 1 and c2.button("Ok para todas", width="stretch", key=f"notif_todas_{n['id']}"):
-            nt.marcar_lidas([x["id"] for x in lista]); _rerun_fragmento()
+    login = st.session_state.get("usuario_login", "")
+    lista = nt.recentes(login)
+    import time as _time
+    vistas = st.session_state.get("notif_vistas")
+    if not isinstance(vistas, dict):
+        vistas = st.session_state["notif_vistas"] = {}
+    agora_ = _time.time()
+    # mostra as não lidas que ainda não apareceram, ou que apareceram há menos de 7 s (a página pode ter sido redesenhada nesse meio tempo)
+    novas = [n for n in lista if not n.get("lida") and (n["id"] not in vistas or agora_ - vistas[n["id"]] < 7)]
+    nao_lidas = sum(1 for n in lista if not n.get("lida"))
+    fuso = _dt.timezone(_dt.timedelta(hours=-3))
 
+    def quando(n):
+        try:
+            t = _dt.datetime.fromisoformat(str(n["criado_em"]).replace("Z", "+00:00")).astimezone(fuso)
+        except Exception:
+            return ""
+        return t.strftime("%d/%m %H:%M")
+
+    # pop-up: aparece, fica ~6 s e some gradualmente; continua guardado no sininho
+    if novas:
+        atraso = lambda n, k: k * .12 - (agora_ - vistas[n["id"]] if n["id"] in vistas else 0)     # continua a animação de onde parou
+        cards = "".join(f"<div class='ps-pop' style='animation-delay:{atraso(n, k):.2f}s'><i class='ps-live'></i><div><b>{ui.esc(n.get('titulo') or 'Notificação')}</b>"
+                        f"<span>{ui.esc(n.get('texto') or '')}</span></div></div>" for k, n in enumerate(novas[:3]))
+        extra = f"<div class='ps-pop ps-pop-mais' style='animation-delay:.36s'>+{len(novas) - 3} no sininho</div>" if len(novas) > 3 else ""
+        st.html(f"<div class='ps-pops'>{cards}{extra}</div>")
+        for n in novas:
+            vistas.setdefault(n["id"], agora_)
+    # sininho no topo, com contador de não lidas
+    with st.container(key="ps_sino"):
+        with st.popover(f"{nao_lidas}" if nao_lidas else "", icon=":material/notifications:", help="Notificações"):
+            st.html("<div class='ps-sino-top'><b>Notificações</b><span>Sugestões do comprador, respostas do Pricing e mensagens do chat.</span></div>")
+            if not lista:
+                st.caption("Nenhuma notificação ainda.")
+            else:
+                st.html("<div class='ps-sino-lista'>" + "".join(
+                    f"<div class='ps-sino-it{'' if n.get('lida') else ' nova'}'><b>{ui.esc(n.get('titulo') or '')}</b><span>{ui.esc(n.get('texto') or '')}</span>"
+                    f"<small>{quando(n)}</small></div>" for n in lista) + "</div>")
+                if nao_lidas and st.button(f"Marcar {nao_lidas} como lida(s)", key="sino_lidas", width="stretch", icon=":material/done_all:"):
+                    nt.marcar_lidas([n["id"] for n in lista if not n.get("lida")])
+                    _rerun_fragmento()
 
 _notificacoes()
 
