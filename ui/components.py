@@ -387,7 +387,9 @@ const d = window.parent.document, w = window.parent;
       const r = el.getBoundingClientRect(); if (r.width > 0 && r.top < 70) dir = Math.min(dir, r.left); });
     const maximo = Math.max(240, 2 * Math.min(meio - esq, dir - meio) - 40);
     alvo = Math.min(alvo, maximo);
-    if (Math.abs((parseFloat(nav.style.width) || 0) - alvo) > 1) { nav.style.setProperty('width', alvo + 'px', 'important'); nav.style.setProperty('max-width', maximo + 'px', 'important'); }
+    const z = parseFloat(w.getComputedStyle(d.documentElement).zoom) || 1;     /* medidas na tela; a largura é aplicada antes do zoom do site */
+    alvo = Math.round(alvo / z); const maxCss = Math.round(maximo / z);
+    if (Math.abs((parseFloat(nav.style.width) || 0) - alvo) > 1) { nav.style.setProperty('width', alvo + 'px', 'important'); nav.style.setProperty('max-width', maxCss + 'px', 'important'); }
     nav.dataset.ilha = '1'; };
   /* o selo "Atualizado" nunca encosta na ilha: encolhe (só a data) e, se ainda faltar espaço, sai do topo */
   const ajustaSelo = () => { const nav = d.querySelector('[data-testid="stTopNav"]'), selo = d.querySelector('.ps-atualizado'); if (!nav || !selo) return;

@@ -91,6 +91,9 @@ def _css(t: dict) -> str:
 
 /* ---------- base e fundo ---------- */
 html, body, .stApp, button, input, textarea, select, [data-testid="stMarkdownContainer"] {{ font-family: var(--ps-font); }}
+html {{ zoom: var(--ps-zoom, .8); }}
+iframe[data-testid="stCustomComponentV1"] {{ width: 100% !important; }}
+[data-testid="stMain"] {{ height: calc(100vh / var(--ps-zoom, .8)) !important; max-height: calc(100vh / var(--ps-zoom, .8)) !important; }}   /* área rolável ocupa a tela inteira mesmo com o zoom */   /* com o zoom do site, o Streamlit mede a largura das telas HTML a menos */   /* o site abre em 80% em qualquer máquina; o zoom do navegador continua funcionando por cima */
 [data-testid="stIconMaterial"], .ms {{ font-family: 'Material Symbols Rounded' !important; font-weight: 400; }}
 .stApp {{
   color: var(--ps-ink);
@@ -154,7 +157,8 @@ html, body, .stApp, button, input, textarea, select, [data-testid="stMarkdownCon
 .st-key-ps_chat [data-testid="stPopoverButton"]:hover {{ transform: translateY(-2px) scale(1.04); }}
 .st-key-ps_chat [data-testid="stPopoverButton"], .st-key-ps_chat [data-testid="stPopoverButton"] * {{ color: #fff !important; font-weight: 700; }}
 /* ---------- chat: painel de vidro, mensagens com avatar, prints com zoom ---------- */
-[data-testid="stPopoverBody"]:has(.ps-chat-hd) {{ width: 440px !important; max-width: 94vw; padding: 0 !important; overflow: hidden;
+[data-testid="stPopoverBody"]:has(.ps-chat-hd) {{ width: 440px !important; max-width: 94vw; padding: 0 !important; overflow-x: hidden; overflow-y: auto;
+  max-height: calc(100vh / var(--ps-zoom, .8) - 130px) !important;
   background: radial-gradient(120% 60% at 0% 0%, color-mix(in srgb, var(--ps-primary) 14%, transparent), transparent 60%),
               radial-gradient(90% 50% at 100% 100%, color-mix(in srgb, #7A3FD1 12%, transparent), transparent 60%), var(--ps-surface-solid) !important;
   border: 1px solid color-mix(in srgb, var(--ps-primary) 25%, var(--ps-line)) !important; border-radius: 22px !important;
@@ -170,7 +174,9 @@ html, body, .stApp, button, input, textarea, select, [data-testid="stMarkdownCon
 .ps-chat-tt .ps-live {{ width: 7px; height: 7px; border-radius: 50%; background: var(--ps-up); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ps-up) 25%, transparent); }}
 .ps-chat-av {{ display: flex; }} .ps-chat-av i {{ width: 26px; height: 26px; margin-left: -7px; border-radius: 50%; display: grid; place-items: center;
   font: 700 10px var(--ps-font); font-style: normal; color: #fff; border: 2px solid var(--ps-surface-solid); }}
-.st-key-ps_chat_msgs {{ border: 1px solid var(--ps-line) !important; border-radius: 16px !important;
+[data-testid="stLayoutWrapper"]:has(> .st-key-ps_chat_msgs) {{ height: auto !important; flex: 0 0 auto !important; }}   /* a altura fica só na área de mensagens, que acompanha a tela */
+.st-key-ps_chat_msgs {{ height: clamp(120px, calc(100vh / var(--ps-zoom, .8) - 560px), 340px) !important; max-height: clamp(120px, calc(100vh / var(--ps-zoom, .8) - 560px), 340px) !important;
+  border: 1px solid var(--ps-line) !important; border-radius: 16px !important;
   background: linear-gradient(var(--ps-line) 1px, transparent 1px) 0 0 / 22px 22px, linear-gradient(90deg, var(--ps-line) 1px, transparent 1px) 0 0 / 22px 22px,
               color-mix(in srgb, var(--ps-canvas) 70%, transparent) !important; background-blend-mode: soft-light; }}
 .ps-msgs {{ display: flex; flex-direction: column; gap: 8px; padding: 4px 2px; }}
@@ -274,7 +280,7 @@ html, body, .stApp, button, input, textarea, select, [data-testid="stMarkdownCon
 /* ---------- gaveta lateral (filtros e uploads) com fundo desfocado ---------- */
 [data-testid="stPopoverBody"]:has(.ps-gaveta) {{
   position: fixed !important; inset: 10px 10px 10px auto !important; transform: none !important; translate: none !important;
-  width: min(420px, 94vw) !important; max-width: none !important; height: calc(100vh - 20px) !important; max-height: none !important;
+  width: min(420px, 94vw) !important; max-width: none !important; height: calc(100vh / var(--ps-zoom, .8) - 20px) !important; max-height: none !important;
   z-index: 1000010 !important; overflow-y: auto !important; padding: 18px 20px 22px !important; border-radius: 22px !important;
   background: color-mix(in srgb, var(--ps-surface-solid) 90%, transparent) !important; border: 1px solid var(--ps-line) !important;
   box-shadow: -24px 0 60px -30px rgba(15,23,42,.45), 0 0 0 100vmax color-mix(in srgb, var(--ps-canvas) 30%, transparent) !important;
