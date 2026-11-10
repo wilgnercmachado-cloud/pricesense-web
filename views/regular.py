@@ -569,13 +569,40 @@ def render() -> None:
         except Exception as exc:
             st.session_state.pop("reg_backup", None)
             st.error(f"Não foi possível abrir o backup: {exc}", icon=":material/error:")
-    from core import blocks as bk
+    from core import blocks as bk, sugestoes as sg
     lista_blocks = bk.expirar(bk.ativos(), df_base)
+    if st.session_state.get("_sug_expira") != sg.hoje():          # pendentes de ontem expiram (uma vez por dia por sessão)
+        st.session_state._sug_expira = sg.hoje()
+        try:
+            sg.expirar_antigas()
+        except Exception:
+            pass
+    lista_sug = [x for x in sg.do_dia() if x.get("status") in ("pendente", "aceita", "rejeitada")]
     retorno = _MESA(app="price", dados=dados, chave=f"{chave}-{formato}-{modo}", formato=formato, modo_visao=modo, admin=auth.eh_admin(),
                     blocks=[{k: b.get(k) for k in ("id", "filial", "produto", "motivo", "observacao", "usuario", "preco_vencedor", "concorrente",
-                                                    "data_pesquisa", "criado_em")} for b in lista_blocks], motivos_block=bk.MOTIVOS, tokens=_tokens_css(), fonte=theme.FONTE_URL, visao=st.session_state.reg_visao,
+                                                    "data_pesquisa", "criado_em")} for b in lista_blocks], motivos_block=bk.MOTIVOS,
+                    sugestoes=[{k: x.get(k) for k in ("id", "filial", "produto", "varejo", "atacado", "motivo", "observacao", "usuario", "criado_em",
+                                                      "status", "motivo_rejeicao", "decidido_por", "fora_parametros")} for x in lista_sug],
+                    motivos_sugestao=sg.MOTIVOS, tokens=_tokens_css(), fonte=theme.FONTE_URL, visao=st.session_state.reg_visao,
                     altura=900, info=info, usuario=usuario, base=base_id, atualizado=_data_base(rel, meta), backups=backups, historico=historico, estado=estado,
                     key="mesa_regular", default=None)
+    if isinstance(retorno, dict) and retorno.get("ts") != st.session_state.get("_reg_ts") and retorno.get("acao") in ("sugerir", "aceitar_sug", "rejeitar_sug", "aplicados"):
+        st.session_state._reg_ts = retorno.get("ts")
+        try:
+            a_ = retorno["acao"]
+            if a_ == "sugerir":
+                sg.criar(retorno, usuario)
+                st.toast("Sugestão enviada ao Pricing do estado.", icon=":material/send:")
+            elif a_ == "aceitar_sug":
+                n_ = sg.aceitar(retorno.get("ids") or [], usuario)
+                st.toast(f"{n_} sugestão(ões) do comprador aceita(s); o comprador foi avisado.", icon=":material/check_circle:")
+            elif a_ == "rejeitar_sug":
+                sg.rejeitar(retorno.get("id"), usuario, retorno.get("motivo", ""))
+                st.toast("Sugestão rejeitada; o comprador recebeu o motivo.", icon=":material/block:")
+            else:
+                sg.registrar_aplicados(retorno.get("itens") or [])
+        except Exception as exc:
+            st.toast(f"Não foi possível gravar a sugestão: {exc}", icon=":material/error:")
     if isinstance(retorno, dict) and retorno.get("ts") != st.session_state.get("_reg_ts") and retorno.get("acao") in ("block", "desbloquear"):
         st.session_state._reg_ts = retorno.get("ts")
         try:
@@ -594,6 +621,12 @@ def render() -> None:
     if isinstance(retorno, dict) and retorno.get("ts") != st.session_state.get("_reg_ts") and retorno.get("acao") in ("backup", "abrir_backup", "sair_backup"):
         st.session_state._reg_ts = retorno.get("ts")
         acao = retorno["acao"]
+        if acao == "backup" and retorno.get("aplicados"):
+            try:
+                from core import sugestoes as sg_
+                sg_.registrar_aplicados(retorno["aplicados"])      # preço aplicado e regra dos itens com sugestão do comprador
+            except Exception:
+                pass
         if acao == "backup" and not historico:
             try:
                 dia = retorno.get("dia") or str(pd.Timestamp.now(tz="America/Bahia").date())
