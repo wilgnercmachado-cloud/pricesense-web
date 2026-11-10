@@ -81,13 +81,30 @@ def marcar_lido(usuario: str, canal: str) -> None:
         pass
 
 
-def enviar(canal: str, autor: dict, texto: str, todos_estados: list[str]) -> None:
+def preparar_imagem(bruto: bytes) -> str:
+    """Print anexado: reduzido (até 1280 px) e em JPEG, guardado junto da mensagem como data URL (~100 KB)."""
+    import base64
+    import io
+    from PIL import Image
+    img = Image.open(io.BytesIO(bruto))
+    img = img.convert("RGB")
+    img.thumbnail((1280, 1280))
+    out = io.BytesIO()
+    img.save(out, "JPEG", quality=78, optimize=True)
+    return "data:image/jpeg;base64," + base64.b64encode(out.getvalue()).decode()
+
+
+def enviar(canal: str, autor: dict, texto: str, todos_estados: list[str], anexo: bytes | None = None) -> None:
     texto = (texto or "").strip()
-    if not texto:
+    if not texto and not anexo:
         return
     agora = dt.datetime.now(dt.timezone.utc).isoformat()
-    db.sb().table(MSG).insert({"id": str(uuid.uuid4()), "canal": canal, "autor": autor["usuario"], "autor_nome": autor.get("nome") or autor["usuario"],
-                               "texto": texto[:2000], "criado_em": agora}).execute()
+    reg = {"id": str(uuid.uuid4()), "canal": canal, "autor": autor["usuario"], "autor_nome": autor.get("nome") or autor["usuario"],
+           "texto": texto[:2000], "criado_em": agora}
+    if anexo:
+        reg["anexo"] = preparar_imagem(anexo)
+        texto = texto or "[print anexado]"
+    db.sb().table(MSG).insert(reg).execute()
     marcar_lido(autor["usuario"], canal)
     nome = autor.get("nome") or autor["usuario"]
     trecho = texto if len(texto) <= 160 else texto[:157] + "..."
