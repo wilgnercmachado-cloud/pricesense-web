@@ -148,6 +148,24 @@ html, body, .stApp, button, input, textarea, select, [data-testid="stMarkdownCon
 .ps-status.on i {{ background: var(--ps-up); animation: ps-pulse 2s infinite; }}
 
 /* aviso de novas solicitações (administradores) */
+.st-key-ps_chat {{ position: fixed !important; left: 22px; bottom: 22px; z-index: 1000001; width: auto !important; }}
+.st-key-ps_chat [data-testid="stPopoverButton"] {{ height: 52px; min-width: 52px; border-radius: 26px; background: linear-gradient(135deg, var(--ps-primary), #7A3FD1) !important;
+  border: 0 !important; box-shadow: 0 14px 34px -12px var(--ps-primary); transition: transform .2s; }}
+.st-key-ps_chat [data-testid="stPopoverButton"]:hover {{ transform: translateY(-2px) scale(1.04); }}
+.st-key-ps_chat [data-testid="stPopoverButton"], .st-key-ps_chat [data-testid="stPopoverButton"] * {{ color: #fff !important; font-weight: 700; }}
+[data-testid="stPopoverBody"]:has(.ps-chat-top) {{ width: 420px !important; max-width: 92vw; }}
+.ps-chat-top b {{ display: block; font-size: 15px; }} .ps-chat-top span {{ font-size: 11.5px; color: var(--ps-muted); }}
+.ps-msgs {{ display: flex; flex-direction: column; gap: 6px; }}
+.ps-msg {{ max-width: 82%; align-self: flex-start; background: var(--ps-raised); border-radius: 12px 12px 12px 4px; padding: 6px 10px; }}
+.ps-msg.eu {{ align-self: flex-end; background: var(--ps-primary); border-radius: 12px 12px 4px 12px; }}
+.ps-msg.eu p, .ps-msg.eu small {{ color: #fff !important; }}
+.ps-msg i {{ font-style: normal; font-size: 11px; font-weight: 700; color: var(--ps-primary); }}
+.ps-msg p {{ margin: 2px 0; font-size: 13px; line-height: 1.4; color: var(--ps-ink); white-space: pre-wrap; word-break: break-word; }}
+.ps-msg small {{ font-size: 10px; color: var(--ps-faint); }}
+.ps-mencao {{ color: #7A3FD1; }} .ps-msg.eu .ps-mencao {{ color: #fff; text-decoration: underline; }}
+.ps-msg-vazio {{ color: var(--ps-faint); font-size: 12.5px; text-align: center; padding: 30px 0; }}
+.st-key-ps_notif {{ position: fixed !important; right: 22px; bottom: 150px; z-index: 1000001; width: 340px !important; padding: 12px 14px; border-radius: 16px; background: var(--ps-surface-solid); border: 1px solid var(--ps-line); box-shadow: 0 18px 48px -18px rgba(15,23,42,.5); animation: ps-entra .35s ease-out; }}
+.st-key-ps_notif .ps-aviso span {{ white-space: normal; line-height: 1.4; }}
 .st-key-ps_aviso {{
   position: fixed !important; right: 22px; bottom: 22px; z-index: 1000001; width: 340px !important; padding: 16px;
   background: color-mix(in srgb, var(--ps-surface-solid) 78%, transparent); border: 1px solid var(--ps-line);
