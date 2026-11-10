@@ -333,6 +333,12 @@ body.foco .kpis,body.foco .linha2{display:grid}
 .bmot{display:flex;flex-wrap:wrap;gap:6px}.bmot .chip.on{background:color-mix(in srgb,var(--down) 14%,transparent);color:var(--down);border-color:var(--down)}
 .blkc textarea{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:9px;background:var(--field);color:var(--ink);padding:8px;font:12.5px 'Geist',sans-serif;resize:vertical}
 .bavi{color:var(--down);font-size:12px;min-height:14px;margin:6px 0 0}
+.sug{display:inline-flex;align-items:center;gap:3px;margin-left:6px;padding:1px 6px;border-radius:5px;background:var(--primary-soft);color:var(--primary);font:700 9.5px 'Geist Mono',monospace;cursor:help;vertical-align:1px}
+.sug.ok{background:color-mix(in srgb,var(--up) 14%,transparent);color:var(--up)}.sug.no{background:var(--raised);color:var(--faint)}
+.sug svg{width:10px;height:10px}
+#chSug em{font-style:normal;font-family:'Geist Mono',monospace;font-size:11px;opacity:.7;margin-left:2px}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.sgrid input{width:100%;box-sizing:border-box;height:34px;border:1px solid var(--line);border-radius:9px;background:var(--field);color:var(--ink);padding:0 10px;font:600 14px 'Geist Mono',monospace;text-align:right}
+.sgfora{display:flex;gap:8px;align-items:flex-start;margin-top:10px;padding:8px 10px;border-radius:9px;background:var(--amber-soft);color:var(--amber);font-size:12px}
 #chOpt em{font-style:normal;font-family:'Geist Mono',monospace;font-size:11px;opacity:.7;margin-left:2px}
 #root{display:block} #app{height:100%}
 </style>
@@ -1584,7 +1590,7 @@ body.foco .kpis,body.foco .linha2{display:grid}
 </head><body><div id="root"></div>
 <script>
 const APP_PRICE = (() => {
-const MARCACAO = "<div id=\"app\">\n  <div class=\"topo\">\n    <div class=\"marca\"><h1 id=\"titulo\"></h1><small id=\"escopo\"></small></div>\n    <div class=\"kstrip\" id=\"kpis\"></div>\n  </div>\n  <div class=\"linha2\">\n    <div class=\"glass histc\">\n      <div class=\"hhead\"><span class=\"htit\">Concorr\u00eancia <small id=\"histSub\"></small></span><div class=\"hchips\" id=\"hChips\"></div>\n        <span class=\"hseg\" id=\"hSeg\"><button data-hm=\"v\" class=\"on\">Varejo</button><button data-hm=\"a\">Atacado</button></span></div>\n      <div id=\"hist\"></div>\n    </div>\n    <div class=\"glass resumo\" id=\"resumo\"></div>\n  </div>\n  <div class=\"gridbox glass\">\n    <div class=\"tools\">\n      <input type=\"search\" id=\"q\" placeholder=\"Buscar produto, filial ou concorrente\">\n      <button class=\"chip\" data-rg=\"4\" data-ic=\"obj\" data-tip=\"Itens sem pesquisa que foram para a margem objetiva\">Aplicado objetiva</button>\n      <button class=\"chip\" data-rg=\"3\" data-ic=\"piso\" data-tip=\"Itens que pararam na margem m\u00ednima\">Aplicado m\u00ednima</button>\n      <button class=\"chip\" data-rg=\"2\" data-ic=\"teto\" data-tip=\"Itens que pararam na margem m\u00e1xima\">Aplicado m\u00e1xima</button>\n      <span class=\"csep\"></span>\n      <button class=\"chip\" data-fx=\"neg\" data-ic=\"tdDn\" data-tip=\"Novo varejo abaixo do custo\">Negativos</button>\n      <button class=\"chip\" data-fx=\"pos\" data-ic=\"tdUp\" data-tip=\"Novo varejo acima do custo\">Positivos</button>\n      <button class=\"chip\" data-fx=\"ipf\" data-ic=\"alerta\" data-tip=\"IP novo acima de 100,9%: mais caro que o mercado\">IP fora</button>\n      <button class=\"chip\" id=\"chBlk\" data-fx=\"blk\" data-ic=\"lock\" data-tip=\"Itens com BLOCK do comercial\">Block <em>0</em></button>\n      <button class=\"chip\" id=\"chAce\" data-fx=\"ace\" data-ic=\"check\" data-tip=\"S\u00f3 os pre\u00e7os com aceite: o que vai para a importa\u00e7\u00e3o\">Aceitos <em>0</em></button>\n      <button class=\"chip\" id=\"chOpt\" data-fx=\"opt\" data-ic=\"robo\" data-tip=\"S\u00f3 os itens ajustados pelo Optimus\" style=\"display:none\">Optimus <em>0</em></button>\n      <span class=\"cnt\" id=\"cnt\"></span>\n    </div>\n    <div id=\"scroll\" tabindex=\"0\"><div class=\"hdr\" id=\"hdr\"></div><div id=\"body\"></div></div>\n  </div>\n</div>\n<nav class=\"dock glass\" id=\"dock\">\n  <button class=\"ib robo\" id=\"bOpt\" data-tip=\"Optimus: an\u00e1lise inteligente dos itens filtrados\" data-ic=\"robo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib gr\" id=\"bAll\" data-tip=\"Aceitar todos os itens filtrados que est\u00e3o fora da regra de corte\" data-ic=\"check\"></button>\n  <button class=\"ib\" id=\"bProx\" data-tip=\"Pr\u00f3ximo pre\u00e7o pendente (N)\" data-ic=\"prox\"></button>\n  <button class=\"ib\" id=\"bNone\" data-tip=\"Retirar aceite dos itens filtrados\" data-ic=\"x\"></button>\n  <button class=\"ib\" id=\"bReset\" data-tip=\"Voltar pre\u00e7os e aceites para a sugest\u00e3o do motor\" data-ic=\"undo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib\" id=\"bRegras\" data-tip=\"Regra de neg\u00f3cio e regra de altera\u00e7\u00e3o\" data-ic=\"regra\"></button>\n  <button class=\"ib\" id=\"bCols\" data-tip=\"Colunas e vis\u00e3o salva no seu perfil\" data-ic=\"cols\"></button>\n  <button class=\"ib\" id=\"bRnd\" data-tip=\"Regra de arredondamento\" data-ic=\"rnd\"></button>\n  <button class=\"ib\" id=\"bPiso\" data-tip=\"Piso de margem por estado\" data-ic=\"piso\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib pri\" id=\"bExp\" data-tip=\"Importa\u00e7\u00e3o (layout PRICE do Pre\u00e7o Bot)\" data-ic=\"up\"></button>\n  <button class=\"ib\" id=\"bProp\" data-tip=\"Importa\u00e7\u00e3o de proporcionais (filhos do produto PAI)\" data-ic=\"prop\"></button>\n  <button class=\"ib\" id=\"bBkp\" data-tip=\"Backup: a precifica\u00e7\u00e3o dos \u00faltimos 3 dias, como estava antes de importar\" data-ic=\"bkp\"></button>\n  <button class=\"ib\" id=\"bXlsA\" data-tip=\"Exportar a an\u00e1lise da grade para Excel\" data-ic=\"xls\"></button>\n  <button class=\"ib\" id=\"bFoco\" data-tip=\"Modo foco em tela cheia\" data-ic=\"foco\"></button>\n  <button class=\"ib\" id=\"bTema\" data-tip=\"Alternar tema claro ou escuro\" data-ic=\"tema\"></button>\n</nav>\n<div class=\"pop glass\" id=\"pRegras\"></div>\n<div class=\"pop glass larga\" id=\"pCols\"></div>\n<div class=\"pop glass\" id=\"pRnd\"></div>\n<div class=\"pop glass\" id=\"pPiso\"></div>\n<div class=\"pop glass\" id=\"pExp\"></div>\n<div class=\"pop glass\" id=\"pProp\"></div>\n<div class=\"pop glass larga\" id=\"pOpt\"></div>\n<div class=\"pop glass larga\" id=\"pBkp\"></div>\n<div class=\"modal\" id=\"modal\"></div>\n<div id=\"tip\"></div><div class=\"toast\" id=\"toast\"></div>\n";
+const MARCACAO = "<div id=\"app\">\n  <div class=\"topo\">\n    <div class=\"marca\"><h1 id=\"titulo\"></h1><small id=\"escopo\"></small></div>\n    <div class=\"kstrip\" id=\"kpis\"></div>\n  </div>\n  <div class=\"linha2\">\n    <div class=\"glass histc\">\n      <div class=\"hhead\"><span class=\"htit\">Concorr\u00eancia <small id=\"histSub\"></small></span><div class=\"hchips\" id=\"hChips\"></div>\n        <span class=\"hseg\" id=\"hSeg\"><button data-hm=\"v\" class=\"on\">Varejo</button><button data-hm=\"a\">Atacado</button></span></div>\n      <div id=\"hist\"></div>\n    </div>\n    <div class=\"glass resumo\" id=\"resumo\"></div>\n  </div>\n  <div class=\"gridbox glass\">\n    <div class=\"tools\">\n      <input type=\"search\" id=\"q\" placeholder=\"Buscar produto, filial ou concorrente\">\n      <button class=\"chip\" data-rg=\"4\" data-ic=\"obj\" data-tip=\"Itens sem pesquisa que foram para a margem objetiva\">Aplicado objetiva</button>\n      <button class=\"chip\" data-rg=\"3\" data-ic=\"piso\" data-tip=\"Itens que pararam na margem m\u00ednima\">Aplicado m\u00ednima</button>\n      <button class=\"chip\" data-rg=\"2\" data-ic=\"teto\" data-tip=\"Itens que pararam na margem m\u00e1xima\">Aplicado m\u00e1xima</button>\n      <span class=\"csep\"></span>\n      <button class=\"chip\" data-fx=\"neg\" data-ic=\"tdDn\" data-tip=\"Novo varejo abaixo do custo\">Negativos</button>\n      <button class=\"chip\" data-fx=\"pos\" data-ic=\"tdUp\" data-tip=\"Novo varejo acima do custo\">Positivos</button>\n      <button class=\"chip\" data-fx=\"ipf\" data-ic=\"alerta\" data-tip=\"IP novo acima de 100,9%: mais caro que o mercado\">IP fora</button>\n      <button class=\"chip\" id=\"chSug\" data-fx=\"sug\" data-ic=\"send\" data-tip=\"Itens com sugest\u00e3o do comprador pendente hoje\">Sugest\u00e3o <em>0</em></button>\n      <button class=\"chip\" id=\"chBlk\" data-fx=\"blk\" data-ic=\"lock\" data-tip=\"Itens com BLOCK do comercial\">Block <em>0</em></button>\n      <button class=\"chip\" id=\"chAce\" data-fx=\"ace\" data-ic=\"check\" data-tip=\"S\u00f3 os pre\u00e7os com aceite: o que vai para a importa\u00e7\u00e3o\">Aceitos <em>0</em></button>\n      <button class=\"chip\" id=\"chOpt\" data-fx=\"opt\" data-ic=\"robo\" data-tip=\"S\u00f3 os itens ajustados pelo Optimus\" style=\"display:none\">Optimus <em>0</em></button>\n      <span class=\"cnt\" id=\"cnt\"></span>\n    </div>\n    <div id=\"scroll\" tabindex=\"0\"><div class=\"hdr\" id=\"hdr\"></div><div id=\"body\"></div></div>\n  </div>\n</div>\n<nav class=\"dock glass\" id=\"dock\">\n  <button class=\"ib robo\" id=\"bOpt\" data-tip=\"Optimus: an\u00e1lise inteligente dos itens filtrados\" data-ic=\"robo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib gr\" id=\"bAll\" data-tip=\"Aceitar todos os itens filtrados que est\u00e3o fora da regra de corte\" data-ic=\"check\"></button>\n  <button class=\"ib\" id=\"bProx\" data-tip=\"Pr\u00f3ximo pre\u00e7o pendente (N)\" data-ic=\"prox\"></button>\n  <button class=\"ib\" id=\"bNone\" data-tip=\"Retirar aceite dos itens filtrados\" data-ic=\"x\"></button>\n  <button class=\"ib\" id=\"bReset\" data-tip=\"Voltar pre\u00e7os e aceites para a sugest\u00e3o do motor\" data-ic=\"undo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib\" id=\"bRegras\" data-tip=\"Regra de neg\u00f3cio e regra de altera\u00e7\u00e3o\" data-ic=\"regra\"></button>\n  <button class=\"ib\" id=\"bCols\" data-tip=\"Colunas e vis\u00e3o salva no seu perfil\" data-ic=\"cols\"></button>\n  <button class=\"ib\" id=\"bRnd\" data-tip=\"Regra de arredondamento\" data-ic=\"rnd\"></button>\n  <button class=\"ib\" id=\"bPiso\" data-tip=\"Piso de margem por estado\" data-ic=\"piso\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib pri\" id=\"bExp\" data-tip=\"Importa\u00e7\u00e3o (layout PRICE do Pre\u00e7o Bot)\" data-ic=\"up\"></button>\n  <button class=\"ib\" id=\"bProp\" data-tip=\"Importa\u00e7\u00e3o de proporcionais (filhos do produto PAI)\" data-ic=\"prop\"></button>\n  <button class=\"ib\" id=\"bBkp\" data-tip=\"Backup: a precifica\u00e7\u00e3o dos \u00faltimos 3 dias, como estava antes de importar\" data-ic=\"bkp\"></button>\n  <button class=\"ib\" id=\"bSugAll\" data-tip=\"Aceitar todas as sugest\u00f5es do comprador (itens filtrados)\" data-ic=\"send\"></button>\n  <button class=\"ib\" id=\"bXlsA\" data-tip=\"Exportar a an\u00e1lise da grade para Excel\" data-ic=\"xls\"></button>\n  <button class=\"ib\" id=\"bFoco\" data-tip=\"Modo foco em tela cheia\" data-ic=\"foco\"></button>\n  <button class=\"ib\" id=\"bTema\" data-tip=\"Alternar tema claro ou escuro\" data-ic=\"tema\"></button>\n</nav>\n<div class=\"pop glass\" id=\"pRegras\"></div>\n<div class=\"pop glass larga\" id=\"pCols\"></div>\n<div class=\"pop glass\" id=\"pRnd\"></div>\n<div class=\"pop glass\" id=\"pPiso\"></div>\n<div class=\"pop glass\" id=\"pExp\"></div>\n<div class=\"pop glass\" id=\"pProp\"></div>\n<div class=\"pop glass larga\" id=\"pOpt\"></div>\n<div class=\"pop glass larga\" id=\"pBkp\"></div>\n<div class=\"modal\" id=\"modal\"></div>\n<div id=\"tip\"></div><div class=\"toast\" id=\"toast\"></div>\n";
 /* ===================== protocolo de componente do Streamlit (sem biblioteca) ===================== */
 const ST = {
   send(type, extra){ window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type }, extra || {}), '*'); },
@@ -1626,7 +1632,7 @@ async function montar(A){
 const ic = (n, cor) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="${cor || 'currentColor'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${P_[n]}</svg>`;
 document.querySelectorAll('[data-ic2]').forEach(h => h.insertAdjacentHTML('afterbegin', ic(h.dataset.ic2, 'var(--primary)')));
 
-  Object.assign(P_, { lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>', xls: '<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="m9 12 6 6M15 12l-6 6"/>', troca: '<path d="M7 4 3 8l4 4"/><path d="M3 8h13a4 4 0 0 1 0 8h-2"/><path d="m17 20 4-4-4-4"/>', tema: '<circle cx="12" cy="12" r="9"/><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"/>', bkp: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>', cols: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>', save: '<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h8V3M8 21v-7h8v7"/>',
+  Object.assign(P_, { send: '<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>', lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>', xls: '<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="m9 12 6 6M15 12l-6 6"/>', troca: '<path d="M7 4 3 8l4 4"/><path d="M3 8h13a4 4 0 0 1 0 8h-2"/><path d="m17 20 4-4-4-4"/>', tema: '<circle cx="12" cy="12" r="9"/><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"/>', bkp: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>', cols: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>', save: '<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h8V3M8 21v-7h8v7"/>',
     seta_c: '<path d="m6 15 6-6 6 6"/>', prox: '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>',
     robo: '<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4"/><circle cx="12" cy="3" r="1"/><circle cx="9" cy="13.5" r="1.4"/><circle cx="15" cy="13.5" r="1.4"/><path d="M9.5 17h5M2 13v2M22 13v2"/>',
     prop: '<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/><path d="M11 7h4a2 2 0 0 1 2 2v4"/>',
@@ -1804,6 +1810,12 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   const BKI = new Array(N).fill(null);
   { const mapa = new Map((A.blocks || []).map(b => [`${b.filial}|${b.produto}`, b]));
     if (mapa.size) for (let i = 0; i < N; i++) { const b = mapa.get(`${codTxt(D.filiais[D.fi[i]])}|${codTxt(D.produtos[D.pi[i]])}`); if (b) BKI[i] = b; } }
+  /* sugestões do comprador do dia (pendente, aceita ou rejeitada) */
+  const SUGI = new Array(N).fill(null);
+  { const ordem = { pendente: 3, aceita: 2, rejeitada: 1 }, mapa = new Map();
+    for (const x of (A.sugestoes || [])) { const k = `${x.filial}|${x.produto}`, o = mapa.get(k); if (!o || (ordem[x.status] || 0) > (ordem[o.status] || 0)) mapa.set(k, x); }
+    if (mapa.size) for (let i = 0; i < N; i++) { const x = mapa.get(`${codTxt(D.filiais[D.fi[i]])}|${codTxt(D.produtos[D.pi[i]])}`); if (x) SUGI[i] = { ...x }; } }
+  const sugPend = i => SUGI[i] && SUGI[i].status === 'pendente';
   const blkLiberado = i => { const b = BKI[i]; if (!b) return true; const pv = +b.preco_vencedor || 0;
     return OV.has(i) && pv > 0 && Math.abs(OV.get(i) / pv - 1) >= 0.02 - 1e-9; };          // bloqueado: só preço manual 2% ou mais longe do vencedor do block
   const podeAceitar = i => !COMERCIAL && (MUD[i] || REAP[i]) && blkLiberado(i);
@@ -1833,7 +1845,8 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     el.onclick = fecha; el._t = setTimeout(fecha, o.premium ? 4200 : 2600); }
   function toast(t){ const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('on'), 2600); }
   const optInfo = i => { const o = OPT.get(i); return typeof o === 'string' ? { m: o } : (o || {}); };
-  const rotRegra = i => RG[i] === 6 ? 'Optimus: ' + (optInfo(i).m || 'ajustado') : RG[i] === 2 ? `Aplicado máxima ${nf1.format(UMAX[i])}%` : RG[i] === 3 ? (D.trava && D.trava[i] != null ? `Trava mínima ${nf1.format(UMIN[i])}%` : D.cesta[i] ? `Aplicado mínima cesta ${nf1.format(UMIN[i])}%` : `Aplicado mínima ${nf1.format(UMIN[i])}%`)
+  const daSug = i => SUGI[i] && SUGI[i].status === 'aceita' && OV.has(i) && Math.abs(OV.get(i) - (+SUGI[i].varejo)) < 0.005;
+  const rotRegra = i => daSug(i) ? `Sugestão do comprador (${SUGI[i].usuario})` : RG[i] === 6 ? 'Optimus: ' + (optInfo(i).m || 'ajustado') : RG[i] === 2 ? `Aplicado máxima ${nf1.format(UMAX[i])}%` : RG[i] === 3 ? (D.trava && D.trava[i] != null ? `Trava mínima ${nf1.format(UMIN[i])}%` : D.cesta[i] ? `Aplicado mínima cesta ${nf1.format(UMIN[i])}%` : `Aplicado mínima ${nf1.format(UMIN[i])}%`)
     : RG[i] === 4 ? `Aplicado objetiva ${nf1.format(UOBJ[i])}%` : RG[i] === 7 ? (isNaN(PCTL[i]) ? 'Moda − R$ 0,01 (fora do delta)' : `Moda × ${nf1.format(PCTL[i])}% (fora do delta)`)
     : RG[i] === 0 && !isNaN(PCTL[i]) ? `Curva ${'ABC'[D.curva[i]] || ''} ${nf1.format(PCTL[i])}% do mercado` : REGRAS[RG[i]][0];
   const tagRegra = i => { const [, n, c] = REGRAS[RG[i]]; return `<span class="tag" style="color:${c}" data-tip="${esc(explicaRegra(i))}">${ic(n, c)}${rotRegra(i)}</span>`; };
@@ -1918,9 +1931,13 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   col('ok', 'Aceite', 'Identificação', 62, i => `<span class="ok-box${podeAceitar(i) ? (aceito(i) ? ' on' : '') : ' na'}" data-ok="${i}">${ic('check')}</span>`, i => (MUD[i] ? (aceito(i) ? 2 : 1) : 0));
   col('fil', 'Filial', 'Identificação', 140, i => esc(curto(D.filiais[D.fi[i]])), i => D.filiais[D.fi[i]], '', () => D.filiais.map(curto));
   const SUB = i => D.subst && D.subst[i] ? D.subst[i] : 0;
+  const seloSug = i => { const x = SUGI[i]; if (!x) return '';
+    const cor = x.status === 'pendente' ? 'sug' : x.status === 'aceita' ? 'sug ok' : 'sug no';
+    const txt = x.status === 'pendente' ? `SUG ${nf2.format(+x.varejo)}` : x.status === 'aceita' ? 'SUG aceita' : 'SUG rejeitada';
+    return `<span class="${cor}" data-tip="${esc(`Sugestão do comprador ${x.usuario}: varejo ${brl(+x.varejo)}, atacado ${brl(+x.atacado || +x.varejo)}. Motivo: ${x.motivo}${x.observacao ? ' (' + x.observacao + ')' : ''}${x.fora_parametros ? '. Fora da mínima/máxima (confirmado pelo comprador)' : ''}. ${x.status === 'pendente' ? 'Pendente: vale só hoje.' : x.status === 'aceita' ? 'Aceita por ' + (x.decidido_por || 'Pricing') + '.' : 'Rejeitada por ' + (x.decidido_por || 'Pricing') + ': ' + (x.motivo_rejeicao || '')}`)}">${ic('send')}${txt}</span>`; };
   const seloBlk = i => { const b = BKI[i]; if (!b) return '';
     return `<span class="blk" data-tip="${esc(`BLOCK do comercial: ${b.motivo}${b.observacao ? ' (' + b.observacao + ')' : ''}. Por ${b.usuario} em ${String(b.criado_em || '').slice(0, 10).split('-').reverse().join('/')}. Preço vencedor do block: ${brl(+b.preco_vencedor)} (${titulo_(curto(b.concorrente || '').split(' - ')[0])}${b.data_pesquisa ? ', ' + b.data_pesquisa : ''}). Dura pelo menos 3 dias e até esse preço sair da análise; só aceita preço manual pelo menos 2% diferente dele.`)}">${ic('lock')}BLOCK</span>`; };
-  col('prod', 'Produto', 'Identificação', 280, i => (SUB(i) ? `${esc(D.produtos[D.pi[i]])}<span class="subp" data-tip="Troca de PAI: o produto PAI ${SUB(i)} está sem estoque nesta filial, então este similar 100% de maior venda é precificado no lugar dele.">${ic('troca')}${SUB(i)}</span>` : esc(D.produtos[D.pi[i]])) + seloBlk(i), i => D.produtos[D.pi[i]], '', () => D.produtos);
+  col('prod', 'Produto', 'Identificação', 280, i => (SUB(i) ? `${esc(D.produtos[D.pi[i]])}<span class="subp" data-tip="Troca de PAI: o produto PAI ${SUB(i)} está sem estoque nesta filial, então este similar 100% de maior venda é precificado no lugar dele.">${ic('troca')}${SUB(i)}</span>` : esc(D.produtos[D.pi[i]])) + seloBlk(i) + seloSug(i), i => D.produtos[D.pi[i]], '', () => D.produtos);
   col('cv', 'Curva', 'Identificação', 58, i => `<span class="cv cv${'ABC'[D.curva[i]]}">${'ABC'[D.curva[i]]}</span>`, i => D.curva[i]);
   col('uf', 'Estado', 'Identificação', 110, i => esc(D.ufs[D.ui[i]]), i => D.ufs[D.ui[i]], '', () => D.ufs);
   col('comp', 'Comprador', 'Identificação', 160, i => esc(D.compradores[D.bi[i]]), i => D.compradores[D.bi[i]], '', () => D.compradores);
@@ -1996,7 +2013,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     for (let i = 0; i < N; i++) {
       if (F.travas.size && !F.travas.has(RG[i])) continue;
       if (F.extra.size) { const neg = NV[i] < D.cu[i] - 1e-9, ipf = D.vmk[i] > 0 && NV[i] / D.vmk[i] > 1.009;
-        if ((F.extra.has('neg') && !neg) || (F.extra.has('pos') && neg) || (F.extra.has('ipf') && !ipf) || (F.extra.has('opt') && !OPT.has(i)) || (F.extra.has('ace') && !aceito(i)) || (F.extra.has('blk') && !BKI[i])) continue; }
+        if ((F.extra.has('neg') && !neg) || (F.extra.has('pos') && neg) || (F.extra.has('ipf') && !ipf) || (F.extra.has('opt') && !OPT.has(i)) || (F.extra.has('ace') && !aceito(i)) || (F.extra.has('blk') && !BKI[i]) || (F.extra.has('sug') && !sugPend(i))) continue; }
       if (F.regra >= 0 && RG[i] !== F.regra) continue;
       if (F.corte === 9 && !(MUD[i] && !aceito(i))) continue;
       if (F.corte >= 0 && F.corte < 9 && !(MUD[i] && (CT[i] & (1 << F.corte)))) continue;
@@ -2046,6 +2063,58 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     calc(i); salvar(i); atualizar(false); if (SEL === i) { resumo(i); historico(i); }
   });
   /* janela de confirmação própria (a do navegador é bloqueada dentro do componente) */
+  /* aceitar sugestão do comprador: o preço do comprador entra direto, com aceite */
+  function aceitarSug(lista){ const ids = [], presos = [];
+    for (const i of lista) { const x = SUGI[i]; if (!x || x.status !== 'pendente') continue;
+      OV.set(i, +x.varejo); OVA.set(i, Math.min(+x.varejo, +x.atacado || +x.varejo)); OPT.delete(i); calc(i);
+      if (BKI[i] && !blkLiberado(i)) { presos.push(i); continue; }
+      ACE.set(i, true); x.status = 'aceita'; x.decidido_por = EU; ids.push(x.id); salvar(i); }
+    if (ids.length) ST.valor({ acao: 'aceitar_sug', ids, ts: Date.now() });
+    atualizar(); if (SEL >= 0) resumo(SEL);
+    anuncio({ icone: 'check', cor: 'var(--up)', titulo: ids.length ? `${nf0.format(ids.length)} sugestões do comprador aceitas` : 'Nenhuma sugestão pendente para aceitar',
+      texto: (ids.length ? 'Os compradores recebem o aviso do aceite.' : '') + (presos.length ? ` ${nf0.format(presos.length)} ficaram de fora por BLOCK (preço a menos de 2% do vencedor do block).` : '') }); }
+  function rejeitarSug(i){ const m = $('modal'), x = SUGI[i]; if (!x) return;
+    m.innerHTML = `<div class="mcard glass blkc"><h4>${ic('x', 'var(--down)')}Rejeitar sugestão do comprador</h4>
+      <p>${esc(x.usuario)} sugeriu ${brl(+x.varejo)} para ${esc(curto(D.produtos[D.pi[i]]))} em ${esc(curto(D.filiais[D.fi[i]]))} (${esc(x.motivo)}).</p>
+      <label>Motivo da rejeição (o comprador recebe este texto)</label><textarea id="rjMot" rows="3"></textarea><p class="bavi" id="rjAvi"></p>
+      <div class="macts"><button class="tx" data-r="0">Cancelar</button><button class="tx pri" data-r="1">Rejeitar</button></div></div>`;
+    m.classList.add('on'); m.querySelector('[data-r="0"]').onclick = () => m.classList.remove('on');
+    m.querySelector('[data-r="1"]').onclick = () => { const t = $('rjMot').value.trim(); if (!t) { $('rjAvi').textContent = 'Informe o motivo da rejeição.'; return; }
+      ST.valor({ acao: 'rejeitar_sug', id: x.id, motivo: t, ts: Date.now() }); x.status = 'rejeitada'; x.motivo_rejeicao = t; x.decidido_por = EU;
+      m.classList.remove('on'); atualizar(false); if (SEL === i) resumo(i); toast('Sugestão rejeitada; o comprador recebe o motivo'); }; }
+  /* comprador sugere preço: varejo + atacado (começa igual ao varejo), motivo da lista e observação */
+  function abrirSugestao(i){ const m = $('modal'), mot = A.motivos_sugestao || ['Negociação com fornecedor', 'Acordo comercial', 'Erro de pesquisa', 'Estratégia da categoria', 'Outros'];
+    m.innerHTML = `<div class="mcard glass blkc"><h4>${ic('send', 'var(--primary)')}Sugerir preço ao Pricing</h4>
+      <p>${esc(curto(D.produtos[D.pi[i]]))}, ${esc(curto(D.filiais[D.fi[i]]))}. Atual ${brl(D.vm[i])}, sugerido pelo sistema ${brl(NV[i])}, custo ${brl(D.cu[i])}. Faixa: ${brl(MN[i])} a ${brl(MX[i])}.</p>
+      <div class="sgrid"><div><label>Novo varejo</label><input id="sgV" type="text" inputmode="decimal" placeholder="0,00"></div><div><label>Novo atacado</label><input id="sgA" type="text" inputmode="decimal" placeholder="igual ao varejo"></div></div>
+      <label>Motivo</label><div class="bmot">${mot.map(x => `<button class="chip" data-mot="${esc(x)}">${esc(x)}</button>`).join('')}</div>
+      <label>Observação <small id="sgReq">(opcional)</small></label><textarea id="sgObs" rows="2"></textarea>
+      <label class="sgfora" id="sgFora" style="display:none"><input type="checkbox" id="sgConf"> <span id="sgForaTxt"></span></label>
+      <p class="bavi" id="sgAvi"></p>
+      <div class="macts"><button class="tx" data-r="0">Cancelar</button><button class="tx pri" data-r="1">${ic('send')}Enviar sugestão</button></div></div>`;
+    m.classList.add('on'); let escolha = null, atacMexido = false;
+    const num = t => parseFloat(String(t).replace(/\./g, '').replace(',', '.'));
+    const conferir = () => { const v = num($('sgV').value); const fora = v > 0 && (v < MN[i] - 1e-9 || v > MX[i] + 1e-9);
+      $('sgFora').style.display = fora ? 'flex' : 'none';
+      if (fora) $('sgForaTxt').textContent = `Confirmo que estou sugerindo fora dos parâmetros atuais (${v < MN[i] ? 'abaixo da mínima de ' + brl(MN[i]) : 'acima da máxima de ' + brl(MX[i])}; margem ${pct((v - D.cu[i]) / v)}).`;
+      return fora; };
+    $('sgV').oninput = () => { if (!atacMexido) $('sgA').value = $('sgV').value; conferir(); };
+    $('sgA').oninput = () => { atacMexido = true; };
+    m.querySelectorAll('[data-mot]').forEach(b => b.onclick = () => { escolha = b.dataset.mot; m.querySelectorAll('[data-mot]').forEach(x => x.classList.toggle('on', x === b));
+      $('sgReq').textContent = escolha === 'Outros' ? '(obrigatória em Outros)' : '(opcional)'; });
+    m.querySelector('[data-r="0"]').onclick = () => m.classList.remove('on');
+    m.querySelector('[data-r="1"]').onclick = () => { const v = num($('sgV').value), at = num($('sgA').value || $('sgV').value), obs = $('sgObs').value.trim(), av = $('sgAvi');
+      if (!(v > 0)) { av.textContent = 'Informe o novo varejo.'; return; }
+      if (!(at > 0) || at > v + 1e-9) { av.textContent = 'O atacado deve ser maior que zero e não pode passar do varejo.'; return; }
+      if (!escolha) { av.textContent = 'Escolha o motivo da sugestão.'; return; }
+      if (escolha === 'Outros' && !obs) { av.textContent = 'Em "Outros", descreva o motivo na observação.'; return; }
+      const fora = conferir(); if (fora && !$('sgConf').checked) { av.textContent = 'Confirme que está sugerindo fora dos parâmetros atuais.'; return; }
+      const reg = { filial: +codTxt(D.filiais[D.fi[i]]), produto: +codTxt(D.produtos[D.pi[i]]), estado: D.ufs[D.ui[i]] || '', varejo: v, atacado: at, motivo: escolha,
+        observacao: obs, fora_parametros: !!fora, produto_nome: curto(D.produtos[D.pi[i]]), filial_nome: curto(D.filiais[D.fi[i]]), preco_vencedor: D.vmk[i], novo_sugerido: NV[i] };
+      ST.valor({ acao: 'sugerir', ...reg, ts: Date.now() });
+      SUGI[i] = { ...reg, id: 'nova-' + Date.now(), usuario: EU, status: 'pendente', criado_em: new Date().toISOString() };
+      m.classList.remove('on'); atualizar(false); if (SEL === i) resumo(i); toast('Sugestão enviada ao Pricing do estado'); };
+    setTimeout(() => $('sgV').focus(), 50); }
   /* janela do BLOCK: motivo obrigatório; observação obrigatória em "Outros" */
   function abrirBlock(i){ const m = $('modal'), mot = A.motivos_block || ['Falta de investimento', 'Possível erro de pesquisa', 'Outros'];
     m.innerHTML = `<div class="mcard glass blkc"><h4>${ic('lock', 'var(--down)')}BLOCK do comercial</h4>
@@ -2106,9 +2175,11 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     const podeTirar = BKI[i] && (ADMIN || BKI[i].usuario === EU);
     if (COMERCIAL) { const abaixo = NV[i] < D.cu[i] - 1e-9;
       cm.innerHTML = `<div class="ctx-t">${esc(curto(D.produtos[D.pi[i]]))}<small>${esc(curto(D.filiais[D.fi[i]]))}</small></div>`
+        + it('sugerir', 'send', sugPend(i) && SUGI[i].usuario === EU ? 'Alterar minha sugestão de preço' : 'Sugerir preço ao Pricing') + '<span class="ctx-s"></span>'
         + (BKI[i] ? it('desbloquear', 'x', 'Retirar BLOCK', !podeTirar) : it('block', 'lock', abaixo ? 'BLOCK (novo preço abaixo do custo)' : 'BLOCK: só com novo preço abaixo do custo', !abaixo));
       cm.style.left = Math.min(e.clientX, innerWidth - 260) + 'px'; cm.style.top = Math.min(e.clientY, innerHeight - cm.offsetHeight - 10) + 'px'; cm.dataset.i = i; cm.classList.add('on'); return; }
     cm.innerHTML = `<div class="ctx-t">${esc(curto(D.produtos[D.pi[i]]))}<small>${esc(curto(D.filiais[D.fi[i]]))}</small></div>`
+      + (sugPend(i) ? it('aceitar_sug', 'send', `Aceitar sugestão comprador (${brl(+SUGI[i].varejo)})`) + it('rejeitar_sug', 'x', 'Rejeitar sugestão comprador') + '<span class="ctx-s"></span>' : '')
       + it('aceitar', 'check', 'Aceitar preço', !podeAceitar(i) || aceito(i)) + it('anular', 'x', 'Anular aceite', !aceito(i))
       + '<span class="ctx-s"></span>' + it('objetiva', 'obj', `Aplicar objetiva (R$ ${nf2.format(roundVarejo(OB[i]))})`) + it('optimus', 'robo', 'Aplicar Optimus', semPesq(i))
       + '<span class="ctx-s"></span>' + it('motor', 'undo', 'Sugestão do motor', !OV.has(i) && !OVA.has(i) && !ACE.has(i));
@@ -2116,6 +2187,9 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     cm.style.left = Math.min(e.clientX, innerWidth - w - 8) + 'px'; cm.style.top = Math.min(e.clientY, innerHeight - h - 8) + 'px'; cm.dataset.i = i; });
   on(cm, 'click', async e => { const b = e.target.closest('[data-ctx]'); if (!b || b.disabled) return; const i = +cm.dataset.i, a = b.dataset.ctx; fechaCtx();
     if (a === 'block') { abrirBlock(i); return; }
+    if (a === 'sugerir') { abrirSugestao(i); return; }
+    if (a === 'aceitar_sug') { aceitarSug([i]); return; }
+    if (a === 'rejeitar_sug') { rejeitarSug(i); return; }
     if (a === 'desbloquear') { const bl = BKI[i]; if (!bl) return;
       if (!(await confirmar('Retirar BLOCK', `Retirar o BLOCK de ${curto(D.produtos[D.pi[i]])} em ${curto(D.filiais[D.fi[i]])} (${bl.motivo})? O item volta a poder ser aceito pelo Pricing.`))) return;
       ST.valor({ acao: 'desbloquear', id: bl.id, filial: +codTxt(D.filiais[D.fi[i]]), produto: +codTxt(D.produtos[D.pi[i]]), ts: Date.now() });
@@ -2604,7 +2678,8 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   function resumoAtual(){ let ac = 0, mud = 0, ganho = 0, inv = 0; for (let i = 0; i < N; i++) { if (aceito(i)) { ac++; const d = (NV[i] - D.vm[i]) * D.un[i]; if (d > 0) ganho += d; else inv -= d; } if (MUD[i]) mud++; }
     return { itens: N, aceitos: ac, mudam: mud, optimus: OPT.size, filiais: D.filiais.length, ganho: Math.round(ganho), investimento: Math.round(inv), hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }; }
   function backup(silencioso){ if (HIST) return; const dia = hojeIso(), res = resumoAtual();
-    ST.valor({ acao: 'backup', dia, estado: estadoAtual(), resumo: res, silencioso: !!silencioso, ts: Date.now() });
+    const aplicados = []; for (let i = 0; i < N; i++) if (SUGI[i] && aceito(i)) aplicados.push({ filial: +codTxt(D.filiais[D.fi[i]]), produto: +codTxt(D.produtos[D.pi[i]]), nv: NV[i], na: NA[i], regra: rotRegra(i) });
+    ST.valor({ acao: 'backup', dia, estado: estadoAtual(), resumo: res, silencioso: !!silencioso, aplicados, ts: Date.now() });
     BKPS = [{ dia, criado_em: new Date().toISOString(), resumo: res }, ...BKPS.filter(b => String(b.dia) !== dia)].slice(0, 3);
     if ($('pBkp').classList.contains('on')) montaBkp(); }
   const diaBr = d => String(d).slice(8, 10) + '/' + String(d).slice(5, 7) + '/' + String(d).slice(0, 4);
@@ -2621,7 +2696,8 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     const b = e.target.closest('[data-abrir]'); if (b) { ST.valor({ acao: 'abrir_backup', dia: b.dataset.abrir, ts: Date.now() }); toast('Abrindo o backup de ' + diaBr(b.dataset.abrir)); } });
   /* tema do site: aciona o mesmo botão do topo (as cores da mesa mudam sem recarregar) */
   $('bXlsA').onclick = () => exportarAnalise();
-  if (COMERCIAL) { ['bOpt', 'bAll', 'bProx', 'bNone', 'bReset', 'bRnd', 'bPiso', 'bExp', 'bProp', 'bBkp', 'chAce', 'chOpt'].forEach(id => { const el = $(id); if (el) el.style.display = 'none'; });
+  $('bSugAll').onclick = () => { const l = VIS.filter(sugPend); if (!l.length) { toast('Nenhuma sugestão pendente nos itens filtrados'); return; } aceitarSug(l); };
+  if (COMERCIAL) { ['bSugAll', 'bOpt', 'bAll', 'bProx', 'bNone', 'bReset', 'bRnd', 'bPiso', 'bExp', 'bProp', 'bBkp', 'chAce', 'chOpt'].forEach(id => { const el = $(id); if (el) el.style.display = 'none'; });
     ORDEM = ORDEM.filter(x => x !== 'ok'); aplicaColunas(); }
   else { const el = $('bXlsA'); if (el) el.style.display = 'none'; }
   $('bTema').onclick = () => { try { const b = window.parent.document.querySelector('.st-key-ps_tema button'); if (b) b.click(); } catch (e) { toast('Use o botão de tema no topo do site'); } };
@@ -2632,7 +2708,8 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
 
   /* ---------- ações ---------- */
   function atualizar(refiltrar = true){ kpis(); chipOptimus(); if (refiltrar) filtrar(); render(); }
-  function chipOptimus(){ const cb = $('chBlk'); if (cb) { let n = 0; for (let i = 0; i < N; i++) if (BKI[i]) n++; cb.querySelector('em').textContent = nf0.format(n); }
+  function chipOptimus(){ const cs = $('chSug'); if (cs) { let n = 0; for (let i = 0; i < N; i++) if (sugPend(i)) n++; cs.querySelector('em').textContent = nf0.format(n); }
+    const cb = $('chBlk'); if (cb) { let n = 0; for (let i = 0; i < N; i++) if (BKI[i]) n++; cb.querySelector('em').textContent = nf0.format(n); }
     const ca = $('chAce'); if (ca) { let n = 0; for (let i = 0; i < N; i++) if (aceito(i)) n++; ca.querySelector('em').textContent = nf0.format(n); }
     const c = $('chOpt'); if (!c) return; c.style.display = OPT.size ? '' : 'none'; c.querySelector('em').textContent = nf0.format(OPT.size); if (!OPT.size && F.extra.has('opt')) { F.extra.delete('opt'); c.classList.remove('on'); } }
   on($('q'), 'input', e => { F.q = e.target.value; clearTimeout(e.target._t); e.target._t = setTimeout(() => { filtrar(); sc.scrollTop = 0; render(); }, 150); });
