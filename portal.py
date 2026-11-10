@@ -254,32 +254,16 @@ def _chat() -> None:
                         st.download_button(f"Baixar {a['nome']}", data=lambda c=a["caminho"]: chat.baixar(c), file_name=a["nome"],
                                            mime=a.get("tipo") or "application/octet-stream", key=f"chat_dl_{m['id']}_{k}", icon=":material/download:",
                                            on_click="ignore", type="tertiary")
-            # anexos: colar print (Ctrl + V), arrastar ou escolher arquivos
-            try:
-                colado = ui.CHAT_COLAR(tema={"texto": theme.tokens()["muted"], "borda": theme.tokens()["line_strong"]},
-                                       limpo=len(st.session_state.get("chat_pend", [])), key="chat_colar", default=None) if ui.CHAT_COLAR else None
-            except Exception:
-                colado = None
-            pend = st.session_state.setdefault("chat_pend", [])
-            if isinstance(colado, dict) and colado.get("ts") != st.session_state.get("_chat_colar_ts"):
-                import base64 as _b64
-                st.session_state._chat_colar_ts = colado.get("ts")
-                for a in colado.get("arquivos") or []:
-                    pend.append({"nome": a["nome"], "tipo": a.get("tipo") or "", "bytes": _b64.b64decode(a["b64"])})
-            if pend:
-                st.html("<div class='ps-pend'>" + "".join(f"<span>{ui.esc(a['nome'])} · {tam(len(a['bytes']))}</span>" for a in pend) + "</div>")
-                if st.button("Remover anexos colados", key="chat_pend_rm", type="tertiary", icon=":material/close:"):
-                    st.session_state.chat_pend = []; _rerun_fragmento()
+            # anexos: Ctrl + V cola o print direto no campo de anexo (script do site); também dá para arrastar ou escolher arquivos
             with st.form("chat_form", clear_on_submit=True, border=False):
                 anexos = st.file_uploader("Anexar arquivos", type=list(chat.TIPOS_ACEITOS), accept_multiple_files=True, key="chat_anexo",
                                           label_visibility="collapsed")
                 c1, c2 = st.columns([6, 1], vertical_alignment="bottom")
                 texto = c1.text_input("Mensagem", placeholder="Escreva uma mensagem... (@nome para marcar)", label_visibility="collapsed")
-                if c2.form_submit_button("", icon=":material/send:", type="primary", width="stretch") and (texto.strip() or anexos or pend):
+                if c2.form_submit_button("", icon=":material/send:", type="primary", width="stretch") and (texto.strip() or anexos):
                     try:
-                        lista = [{"nome": a.name, "tipo": a.type or "", "bytes": a.getvalue()} for a in (anexos or [])] + list(pend)
+                        lista = [{"nome": a.name, "tipo": a.type or "", "bytes": a.getvalue()} for a in (anexos or [])]
                         chat.enviar(canal, eu, texto, todos, arquivos=lista)
-                        st.session_state.chat_pend = []
                         _rerun_fragmento()
                     except Exception as exc:
                         st.session_state.chat_erro = str(exc)[:300]
