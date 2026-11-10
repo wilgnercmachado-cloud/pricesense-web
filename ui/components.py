@@ -383,7 +383,7 @@ const d = window.parent.document, w = window.parent;
     const logo = d.querySelector('[data-testid="stLogo"], [data-testid="stHeaderLogo"], header img');
     const esq = logo ? logo.getBoundingClientRect().right : 180;
     let dir = W;
-    d.querySelectorAll('.st-key-ps_tema, #ps-fs, [class*="st-key-reg_topo"], [class*="st-key-promo_topo"], [class*="st-key-mk_topo"]').forEach(el => {
+    d.querySelectorAll('.st-key-ps_tema, #ps-fs, .st-key-ps_sino, [class*="st-key-reg_topo"], [class*="st-key-promo_topo"], [class*="st-key-mk_topo"]').forEach(el => {
       const r = el.getBoundingClientRect(); if (r.width > 0 && r.top < 70) dir = Math.min(dir, r.left); });
     const maximo = Math.max(240, 2 * Math.min(meio - esq, dir - meio) - 40);
     alvo = Math.min(alvo, maximo);

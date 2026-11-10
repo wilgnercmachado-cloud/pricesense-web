@@ -236,8 +236,30 @@ iframe[data-testid="stCustomComponentV1"] {{ width: 100% !important; }}
 .st-key-chat_anexo [data-testid="stFileUploaderDropzone"]::before {{ content: "Ctrl + V cola um print • ou anexe imagem, texto, Excel, CSV, ZIP, PDF"; font-size: 12px; color: var(--ps-muted); margin-right: auto; align-self: center; }}
 [data-testid="stPopoverBody"]:has(.ps-chat-hd) [data-testid="stTextInputRootElement"] {{ border-radius: 999px !important; }}
 [data-testid="stPopoverBody"]:has(.ps-chat-hd) [data-testid="stFormSubmitButton"] button {{ border-radius: 999px !important; background: linear-gradient(135deg, var(--ps-primary), #7A3FD1) !important; border: 0 !important; }}
-.st-key-ps_notif {{ position: fixed !important; right: 22px; bottom: 150px; z-index: 1000001; width: 340px !important; padding: 12px 14px; border-radius: 16px; background: var(--ps-surface-solid); border: 1px solid var(--ps-line); box-shadow: 0 18px 48px -18px rgba(15,23,42,.5); animation: ps-entra .35s ease-out; }}
-.st-key-ps_notif .ps-aviso span {{ white-space: normal; line-height: 1.4; }}
+/* ---------- notificações: pop-up que some sozinho e sininho no topo ---------- */
+.ps-pops {{ position: fixed; right: 22px; top: 62px; z-index: 1000003; display: flex; flex-direction: column; gap: 8px; width: 340px; pointer-events: none; }}
+.ps-pop {{ display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 14px; pointer-events: auto;
+  background: color-mix(in srgb, var(--ps-surface-solid) 88%, transparent); border: 1px solid var(--ps-line);
+  backdrop-filter: var(--ps-glass); -webkit-backdrop-filter: var(--ps-glass); box-shadow: 0 22px 50px -22px rgba(15,23,42,.55);
+  animation: ps-pop-vida 7s cubic-bezier(.2,.8,.2,1) both; }}
+.ps-pop b {{ display: block; font-size: 13px; }} .ps-pop span {{ display: block; font-size: 12px; color: var(--ps-muted); line-height: 1.4; margin-top: 2px; }}
+.ps-pop .ps-live {{ width: 8px; height: 8px; margin-top: 5px; flex: none; border-radius: 50%; background: var(--ps-primary); box-shadow: 0 0 0 4px var(--ps-primary-soft); }}
+.ps-pop-mais {{ justify-content: center; font-size: 12px; color: var(--ps-muted); }}
+@keyframes ps-pop-vida {{ 0% {{ opacity: 0; transform: translateY(-12px) scale(.97); }} 6% {{ opacity: 1; transform: none; }}
+  86% {{ opacity: 1; transform: none; }} 100% {{ opacity: 0; transform: translateX(24px); visibility: hidden; pointer-events: none; }} }}
+.st-key-ps_sino {{ position: fixed !important; top: 11px; right: 112px; z-index: 1000002; width: auto !important; }}
+.st-key-ps_sino [data-testid="stPopoverButton"] {{ height: 38px; min-height: 38px; min-width: 38px; padding: 0 9px; border-radius: 19px;
+  background: var(--ps-surface) !important; border: 1px solid var(--ps-line) !important; backdrop-filter: var(--ps-glass); }}
+.st-key-ps_sino [data-testid="stPopoverButton"]:hover {{ border-color: var(--ps-primary) !important; box-shadow: 0 0 0 4px var(--ps-primary-soft); }}
+.st-key-ps_sino [data-testid="stPopoverButton"] p {{ font: 700 11px var(--ps-mono); color: #fff; background: #E0567A; border-radius: 999px; padding: 1px 6px; }}
+.st-key-ps_sino [data-testid="stPopoverButton"] [data-testid="stIconMaterial"] {{ color: var(--ps-ink); font-size: 20px; }}
+[data-testid="stPopoverBody"]:has(.ps-sino-top) {{ width: 380px !important; max-width: 92vw; }}
+.ps-sino-top b {{ display: block; font-size: 15px; }} .ps-sino-top span {{ font-size: 11.5px; color: var(--ps-muted); }}
+.ps-sino-lista {{ display: flex; flex-direction: column; gap: 6px; max-height: calc(100vh / var(--ps-zoom, .8) - 260px); overflow: auto; margin-top: 6px; }}
+.ps-sino-it {{ padding: 8px 10px; border-radius: 10px; border: 1px solid var(--ps-line); }}
+.ps-sino-it.nova {{ background: var(--ps-primary-soft); border-color: color-mix(in srgb, var(--ps-primary) 30%, var(--ps-line)); }}
+.ps-sino-it b {{ display: block; font-size: 12.5px; }} .ps-sino-it span {{ display: block; font-size: 12px; color: var(--ps-muted); line-height: 1.4; }}
+.ps-sino-it small {{ font: 500 10px var(--ps-mono); color: var(--ps-faint); }}
 .st-key-ps_aviso {{
   position: fixed !important; right: 22px; bottom: 22px; z-index: 1000001; width: 340px !important; padding: 16px;
   background: color-mix(in srgb, var(--ps-surface-solid) 78%, transparent); border: 1px solid var(--ps-line);
