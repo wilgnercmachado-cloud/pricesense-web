@@ -255,8 +255,11 @@ def _chat() -> None:
                                            mime=a.get("tipo") or "application/octet-stream", key=f"chat_dl_{m['id']}_{k}", icon=":material/download:",
                                            on_click="ignore", type="tertiary")
             # anexos: colar print (Ctrl + V), arrastar ou escolher arquivos
-            colado = ui.CHAT_COLAR(tema={"texto": theme.tokens()["muted"], "borda": theme.tokens()["line_strong"]}, limpo=len(st.session_state.get("chat_pend", [])),
-                                   key="chat_colar", default=None)
+            try:
+                colado = ui.CHAT_COLAR(tema={"texto": theme.tokens()["muted"], "borda": theme.tokens()["line_strong"]},
+                                       limpo=len(st.session_state.get("chat_pend", [])), key="chat_colar", default=None) if ui.CHAT_COLAR else None
+            except Exception:
+                colado = None
             pend = st.session_state.setdefault("chat_pend", [])
             if isinstance(colado, dict) and colado.get("ts") != st.session_state.get("_chat_colar_ts"):
                 import base64 as _b64
