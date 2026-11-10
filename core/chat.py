@@ -94,16 +94,59 @@ def preparar_imagem(bruto: bytes) -> str:
     return "data:image/jpeg;base64," + base64.b64encode(out.getvalue()).decode()
 
 
-def enviar(canal: str, autor: dict, texto: str, todos_estados: list[str], anexo: bytes | None = None) -> None:
+TIPOS_ACEITOS = ("png", "jpg", "jpeg", "webp", "gif", "txt", "csv", "xlsx", "xls", "zip", "pdf", "docx")
+LIMITE_ARQUIVO = 15 * 1024 * 1024
+
+
+def _miniatura(bruto: bytes) -> str | None:
+    try:
+        import base64
+        import io
+        from PIL import Image
+        img = Image.open(io.BytesIO(bruto)).convert("RGB")
+        img.thumbnail((900, 900))
+        out = io.BytesIO(); img.save(out, "JPEG", quality=72, optimize=True)
+        return "data:image/jpeg;base64," + base64.b64encode(out.getvalue()).decode()
+    except Exception:
+        return None
+
+
+def baixar(caminho: str) -> bytes:
+    """Arquivo do chat no tamanho original (guardado compactado no Storage)."""
+    import gzip
+    return gzip.decompress(db.sb().storage.from_("relatorios").download(caminho))
+
+
+def enviar(canal: str, autor: dict, texto: str, todos_estados: list[str], anexo: bytes | None = None,
+           arquivos: list[dict] | None = None) -> None:
+    """arquivos: [{nome, tipo, bytes}] — prints, textos, Excel, CSV, ZIP. Cada um fica no Storage no tamanho original;
+    imagens ganham também uma miniatura para aparecer na conversa."""
+    import gzip
     texto = (texto or "").strip()
-    if not texto and not anexo:
+    arquivos = list(arquivos or [])
+    if anexo:
+        arquivos.append({"nome": "print.png", "tipo": "image/png", "bytes": anexo})
+    if not texto and not arquivos:
         return
     agora = dt.datetime.now(dt.timezone.utc).isoformat()
-    reg = {"id": str(uuid.uuid4()), "canal": canal, "autor": autor["usuario"], "autor_nome": autor.get("nome") or autor["usuario"],
+    ident = str(uuid.uuid4())
+    reg = {"id": ident, "canal": canal, "autor": autor["usuario"], "autor_nome": autor.get("nome") or autor["usuario"],
            "texto": texto[:2000], "criado_em": agora}
-    if anexo:
-        reg["anexo"] = preparar_imagem(anexo)
-        texto = texto or "[print anexado]"
+    salvos = []
+    for n, a_ in enumerate(arquivos):
+        bruto = a_["bytes"]
+        if len(bruto) > LIMITE_ARQUIVO:
+            raise ValueError(f"{a_['nome']} passa de 15 MB")
+        nome = re.sub(r"[^\w.\- ]", "_", str(a_.get("nome") or f"arquivo_{n}"))[:120]
+        caminho = f"chat/{ident}/{n}_{nome}.gz"
+        db.sb().storage.from_("relatorios").upload(caminho, gzip.compress(bruto, 6), {"content-type": "application/gzip", "upsert": "true"})
+        item = {"nome": nome, "tipo": a_.get("tipo") or "", "tamanho": len(bruto), "caminho": caminho}
+        if str(item["tipo"]).startswith("image/") or nome.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".gif")):
+            item["previa"] = _miniatura(bruto)
+        salvos.append(item)
+    if salvos:
+        reg["arquivos"] = salvos
+        texto = texto or ("[" + ", ".join(x["nome"] for x in salvos) + "]")
     db.sb().table(MSG).insert(reg).execute()
     marcar_lido(autor["usuario"], canal)
     nome = autor.get("nome") or autor["usuario"]
