@@ -263,6 +263,17 @@ def _uploads(rel: dict, meta_base: dict) -> None:
             _profimetrics(aba)
 
 
+def _modo_visao() -> str:
+    """Setor PRICE: visão de Pricing. Demais setores (ou vazio): visão do Comercial. Administrador escolhe entre as duas."""
+    if auth.eh_admin():
+        ss = st.session_state
+        ss.setdefault("reg_modo_sel", "Pricing")
+        st.segmented_control("Visão", ["Pricing", "Comercial"], key="reg_modo_sel", required=True, label_visibility="collapsed")
+        return "pricing" if ss.reg_modo_sel == "Pricing" else "comercial"
+    setor = str(st.session_state.get("usuario_setor") or "").strip().upper()
+    return "pricing" if setor.startswith("PRICE") or setor == "PRICING" else "comercial"
+
+
 def _formacao(df: pd.DataFrame) -> str:
     """Botão de controle da formação do novo preço: formato (por usuário), percentuais por curva e delta seguro por estado ou filial."""
     from core import parametros as pm
@@ -489,6 +500,7 @@ def render() -> None:
     if fonte is None:
         return
     df_all, meta, rel = fonte
+    df_base = df_all                                       # base inteira (para encerrar os blocks pela regra)
     permitidos = auth.estados_permitidos()
     if permitidos is not None:
         if not permitidos:
@@ -505,9 +517,13 @@ def render() -> None:
             return
 
     with st.container(horizontal=True, vertical_alignment="center", gap="small", key="reg_topo"):
+        modo = _modo_visao()
         f = _filtros(df_all)
-        formato = _formacao(df_all)
-        _uploads(rel, meta)
+        if modo == "pricing":
+            formato = _formacao(df_all)
+            _uploads(rel, meta)
+        else:
+            formato = "mercado"
     regras, _ = pf.carregar()
     dtfim = meta.get("com_data_fim", 0)
     info = (f"{rel.get('titulo')}: base de {meta.get('atualizado')}, pesquisa de {' a '.join(meta.get('periodo') or [])}. "
@@ -553,9 +569,28 @@ def render() -> None:
         except Exception as exc:
             st.session_state.pop("reg_backup", None)
             st.error(f"Não foi possível abrir o backup: {exc}", icon=":material/error:")
-    retorno = _MESA(app="price", dados=dados, chave=f"{chave}-{formato}", formato=formato, tokens=_tokens_css(), fonte=theme.FONTE_URL, visao=st.session_state.reg_visao,
+    from core import blocks as bk
+    lista_blocks = bk.expirar(bk.ativos(), df_base)
+    retorno = _MESA(app="price", dados=dados, chave=f"{chave}-{formato}-{modo}", formato=formato, modo_visao=modo, admin=auth.eh_admin(),
+                    blocks=[{k: b.get(k) for k in ("id", "filial", "produto", "motivo", "observacao", "usuario", "preco_vencedor", "concorrente",
+                                                    "data_pesquisa", "criado_em")} for b in lista_blocks], motivos_block=bk.MOTIVOS, tokens=_tokens_css(), fonte=theme.FONTE_URL, visao=st.session_state.reg_visao,
                     altura=900, info=info, usuario=usuario, base=base_id, atualizado=_data_base(rel, meta), backups=backups, historico=historico, estado=estado,
                     key="mesa_regular", default=None)
+    if isinstance(retorno, dict) and retorno.get("ts") != st.session_state.get("_reg_ts") and retorno.get("acao") in ("block", "desbloquear"):
+        st.session_state._reg_ts = retorno.get("ts")
+        try:
+            if retorno["acao"] == "block":
+                bk.criar(retorno["filial"], retorno["produto"], retorno.get("estado", ""), retorno.get("motivo", ""), retorno.get("observacao", ""),
+                         usuario, retorno.get("preco_vencedor") or 0, retorno.get("concorrente", ""), retorno.get("data_pesquisa", ""))
+                st.toast("BLOCK registrado: o item fica travado para o Pricing.", icon=":material/block:")
+            else:
+                alvo = next((b for b in bk.ativos() if b["id"] == retorno.get("id")
+                             or (int(b["filial"]) == int(retorno.get("filial") or -1) and int(b["produto"]) == int(retorno.get("produto") or -1))), None)
+                if alvo and (auth.eh_admin() or alvo.get("usuario") == usuario):
+                    bk.remover(alvo["id"], usuario)
+                    st.toast("BLOCK retirado.", icon=":material/lock_open:")
+        except Exception as exc:
+            st.toast(f"Não foi possível gravar o BLOCK: {exc}", icon=":material/error:")
     if isinstance(retorno, dict) and retorno.get("ts") != st.session_state.get("_reg_ts") and retorno.get("acao") in ("backup", "abrir_backup", "sair_backup"):
         st.session_state._reg_ts = retorno.get("ts")
         acao = retorno["acao"]
