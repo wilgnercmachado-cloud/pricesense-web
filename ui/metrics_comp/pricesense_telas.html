@@ -339,6 +339,16 @@ body.foco .kpis,body.foco .linha2{display:grid}
 #chSug em{font-style:normal;font-family:'Geist Mono',monospace;font-size:11px;opacity:.7;margin-left:2px}
 .sgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.sgrid input{width:100%;box-sizing:border-box;height:34px;border:1px solid var(--line);border-radius:9px;background:var(--field);color:var(--ink);padding:0 10px;font:600 14px 'Geist Mono',monospace;text-align:right}
 .sgfora{display:flex;gap:8px;align-items:flex-start;margin-top:10px;padding:8px 10px;border-radius:9px;background:var(--amber-soft);color:var(--amber);font-size:12px}
+.row.grp{background:color-mix(in srgb,var(--primary) 5%,var(--surface));cursor:pointer;font-weight:600}
+.row.grp:hover{background:color-mix(in srgb,var(--primary) 10%,var(--surface))}.row.grp.aberto{box-shadow:inset 3px 0 0 var(--primary)}
+.row.filho>div:nth-child(-n+3){padding-left:22px}.row.filho{background:color-mix(in srgb,var(--raised) 60%,transparent)}
+.gcar{display:inline-block;width:14px;color:var(--primary)}.gcnt{font:600 11px 'Geist Mono',monospace;color:var(--primary)}.gmix{color:var(--faint);font-weight:400}
+.gsug{margin-left:8px;display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--primary);font:600 11px 'Geist',sans-serif;cursor:pointer}
+.gsug:hover{background:var(--primary-soft)}.gsug svg{width:11px;height:11px}
+.lote{width:min(620px,94vw)}.lhd{display:flex;align-items:center;justify-content:space-between;margin:10px 0 6px}.lhd em{font-style:normal;font-size:11.5px;color:var(--muted)}
+.llist{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:4px}
+.lfil{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:pointer;font-size:12.5px}.lfil:hover{background:var(--raised)}
+.lfil span{font-weight:600;min-width:180px}.lfil small{color:var(--muted);font-size:11px}.lfil.todos span{min-width:0}
 #chOpt em{font-style:normal;font-family:'Geist Mono',monospace;font-size:11px;opacity:.7;margin-left:2px}
 #root{display:block} #app{height:100%}
 </style>
@@ -1590,7 +1600,7 @@ body.foco .kpis,body.foco .linha2{display:grid}
 </head><body><div id="root"></div>
 <script>
 const APP_PRICE = (() => {
-const MARCACAO = "<div id=\"app\">\n  <div class=\"topo\">\n    <div class=\"marca\"><h1 id=\"titulo\"></h1><small id=\"escopo\"></small></div>\n    <div class=\"kstrip\" id=\"kpis\"></div>\n  </div>\n  <div class=\"linha2\">\n    <div class=\"glass histc\">\n      <div class=\"hhead\"><span class=\"htit\">Concorr\u00eancia <small id=\"histSub\"></small></span><div class=\"hchips\" id=\"hChips\"></div>\n        <span class=\"hseg\" id=\"hSeg\"><button data-hm=\"v\" class=\"on\">Varejo</button><button data-hm=\"a\">Atacado</button></span></div>\n      <div id=\"hist\"></div>\n    </div>\n    <div class=\"glass resumo\" id=\"resumo\"></div>\n  </div>\n  <div class=\"gridbox glass\">\n    <div class=\"tools\">\n      <input type=\"search\" id=\"q\" placeholder=\"Buscar produto, filial ou concorrente\">\n      <button class=\"chip\" data-rg=\"4\" data-ic=\"obj\" data-tip=\"Itens sem pesquisa que foram para a margem objetiva\">Aplicado objetiva</button>\n      <button class=\"chip\" data-rg=\"3\" data-ic=\"piso\" data-tip=\"Itens que pararam na margem m\u00ednima\">Aplicado m\u00ednima</button>\n      <button class=\"chip\" data-rg=\"2\" data-ic=\"teto\" data-tip=\"Itens que pararam na margem m\u00e1xima\">Aplicado m\u00e1xima</button>\n      <span class=\"csep\"></span>\n      <button class=\"chip\" data-fx=\"neg\" data-ic=\"tdDn\" data-tip=\"Novo varejo abaixo do custo\">Negativos</button>\n      <button class=\"chip\" data-fx=\"pos\" data-ic=\"tdUp\" data-tip=\"Novo varejo acima do custo\">Positivos</button>\n      <button class=\"chip\" data-fx=\"ipf\" data-ic=\"alerta\" data-tip=\"IP novo acima de 100,9%: mais caro que o mercado\">IP fora</button>\n      <button class=\"chip\" id=\"chSug\" data-fx=\"sug\" data-ic=\"send\" data-tip=\"Itens com sugest\u00e3o do comprador pendente hoje\">Sugest\u00e3o <em>0</em></button>\n      <button class=\"chip\" id=\"chBlk\" data-fx=\"blk\" data-ic=\"lock\" data-tip=\"Itens com BLOCK do comercial\">Block <em>0</em></button>\n      <button class=\"chip\" id=\"chAce\" data-fx=\"ace\" data-ic=\"check\" data-tip=\"S\u00f3 os pre\u00e7os com aceite: o que vai para a importa\u00e7\u00e3o\">Aceitos <em>0</em></button>\n      <button class=\"chip\" id=\"chOpt\" data-fx=\"opt\" data-ic=\"robo\" data-tip=\"S\u00f3 os itens ajustados pelo Optimus\" style=\"display:none\">Optimus <em>0</em></button>\n      <span class=\"cnt\" id=\"cnt\"></span>\n    </div>\n    <div id=\"scroll\" tabindex=\"0\"><div class=\"hdr\" id=\"hdr\"></div><div id=\"body\"></div></div>\n  </div>\n</div>\n<nav class=\"dock glass\" id=\"dock\">\n  <button class=\"ib robo\" id=\"bOpt\" data-tip=\"Optimus: an\u00e1lise inteligente dos itens filtrados\" data-ic=\"robo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib gr\" id=\"bAll\" data-tip=\"Aceitar todos os itens filtrados que est\u00e3o fora da regra de corte\" data-ic=\"check\"></button>\n  <button class=\"ib\" id=\"bProx\" data-tip=\"Pr\u00f3ximo pre\u00e7o pendente (N)\" data-ic=\"prox\"></button>\n  <button class=\"ib\" id=\"bNone\" data-tip=\"Retirar aceite dos itens filtrados\" data-ic=\"x\"></button>\n  <button class=\"ib\" id=\"bReset\" data-tip=\"Voltar pre\u00e7os e aceites para a sugest\u00e3o do motor\" data-ic=\"undo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib\" id=\"bRegras\" data-tip=\"Regra de neg\u00f3cio e regra de altera\u00e7\u00e3o\" data-ic=\"regra\"></button>\n  <button class=\"ib\" id=\"bCols\" data-tip=\"Colunas e vis\u00e3o salva no seu perfil\" data-ic=\"cols\"></button>\n  <button class=\"ib\" id=\"bRnd\" data-tip=\"Regra de arredondamento\" data-ic=\"rnd\"></button>\n  <button class=\"ib\" id=\"bPiso\" data-tip=\"Piso de margem por estado\" data-ic=\"piso\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib pri\" id=\"bExp\" data-tip=\"Importa\u00e7\u00e3o (layout PRICE do Pre\u00e7o Bot)\" data-ic=\"up\"></button>\n  <button class=\"ib\" id=\"bProp\" data-tip=\"Importa\u00e7\u00e3o de proporcionais (filhos do produto PAI)\" data-ic=\"prop\"></button>\n  <button class=\"ib\" id=\"bBkp\" data-tip=\"Backup: a precifica\u00e7\u00e3o dos \u00faltimos 3 dias, como estava antes de importar\" data-ic=\"bkp\"></button>\n  <button class=\"ib\" id=\"bSugAll\" data-tip=\"Aceitar todas as sugest\u00f5es do comprador (itens filtrados)\" data-ic=\"send\"></button>\n  <button class=\"ib\" id=\"bXlsA\" data-tip=\"Exportar a an\u00e1lise da grade para Excel\" data-ic=\"xls\"></button>\n  <button class=\"ib\" id=\"bFoco\" data-tip=\"Modo foco em tela cheia\" data-ic=\"foco\"></button>\n  <button class=\"ib\" id=\"bTema\" data-tip=\"Alternar tema claro ou escuro\" data-ic=\"tema\"></button>\n</nav>\n<div class=\"pop glass\" id=\"pRegras\"></div>\n<div class=\"pop glass larga\" id=\"pCols\"></div>\n<div class=\"pop glass\" id=\"pRnd\"></div>\n<div class=\"pop glass\" id=\"pPiso\"></div>\n<div class=\"pop glass\" id=\"pExp\"></div>\n<div class=\"pop glass\" id=\"pProp\"></div>\n<div class=\"pop glass larga\" id=\"pOpt\"></div>\n<div class=\"pop glass larga\" id=\"pBkp\"></div>\n<div class=\"modal\" id=\"modal\"></div>\n<div id=\"tip\"></div><div class=\"toast\" id=\"toast\"></div>\n";
+const MARCACAO = "<div id=\"app\">\n  <div class=\"topo\">\n    <div class=\"marca\"><h1 id=\"titulo\"></h1><small id=\"escopo\"></small></div>\n    <div class=\"kstrip\" id=\"kpis\"></div>\n  </div>\n  <div class=\"linha2\">\n    <div class=\"glass histc\">\n      <div class=\"hhead\"><span class=\"htit\">Concorr\u00eancia <small id=\"histSub\"></small></span><div class=\"hchips\" id=\"hChips\"></div>\n        <span class=\"hseg\" id=\"hSeg\"><button data-hm=\"v\" class=\"on\">Varejo</button><button data-hm=\"a\">Atacado</button></span></div>\n      <div id=\"hist\"></div>\n    </div>\n    <div class=\"glass resumo\" id=\"resumo\"></div>\n  </div>\n  <div class=\"gridbox glass\">\n    <div class=\"tools\">\n      <input type=\"search\" id=\"q\" placeholder=\"Buscar produto, filial ou concorrente\">\n      <button class=\"chip\" data-rg=\"4\" data-ic=\"obj\" data-tip=\"Itens sem pesquisa que foram para a margem objetiva\">Aplicado objetiva</button>\n      <button class=\"chip\" data-rg=\"3\" data-ic=\"piso\" data-tip=\"Itens que pararam na margem m\u00ednima\">Aplicado m\u00ednima</button>\n      <button class=\"chip\" data-rg=\"2\" data-ic=\"teto\" data-tip=\"Itens que pararam na margem m\u00e1xima\">Aplicado m\u00e1xima</button>\n      <span class=\"csep\"></span>\n      <button class=\"chip\" data-fx=\"neg\" data-ic=\"tdDn\" data-tip=\"Novo varejo abaixo do custo\">Negativos</button>\n      <button class=\"chip\" data-fx=\"pos\" data-ic=\"tdUp\" data-tip=\"Novo varejo acima do custo\">Positivos</button>\n      <button class=\"chip\" data-fx=\"ipf\" data-ic=\"alerta\" data-tip=\"IP novo acima de 100,9%: mais caro que o mercado\">IP fora</button>\n      <button class=\"chip\" id=\"chCasc\" data-ic=\"layers\" data-tip=\"Ver por produto, com as filiais dentro (cascata)\">Por produto</button>\n      <button class=\"chip\" id=\"chSug\" data-fx=\"sug\" data-ic=\"send\" data-tip=\"Itens com sugest\u00e3o do comprador pendente hoje\">Sugest\u00e3o <em>0</em></button>\n      <button class=\"chip\" id=\"chBlk\" data-fx=\"blk\" data-ic=\"lock\" data-tip=\"Itens com BLOCK do comercial\">Block <em>0</em></button>\n      <button class=\"chip\" id=\"chAce\" data-fx=\"ace\" data-ic=\"check\" data-tip=\"S\u00f3 os pre\u00e7os com aceite: o que vai para a importa\u00e7\u00e3o\">Aceitos <em>0</em></button>\n      <button class=\"chip\" id=\"chOpt\" data-fx=\"opt\" data-ic=\"robo\" data-tip=\"S\u00f3 os itens ajustados pelo Optimus\" style=\"display:none\">Optimus <em>0</em></button>\n      <span class=\"cnt\" id=\"cnt\"></span>\n    </div>\n    <div id=\"scroll\" tabindex=\"0\"><div class=\"hdr\" id=\"hdr\"></div><div id=\"body\"></div></div>\n  </div>\n</div>\n<nav class=\"dock glass\" id=\"dock\">\n  <button class=\"ib robo\" id=\"bOpt\" data-tip=\"Optimus: an\u00e1lise inteligente dos itens filtrados\" data-ic=\"robo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib gr\" id=\"bAll\" data-tip=\"Aceitar todos os itens filtrados que est\u00e3o fora da regra de corte\" data-ic=\"check\"></button>\n  <button class=\"ib\" id=\"bProx\" data-tip=\"Pr\u00f3ximo pre\u00e7o pendente (N)\" data-ic=\"prox\"></button>\n  <button class=\"ib\" id=\"bNone\" data-tip=\"Retirar aceite dos itens filtrados\" data-ic=\"x\"></button>\n  <button class=\"ib\" id=\"bReset\" data-tip=\"Voltar pre\u00e7os e aceites para a sugest\u00e3o do motor\" data-ic=\"undo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib\" id=\"bRegras\" data-tip=\"Regra de neg\u00f3cio e regra de altera\u00e7\u00e3o\" data-ic=\"regra\"></button>\n  <button class=\"ib\" id=\"bCols\" data-tip=\"Colunas e vis\u00e3o salva no seu perfil\" data-ic=\"cols\"></button>\n  <button class=\"ib\" id=\"bRnd\" data-tip=\"Regra de arredondamento\" data-ic=\"rnd\"></button>\n  <button class=\"ib\" id=\"bPiso\" data-tip=\"Piso de margem por estado\" data-ic=\"piso\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib pri\" id=\"bExp\" data-tip=\"Importa\u00e7\u00e3o (layout PRICE do Pre\u00e7o Bot)\" data-ic=\"up\"></button>\n  <button class=\"ib\" id=\"bProp\" data-tip=\"Importa\u00e7\u00e3o de proporcionais (filhos do produto PAI)\" data-ic=\"prop\"></button>\n  <button class=\"ib\" id=\"bBkp\" data-tip=\"Backup: a precifica\u00e7\u00e3o dos \u00faltimos 3 dias, como estava antes de importar\" data-ic=\"bkp\"></button>\n  <button class=\"ib\" id=\"bSugAll\" data-tip=\"Aceitar todas as sugest\u00f5es do comprador (itens filtrados)\" data-ic=\"send\"></button>\n  <button class=\"ib\" id=\"bXlsA\" data-tip=\"Exportar a an\u00e1lise da grade para Excel\" data-ic=\"xls\"></button>\n  <button class=\"ib\" id=\"bFoco\" data-tip=\"Modo foco em tela cheia\" data-ic=\"foco\"></button>\n  <button class=\"ib\" id=\"bTema\" data-tip=\"Alternar tema claro ou escuro\" data-ic=\"tema\"></button>\n</nav>\n<div class=\"pop glass\" id=\"pRegras\"></div>\n<div class=\"pop glass larga\" id=\"pCols\"></div>\n<div class=\"pop glass\" id=\"pRnd\"></div>\n<div class=\"pop glass\" id=\"pPiso\"></div>\n<div class=\"pop glass\" id=\"pExp\"></div>\n<div class=\"pop glass\" id=\"pProp\"></div>\n<div class=\"pop glass larga\" id=\"pOpt\"></div>\n<div class=\"pop glass larga\" id=\"pBkp\"></div>\n<div class=\"modal\" id=\"modal\"></div>\n<div id=\"tip\"></div><div class=\"toast\" id=\"toast\"></div>\n";
 /* ===================== protocolo de componente do Streamlit (sem biblioteca) ===================== */
 const ST = {
   send(type, extra){ window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type }, extra || {}), '*'); },
@@ -1633,7 +1643,7 @@ async function montar(A){
 const ic = (n, cor) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="${cor || 'currentColor'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${P_[n]}</svg>`;
 document.querySelectorAll('[data-ic2]').forEach(h => h.insertAdjacentHTML('afterbegin', ic(h.dataset.ic2, 'var(--primary)')));
 
-  Object.assign(P_, { send: '<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>', lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>', xls: '<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="m9 12 6 6M15 12l-6 6"/>', troca: '<path d="M7 4 3 8l4 4"/><path d="M3 8h13a4 4 0 0 1 0 8h-2"/><path d="m17 20 4-4-4-4"/>', tema: '<circle cx="12" cy="12" r="9"/><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"/>', bkp: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>', cols: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>', save: '<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h8V3M8 21v-7h8v7"/>',
+  Object.assign(P_, { layers: '<path d="m12 2 9 5-9 5-9-5z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/>', send: '<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>', lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>', xls: '<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="m9 12 6 6M15 12l-6 6"/>', troca: '<path d="M7 4 3 8l4 4"/><path d="M3 8h13a4 4 0 0 1 0 8h-2"/><path d="m17 20 4-4-4-4"/>', tema: '<circle cx="12" cy="12" r="9"/><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"/>', bkp: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>', cols: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>', save: '<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h8V3M8 21v-7h8v7"/>',
     seta_c: '<path d="m6 15 6-6 6 6"/>', prox: '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>',
     robo: '<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4"/><circle cx="12" cy="3" r="1"/><circle cx="9" cy="13.5" r="1.4"/><circle cx="15" cy="13.5" r="1.4"/><path d="M9.5 17h5M2 13v2M22 13v2"/>',
     prop: '<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/><path d="M11 7h4a2 2 0 0 1 2 2v4"/>',
@@ -2027,12 +2037,44 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     const nf = (F.regra >= 0) + (F.corte >= 0); $('bRegras').querySelector('.badge')?.remove(); if (nf) $('bRegras').insertAdjacentHTML('beforeend', `<span class="badge">${nf}</span>`);
   }
   const H = 34, sc = $('scroll'), body = $('body');
+  /* ---------- visão em cascata (Comercial): produto com as filiais dentro ---------- */
+  let CASC = false; const ABERTOS = new Set(); let GRUPOS = [], LIN = [];
+  function montarCascata(){ const mapa = new Map(); GRUPOS = [];
+    for (const i of VIS) { let g = mapa.get(D.pi[i]); if (!g) { g = { pi: D.pi[i], idx: [] }; mapa.set(D.pi[i], g); GRUPOS.push(g); } g.idx.push(i); }
+    LIN = []; GRUPOS.forEach((g, n) => { LIN.push(-(n + 1)); if (ABERTOS.has(g.pi)) for (const i of g.idx) LIN.push(i); }); }
+  const media = (idx, f, peso) => { let s_ = 0, w_ = 0; for (const i of idx) { const v = f(i); if (!isFinite(v) || v === -9 || v === -1) continue; const p_ = peso ? Math.max(peso(i), 0) : 1; if (!p_) continue; s_ += v * p_; w_ += p_; } return w_ ? s_ / w_ : NaN; };
+  const soma = (idx, f) => idx.reduce((t, i) => t + (isFinite(f(i)) && f(i) !== -1 ? f(i) : 0), 0);
+  const venda = i => D.venda[i] || 0;
+  function celGrupo(c, g){ const idx = g.idx, n = idx.length, ord = c.ord || (() => NaN);
+    const din = v => isFinite(v) ? nf2.format(v) : '–', pc = v => isFinite(v) ? vneg(v, pct(v)) : '–';
+    switch (c.id) {
+      case 'ok': return '';
+      case 'fil': return `<span class="gcnt">${n} ${n === 1 ? 'filial' : 'filiais'}</span>`;
+      case 'prod': { const sug = idx.filter(sugPend).length, blk = idx.filter(i => BKI[i]).length;
+        return `<span class="gcar">${ABERTOS.has(g.pi) ? '▾' : '▸'}</span><b>${esc(curto(D.produtos[g.pi]))}</b>${sug ? `<span class="sug">${ic('send')}${sug}</span>` : ''}${blk ? `<span class="blk">${ic('lock')}${blk}</span>` : ''}<button class="gsug" data-gsug="${g.pi}" data-tip="Sugerir preço para uma ou mais filiais deste produto">${ic('send')}Sugerir</button>`; }
+      case 'cu': case 'vm': case 'am': case 'vmk': case 'amk': case 'mo': case 'mav': case 'nv': case 'na': return din(media(idx, ord));
+      case 'm0': case 'ma0': case 'nm': case 'nma': return pc(media(idx, ord));
+      case 'var': { const v = media(idx, ord); return isFinite(v) ? `<span class="${v > 1e-4 ? 'pos' : v < -1e-4 ? 'neg' : ''}">${v > 0 ? '+' : ''}${pct(v)}</span>` : '–'; }
+      case 'dm': { const v = media(idx, i => ord(i) > 0 ? ord(i) - 1 : NaN); return isFinite(v) ? vneg(v, (v > 0 ? '+' : '') + pct(v)) : '–'; }
+      case 'ip': case 'ipn': return ipFmt(media(idx, i => ord(i) > 0 ? ord(i) : NaN, venda));
+      case 've': return 'R$ ' + nf0.format(soma(idx, venda));
+      case 'un': return nf0.format(soma(idx, i => D.un[i])) + ' un';
+      case 'imp': { const v = soma(idx, imp); return `<span class="${v > 0.5 ? 'pos' : v < -0.5 ? 'neg' : ''}">${v >= 0 ? '+' : '−'}R$ ${nf0.format(Math.abs(v))}</span>`; }
+      case 'est': return 'R$ ' + nf0.format(soma(idx, i => D.estoque[i] ?? 0));
+      case 'dde': { const v = media(idx, i => D.dde[i] ?? NaN, venda); return isFinite(v) ? nf0.format(v) : '–'; }   // DDE do estado: média pesada pela venda
+      case 'idade': case 'mcob': { const v = media(idx, ord); return isFinite(v) ? nf0.format(v) : '–'; }
+      case 'pobj': case 'pmin': case 'pmax': case 'red': { const v = media(idx, ord); return isFinite(v) ? nf1.format(v) + '%' : '–'; }
+      default: { const h0 = c.rend(idx[0]); for (const i of idx) if (c.rend(i) !== h0) return '<span class="gmix">vários</span>'; return h0; }
+    } }
   function render(){
-    body.style.height = (VIS.length * H) + 'px';
-    const ini = Math.max(0, Math.floor(sc.scrollTop / H) - 6), fim = Math.min(VIS.length, ini + Math.ceil(sc.clientHeight / H) + 14);
+    const lista = CASC ? LIN : VIS;
+    body.style.height = (lista.length * H) + 'px';
+    const ini = Math.max(0, Math.floor(sc.scrollTop / H) - 6), fim = Math.min(lista.length, ini + Math.ceil(sc.clientHeight / H) + 14);
     let h = '';
-    for (let k = ini; k < fim; k++) { const i = VIS[k];
-      h += `<div class="row${i === SEL ? ' sel' : ''}" data-i="${i}" style="top:${k * H}px">` + COLS.map((c, j) => `<div class="${cls(c, j)}"${sty(j)}>${c.rend(i)}</div>`).join('') + '</div>'; }
+    for (let k = ini; k < fim; k++) { const i = lista[k];
+      if (i < 0) { const g = GRUPOS[-i - 1];
+        h += `<div class="row grp${ABERTOS.has(g.pi) ? ' aberto' : ''}" data-g="${g.pi}" style="top:${k * H}px">` + COLS.map((c, j) => `<div class="${cls(c, j)}"${sty(j)}>${celGrupo(c, g)}</div>`).join('') + '</div>'; continue; }
+      h += `<div class="row${i === SEL ? ' sel' : ''}${CASC ? ' filho' : ''}" data-i="${i}" style="top:${k * H}px">` + COLS.map((c, j) => `<div class="${cls(c, j)}"${sty(j)}>${c.rend(i)}</div>`).join('') + '</div>'; }
     body.innerHTML = h;
   }
   let raf = 0; on(sc, 'scroll', () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; render(); }); });
@@ -2083,6 +2125,48 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     m.querySelector('[data-r="1"]').onclick = () => { const t = $('rjMot').value.trim(); if (!t) { $('rjAvi').textContent = 'Informe o motivo da rejeição.'; return; }
       ST.valor({ acao: 'rejeitar_sug', id: x.id, motivo: t, ts: Date.now() }); x.status = 'rejeitada'; x.motivo_rejeicao = t; x.decidido_por = EU;
       m.classList.remove('on'); atualizar(false); if (SEL === i) resumo(i); toast('Sugestão rejeitada; o comprador recebe o motivo'); }; }
+  /* sugestão do comprador para várias filiais do mesmo produto: marca as filiais (ou todas) e informa um preço */
+  function sugerirLote(g){ const m = $('modal'), mot = A.motivos_sugestao || ['Negociação com fornecedor', 'Acordo comercial', 'Erro de pesquisa', 'Estratégia da categoria', 'Outros'];
+    const linhas = g.idx.map(i => `<label class="lfil"><input type="checkbox" data-lf="${i}"><span>${esc(curto(D.filiais[D.fi[i]]))}</span>
+        <small>atual ${nf2.format(D.vm[i])} · mercado ${D.vmk[i] > 0 ? nf2.format(D.vmk[i]) : '–'} · custo ${nf2.format(D.cu[i])}${sugPend(i) ? ' · <b>já tem sugestão</b>' : ''}</small></label>`).join('');
+    m.innerHTML = `<div class="mcard glass blkc lote"><h4>${ic('send', 'var(--primary)')}Sugerir preço: ${esc(curto(D.produtos[g.pi]))}</h4>
+      <div class="lhd"><label class="lfil todos"><input type="checkbox" id="lfTodas"><span>Marcar todas as filiais (${g.idx.length})</span></label><em id="lfCnt">0 marcadas</em></div>
+      <div class="llist">${linhas}</div>
+      <div class="sgrid"><div><label>Novo varejo</label><input id="sgV" type="text" inputmode="decimal" placeholder="0,00"></div><div><label>Novo atacado</label><input id="sgA" type="text" inputmode="decimal" placeholder="igual ao varejo"></div></div>
+      <label>Motivo</label><div class="bmot">${mot.map(x => `<button class="chip" data-mot="${esc(x)}">${esc(x)}</button>`).join('')}</div>
+      <label>Observação <small id="sgReq">(opcional)</small></label><textarea id="sgObs" rows="2"></textarea>
+      <label class="sgfora" id="sgFora" style="display:none"><input type="checkbox" id="sgConf"> <span id="sgForaTxt"></span></label>
+      <p class="bavi" id="sgAvi"></p>
+      <div class="macts"><button class="tx" data-r="0">Cancelar</button><button class="tx pri" data-r="1">${ic('send')}Enviar sugestão</button></div></div>`;
+    m.classList.add('on'); let escolha = null, atacMexido = false;
+    const num = t => parseFloat(String(t).replace(/\./g, '').replace(',', '.'));
+    const marcadas = () => [...m.querySelectorAll('[data-lf]')].filter(x => x.checked).map(x => +x.dataset.lf);
+    const conferir = () => { const v = num($('sgV').value), sel = marcadas(); $('lfCnt').textContent = `${sel.length} marcada(s)`;
+      const fora = v > 0 ? sel.filter(i => v < MN[i] - 1e-9 || v > MX[i] + 1e-9) : [];
+      $('sgFora').style.display = fora.length ? 'flex' : 'none';
+      if (fora.length) $('sgForaTxt').textContent = `Confirmo que estou sugerindo fora dos parâmetros atuais em ${fora.length} filial(is) (abaixo da mínima ou acima da máxima).`;
+      return fora.length > 0; };
+    m.querySelectorAll('[data-lf]').forEach(x => x.onchange = () => { $('lfTodas').checked = marcadas().length === g.idx.length; conferir(); });
+    $('lfTodas').onchange = e => { m.querySelectorAll('[data-lf]').forEach(x => x.checked = e.target.checked); conferir(); };
+    $('sgV').oninput = () => { if (!atacMexido) $('sgA').value = $('sgV').value; conferir(); };
+    $('sgA').oninput = () => { atacMexido = true; };
+    m.querySelectorAll('[data-mot]').forEach(b => b.onclick = () => { escolha = b.dataset.mot; m.querySelectorAll('[data-mot]').forEach(x => x.classList.toggle('on', x === b));
+      $('sgReq').textContent = escolha === 'Outros' ? '(obrigatória em Outros)' : '(opcional)'; });
+    m.querySelector('[data-r="0"]').onclick = () => m.classList.remove('on');
+    m.querySelector('[data-r="1"]').onclick = () => { const sel = marcadas(), v = num($('sgV').value), at = num($('sgA').value || $('sgV').value), obs = $('sgObs').value.trim(), av = $('sgAvi');
+      if (!sel.length) { av.textContent = 'Marque pelo menos uma filial.'; return; }
+      if (!(v > 0)) { av.textContent = 'Informe o novo varejo.'; return; }
+      if (!(at > 0) || at > v + 1e-9) { av.textContent = 'O atacado deve ser maior que zero e não pode passar do varejo.'; return; }
+      if (!escolha) { av.textContent = 'Escolha o motivo da sugestão.'; return; }
+      if (escolha === 'Outros' && !obs) { av.textContent = 'Em "Outros", descreva o motivo na observação.'; return; }
+      if (conferir() && !$('sgConf').checked) { av.textContent = 'Confirme que está sugerindo fora dos parâmetros atuais.'; return; }
+      const itens = sel.map(i => ({ filial: +codTxt(D.filiais[D.fi[i]]), produto: +codTxt(D.produtos[D.pi[i]]), estado: D.ufs[D.ui[i]] || '', varejo: v, atacado: at,
+        motivo: escolha, observacao: obs, fora_parametros: v < MN[i] - 1e-9 || v > MX[i] + 1e-9, produto_nome: curto(D.produtos[D.pi[i]]), filial_nome: curto(D.filiais[D.fi[i]]),
+        preco_vencedor: D.vmk[i], novo_sugerido: NV[i] }));
+      ST.valor({ acao: 'sugerir_lote', itens, ts: Date.now() });
+      sel.forEach((i, n) => SUGI[i] = { ...itens[n], id: 'nova-' + Date.now() + '-' + n, usuario: EU, status: 'pendente', criado_em: new Date().toISOString() });
+      m.classList.remove('on'); atualizar(false); toast(`Sugestão enviada para ${sel.length} filial(is)`); };
+    setTimeout(() => $('sgV').focus(), 50); }
   /* comprador sugere preço: varejo + atacado (começa igual ao varejo), motivo da lista e observação */
   function abrirSugestao(i){ const m = $('modal'), mot = A.motivos_sugestao || ['Negociação com fornecedor', 'Acordo comercial', 'Erro de pesquisa', 'Estratégia da categoria', 'Outros'];
     m.innerHTML = `<div class="mcard glass blkc"><h4>${ic('send', 'var(--primary)')}Sugerir preço ao Pricing</h4>
@@ -2218,7 +2302,9 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   on(document, 'click', e => { if (!e.target.closest('.ctx')) fechaCtx(); });
   on(document, 'keydown', e => { if (e.key === 'Escape') fechaCtx(); });
   on(sc, 'scroll', fechaCtx);
-  on(body, 'click', e => { const ok = e.target.closest('[data-ok]'); if (ok) { alternarAceite(+ok.dataset.ok); return; }
+  on(body, 'click', e => { const gs = e.target.closest('[data-gsug]'); if (gs) { const g = GRUPOS.find(x => x.pi === +gs.dataset.gsug); if (g) sugerirLote(g); return; }
+    const gr = e.target.closest('.row.grp'); if (gr) { const pi = +gr.dataset.g; ABERTOS.has(pi) ? ABERTOS.delete(pi) : ABERTOS.add(pi); montarCascata(); render(); return; }
+    const ok = e.target.closest('[data-ok]'); if (ok) { alternarAceite(+ok.dataset.ok); return; }
     if (e.target.tagName === 'INPUT') return; const r = e.target.closest('.row'); if (!r) return;
     const cel = e.target.closest('.edc'), inp = cel && cel.querySelector('input[type=text]');
     if (inp) { const campo = inp.dataset.e, i = +r.dataset.i; if (SEL !== i) { selecionar(i); focarCelula(campo, VIS.indexOf(i)); } return; }   // célula editável: seleciona a linha e já deixa digitando
@@ -2708,6 +2794,9 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     const b = e.target.closest('[data-abrir]'); if (b) { ST.valor({ acao: 'abrir_backup', dia: b.dataset.abrir, ts: Date.now() }); toast('Abrindo o backup de ' + diaBr(b.dataset.abrir)); } });
   /* tema do site: aciona o mesmo botão do topo (as cores da mesa mudam sem recarregar) */
   $('bXlsA').onclick = () => exportarAnalise();
+  $('chCasc').onclick = () => { CASC = !CASC; $('chCasc').classList.toggle('on', CASC); $('chCasc').lastChild.textContent = CASC ? 'Por filial' : 'Por produto';
+    sc.scrollTop = 0; if (CASC) montarCascata(); render(); };
+  if (!COMERCIAL) $('chCasc').style.display = 'none';
   $('bSugAll').onclick = () => { const l = VIS.filter(sugPend); if (!l.length) { toast('Nenhuma sugestão pendente nos itens filtrados'); return; } aceitarSug(l); };
   if (COMERCIAL) { ['bSugAll', 'bOpt', 'bAll', 'bProx', 'bNone', 'bReset', 'bRnd', 'bPiso', 'bExp', 'bProp', 'bBkp', 'chAce', 'chOpt'].forEach(id => { const el = $(id); if (el) el.style.display = 'none'; });
     ORDEM = ORDEM.filter(x => x !== 'ok'); aplicaColunas(); }
@@ -2719,13 +2808,14 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     $('app').prepend(ban); ban.querySelector('#kSair').onclick = () => ST.valor({ acao: 'sair_backup', ts: Date.now() }); }
 
   /* ---------- ações ---------- */
-  function atualizar(refiltrar = true){ kpis(); chipOptimus(); if (refiltrar) filtrar(); render(); }
+  function atualizar(refiltrar = true){ kpis(); chipOptimus(); if (refiltrar) filtrar(); if (CASC) montarCascata(); render(); }
   function chipOptimus(){ const cs = $('chSug'); if (cs) { let n = 0; for (let i = 0; i < N; i++) if (sugPend(i)) n++; cs.querySelector('em').textContent = nf0.format(n); }
     const cb = $('chBlk'); if (cb) { let n = 0; for (let i = 0; i < N; i++) if (BKI[i]) n++; cb.querySelector('em').textContent = nf0.format(n); }
     const ca = $('chAce'); if (ca) { let n = 0; for (let i = 0; i < N; i++) if (aceito(i)) n++; ca.querySelector('em').textContent = nf0.format(n); }
     const c = $('chOpt'); if (!c) return; c.style.display = OPT.size ? '' : 'none'; c.querySelector('em').textContent = nf0.format(OPT.size); if (!OPT.size && F.extra.has('opt')) { F.extra.delete('opt'); c.classList.remove('on'); } }
   on($('q'), 'input', e => { F.q = e.target.value; clearTimeout(e.target._t); e.target._t = setTimeout(() => { filtrar(); sc.scrollTop = 0; render(); }, 150); });
   document.querySelectorAll('.chip').forEach(b => on(b, 'click', () => {
+    if (!b.dataset.fx && b.dataset.rg == null) return;                     // botões que não são filtro (ex.: Por produto)
     if (b.dataset.fx) { const v = b.dataset.fx; if (F.extra.has(v)) F.extra.delete(v); else { if (v === 'neg') F.extra.delete('pos'); if (v === 'pos') F.extra.delete('neg'); F.extra.add(v); }
       document.querySelectorAll('[data-fx]').forEach(x => x.classList.toggle('on', F.extra.has(x.dataset.fx))); }
     else { const v = +b.dataset.rg; F.travas.has(v) ? F.travas.delete(v) : F.travas.add(v); b.classList.toggle('on'); }
