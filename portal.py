@@ -217,43 +217,66 @@ def _chat() -> None:
                                  key="chat_sel", label_visibility="collapsed",
                                  on_change=lambda: chat.marcar_lido(login, st.session_state.chat_sel))     # abrir a conversa marca como lida
             st.session_state.chat_canal = canal
-            # mensagens: agrupadas por dia, com avatar, menções destacadas e print anexado (clique para ampliar)
-            msgs, html, dia_ant = chat.mensagens(canal), [], None
-            for n, m in enumerate(msgs):
-                try:
-                    t = _dt.datetime.fromisoformat(str(m["criado_em"]).replace("Z", "+00:00")).astimezone(fuso)
-                except Exception:
-                    t = _dt.datetime.now(fuso)
-                if t.date() != dia_ant:
-                    dia_ant = t.date()
-                    rot = "Hoje" if dia_ant == hoje else "Ontem" if (hoje - dia_ant).days == 1 else dia_ant.strftime("%d/%m/%Y")
-                    html.append(f"<div class='ps-dia'><span>{rot}</span></div>")
-                meu = m["autor"] == login
-                nome = m.get("autor_nome") or m["autor"]
-                texto = ui.esc(m.get("texto") or "")
-                texto = _re.sub(r"(@[\wÀ-ÿ.\-]+)", r"<b class='ps-mencao'>\1</b>", texto).replace("\n", "<br>")
-                if m.get("texto") == "" and m.get("anexo"):
-                    texto = ""
-                img = ""
-                if m.get("anexo"):
-                    ida = f"psimg-{str(m['id'])[:8]}"
-                    img = (f"<details class='ps-anexo'><summary><img src='{m['anexo']}' alt='print'><span class='ps-zoom'>ampliar</span></summary>"
-                           f"<a class='ps-baixar' download='{ida}.jpg' href='{m['anexo']}'>Baixar print em tamanho real</a></details>")
-                ava = "" if meu else f"<i class='ps-ava' style='background:{cor(m['autor'])}'>{iniciais(nome)}</i>"
-                html.append(f"<div class='ps-linha{' eu' if meu else ''}'>{ava}<div class='ps-msg{' eu' if meu else ''}'>"
-                            f"{'' if meu else f'<em>{ui.esc(nome)}</em>'}{img}{f'<p>{texto}</p>' if texto else ''}"
-                            f"<small>{t.strftime('%H:%M')}</small></div></div>")
+            # mensagens: agrupadas por dia, com avatar, menções destacadas, prints na conversa e arquivos para baixar
+            msgs, dia_ant = chat.mensagens(canal), None
+            tam = lambda b: f"{b / 1024:,.0f} KB".replace(",", ".") if b < 1024 * 1024 else f"{b / 1024 / 1024:,.1f} MB".replace(".", ",")
             with st.container(height=340, key="ps_chat_msgs"):
-                st.html("<div class='ps-msgs'>" + ("".join(html) or "<div class='ps-msg-vazio'><b>Nenhuma mensagem ainda</b>Comece a conversa: use @nome para marcar alguém ou anexe um print.</div>") + "</div>")
+                if not msgs:
+                    st.html("<div class='ps-msg-vazio'><b>Nenhuma mensagem ainda</b>Comece a conversa: use @nome para marcar alguém, cole um print (Ctrl + V) ou anexe arquivos.</div>")
+                for m in msgs:
+                    try:
+                        t = _dt.datetime.fromisoformat(str(m["criado_em"]).replace("Z", "+00:00")).astimezone(fuso)
+                    except Exception:
+                        t = _dt.datetime.now(fuso)
+                    topo = ""
+                    if t.date() != dia_ant:
+                        dia_ant = t.date()
+                        rot = "Hoje" if dia_ant == hoje else "Ontem" if (hoje - dia_ant).days == 1 else dia_ant.strftime("%d/%m/%Y")
+                        topo = f"<div class='ps-dia'><span>{rot}</span></div>"
+                    meu = m["autor"] == login
+                    nome = m.get("autor_nome") or m["autor"]
+                    arqs = m.get("arquivos") or []
+                    texto = m.get("texto") or ""
+                    if arqs and texto.startswith("[") and texto.endswith("]"):
+                        texto = ""
+                    texto = _re.sub(r"(@[\wÀ-ÿ.\-]+)", r"<b class='ps-mencao'>\1</b>", ui.esc(texto)).replace("\n", "<br>")
+                    imgs = "".join(f"<details class='ps-anexo'><summary><img src='{a['previa']}' alt='print'><span class='ps-zoom'>ampliar</span></summary></details>"
+                                   for a in arqs if a.get("previa"))
+                    if m.get("anexo"):
+                        imgs += f"<details class='ps-anexo'><summary><img src='{m['anexo']}' alt='print'><span class='ps-zoom'>ampliar</span></summary></details>"
+                    docs = "".join(f"<div class='ps-arq'><i>{ui.esc(a['nome'].rsplit('.', 1)[-1][:4].upper())}</i><span><b>{ui.esc(a['nome'])}</b><small>{tam(int(a.get('tamanho') or 0))}</small></span></div>"
+                                   for a in arqs)
+                    ava = "" if meu else f"<i class='ps-ava' style='background:{cor(m['autor'])}'>{iniciais(nome)}</i>"
+                    st.html(f"{topo}<div class='ps-linha{' eu' if meu else ''}'>{ava}<div class='ps-msg{' eu' if meu else ''}'>"
+                            f"{'' if meu else f'<em>{ui.esc(nome)}</em>'}{imgs}{f'<p>{texto}</p>' if texto else ''}{docs}"
+                            f"<small>{t.strftime('%H:%M')}</small></div></div>")
+                    for k, a in enumerate(arqs):                      # baixar no tamanho original: o navegador salva onde o usuário escolher
+                        st.download_button(f"Baixar {a['nome']}", data=lambda c=a["caminho"]: chat.baixar(c), file_name=a["nome"],
+                                           mime=a.get("tipo") or "application/octet-stream", key=f"chat_dl_{m['id']}_{k}", icon=":material/download:",
+                                           on_click="ignore", type="tertiary")
+            # anexos: colar print (Ctrl + V), arrastar ou escolher arquivos
+            colado = ui.CHAT_COLAR(tema={"texto": theme.tokens()["muted"], "borda": theme.tokens()["line_strong"]}, limpo=len(st.session_state.get("chat_pend", [])),
+                                   key="chat_colar", default=None)
+            pend = st.session_state.setdefault("chat_pend", [])
+            if isinstance(colado, dict) and colado.get("ts") != st.session_state.get("_chat_colar_ts"):
+                import base64 as _b64
+                st.session_state._chat_colar_ts = colado.get("ts")
+                for a in colado.get("arquivos") or []:
+                    pend.append({"nome": a["nome"], "tipo": a.get("tipo") or "", "bytes": _b64.b64decode(a["b64"])})
+            if pend:
+                st.html("<div class='ps-pend'>" + "".join(f"<span>{ui.esc(a['nome'])} · {tam(len(a['bytes']))}</span>" for a in pend) + "</div>")
+                if st.button("Remover anexos colados", key="chat_pend_rm", type="tertiary", icon=":material/close:"):
+                    st.session_state.chat_pend = []; _rerun_fragmento()
             with st.form("chat_form", clear_on_submit=True, border=False):
-                anexo = st.file_uploader("Anexar print", type=["png", "jpg", "jpeg", "webp"], key="chat_anexo", label_visibility="collapsed")
+                anexos = st.file_uploader("Anexar arquivos", type=list(chat.TIPOS_ACEITOS), accept_multiple_files=True, key="chat_anexo",
+                                          label_visibility="collapsed")
                 c1, c2 = st.columns([6, 1], vertical_alignment="bottom")
                 texto = c1.text_input("Mensagem", placeholder="Escreva uma mensagem... (@nome para marcar)", label_visibility="collapsed")
-                if c2.form_submit_button("", icon=":material/send:", type="primary", width="stretch") and (texto.strip() or anexo):
+                if c2.form_submit_button("", icon=":material/send:", type="primary", width="stretch") and (texto.strip() or anexos or pend):
                     try:
-                        if anexo is not None and anexo.size > 8 * 1024 * 1024:
-                            raise ValueError("o print passa de 8 MB")
-                        chat.enviar(canal, eu, texto, todos, anexo.getvalue() if anexo is not None else None)
+                        lista = [{"nome": a.name, "tipo": a.type or "", "bytes": a.getvalue()} for a in (anexos or [])] + list(pend)
+                        chat.enviar(canal, eu, texto, todos, arquivos=lista)
+                        st.session_state.chat_pend = []
                         _rerun_fragmento()
                     except Exception as exc:
                         st.session_state.chat_erro = str(exc)[:300]
