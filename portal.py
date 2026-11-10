@@ -155,7 +155,10 @@ _notificacoes()
 
 @st.fragment(run_every="15s")
 def _chat() -> None:
-    """Chat flutuante (canal público por estado e privados), em todas as telas."""
+    """Chat flutuante (canal público por estado e privados), em todas as telas, com print anexado."""
+    import datetime as _dt
+    import hashlib as _hl
+    import re as _re
     from core import chat
     login = st.session_state.get("usuario_login", "")
     try:
@@ -175,54 +178,86 @@ def _chat() -> None:
         if m["autor"] != login and str(m["criado_em"]) > str(lidos.get(m["canal"], "")):
             nao[m["canal"]] = nao.get(m["canal"], 0) + 1
     total = sum(nao.values())
+    fuso = _dt.timezone(_dt.timedelta(hours=-3))
+    hoje = _dt.datetime.now(fuso).date()
+    paleta = ["#2D4BFF", "#7A3FD1", "#0EA5A4", "#E0567A", "#F59E0B", "#16A34A", "#0284C7", "#DB2777"]
+    cor = lambda u: paleta[int(_hl.md5(str(u).encode()).hexdigest(), 16) % len(paleta)]
+    iniciais = lambda n: "".join(p[0] for p in str(n or "?").split()[:2]).upper()
+    pessoas = {u["usuario"]: u for u in chat.usuarios()}
+
     with st.container(key="ps_chat"):
         with st.popover(f"{total}" if total else "", icon=":material/forum:", help="Chat da equipe"):
-            st.html("<div class='ps-chat-top'><b>Chat</b><span>Público por estado e conversas privadas. Use @nome para marcar alguém.</span></div>")
-            rotulos = {c: r + (f"  ({nao[c]})" if nao.get(c) else "") for c, r in lista}
+            rotulos = {c: r + (f"  •  {nao[c]} nova(s)" if nao.get(c) else "") for c, r in lista}
             atual = st.session_state.get("chat_canal")
             if atual not in rotulos:
                 atual = max(rotulos, key=lambda c: (nao.get(c, 0), c.startswith("uf:")))
+            # cabeçalho: título, canal atual e quem participa
+            if atual.startswith("uf:"):
+                uf = atual[3:]
+                membros = [u for u in chat.usuarios() if uf in chat.estados_de(u, todos)]
+                tit, sub = f"Público {uf}", f"{len(membros)} participantes do estado"
+                ava = "".join(f"<i style='background:{cor(u['usuario'])}' title='{ui.esc(u.get('nome') or u['usuario'])}'>{iniciais(u.get('nome') or u['usuario'])}</i>"
+                              for u in membros[:5])
+            else:
+                outro = [x for x in atual[3:].split("|") if x != login]
+                o = pessoas.get(outro[0], {}) if outro else {}
+                tit, sub = o.get("nome") or (outro[0] if outro else "Conversa"), (o.get("cargo") or "Conversa privada")
+                ava = f"<i style='background:{cor(o.get('usuario'))}'>{iniciais(o.get('nome') or o.get('usuario'))}</i>"
+            st.html(f"""<div class='ps-chat-hd'><div class='ps-chat-ic'><span>forum</span></div>
+              <div class='ps-chat-tt'><b>{ui.esc(tit)}</b><span><i class='ps-live'></i>{ui.esc(sub)}</span></div><div class='ps-chat-av'>{ava}</div></div>""")
             canal = st.selectbox("Conversa", list(rotulos), index=list(rotulos).index(atual), format_func=lambda c: rotulos[c],
                                  key="chat_sel", label_visibility="collapsed",
                                  on_change=lambda: chat.marcar_lido(login, st.session_state.chat_sel))     # abrir a conversa marca como lida
             st.session_state.chat_canal = canal
-            msgs = chat.mensagens(canal)
-            html = []
-            for m in msgs:
-                meu = m["autor"] == login
-                import datetime as _dt
+            # mensagens: agrupadas por dia, com avatar, menções destacadas e print anexado (clique para ampliar)
+            msgs, html, dia_ant = chat.mensagens(canal), [], None
+            for n, m in enumerate(msgs):
                 try:
-                    _t = _dt.datetime.fromisoformat(str(m["criado_em"]).replace("Z", "+00:00")).astimezone(_dt.timezone(_dt.timedelta(hours=-3)))
+                    t = _dt.datetime.fromisoformat(str(m["criado_em"]).replace("Z", "+00:00")).astimezone(fuso)
                 except Exception:
-                    _t = None
-                hora = _t.strftime("%H:%M") if _t else str(m["criado_em"])[11:16]
-                texto = ui.esc(m["texto"]).replace("\n", "<br>")
-                import re as _re
-                texto = _re.sub(r"(@[\wÀ-ÿ.\-]+)", r"<b class='ps-mencao'>\1</b>", texto)
-                autor_ = "" if meu else "<i>" + ui.esc(m.get("autor_nome") or m["autor"]) + "</i>"
-                quando = (_t.strftime("%d/%m ") if _t else "") + hora
-                html.append(f"<div class='ps-msg{' eu' if meu else ''}'>{autor_}<p>{texto}</p><small>{quando}</small></div>")
-            with st.container(height=330, key="ps_chat_msgs"):
-                st.html("<div class='ps-msgs'>" + ("".join(html) or "<div class='ps-msg-vazio'>Nenhuma mensagem ainda. Comece a conversa.</div>") + "</div>")
+                    t = _dt.datetime.now(fuso)
+                if t.date() != dia_ant:
+                    dia_ant = t.date()
+                    rot = "Hoje" if dia_ant == hoje else "Ontem" if (hoje - dia_ant).days == 1 else dia_ant.strftime("%d/%m/%Y")
+                    html.append(f"<div class='ps-dia'><span>{rot}</span></div>")
+                meu = m["autor"] == login
+                nome = m.get("autor_nome") or m["autor"]
+                texto = ui.esc(m.get("texto") or "")
+                texto = _re.sub(r"(@[\wÀ-ÿ.\-]+)", r"<b class='ps-mencao'>\1</b>", texto).replace("\n", "<br>")
+                if m.get("texto") == "" and m.get("anexo"):
+                    texto = ""
+                img = ""
+                if m.get("anexo"):
+                    ida = f"psimg-{str(m['id'])[:8]}"
+                    img = (f"<details class='ps-anexo'><summary><img src='{m['anexo']}' alt='print'><span class='ps-zoom'>ampliar</span></summary>"
+                           f"<a class='ps-baixar' download='{ida}.jpg' href='{m['anexo']}'>Baixar print em tamanho real</a></details>")
+                ava = "" if meu else f"<i class='ps-ava' style='background:{cor(m['autor'])}'>{iniciais(nome)}</i>"
+                html.append(f"<div class='ps-linha{' eu' if meu else ''}'>{ava}<div class='ps-msg{' eu' if meu else ''}'>"
+                            f"{'' if meu else f'<em>{ui.esc(nome)}</em>'}{img}{f'<p>{texto}</p>' if texto else ''}"
+                            f"<small>{t.strftime('%H:%M')}</small></div></div>")
+            with st.container(height=340, key="ps_chat_msgs"):
+                st.html("<div class='ps-msgs'>" + ("".join(html) or "<div class='ps-msg-vazio'><b>Nenhuma mensagem ainda</b>Comece a conversa: use @nome para marcar alguém ou anexe um print.</div>") + "</div>")
             with st.form("chat_form", clear_on_submit=True, border=False):
-                c1, c2 = st.columns([5, 1], vertical_alignment="bottom")
-                texto = c1.text_input("Mensagem", placeholder="Escreva... (@nome para marcar)", label_visibility="collapsed")
-                if c2.form_submit_button("", icon=":material/send:", type="primary", width="stretch") and texto.strip():
+                anexo = st.file_uploader("Anexar print", type=["png", "jpg", "jpeg", "webp"], key="chat_anexo", label_visibility="collapsed")
+                c1, c2 = st.columns([6, 1], vertical_alignment="bottom")
+                texto = c1.text_input("Mensagem", placeholder="Escreva uma mensagem... (@nome para marcar)", label_visibility="collapsed")
+                if c2.form_submit_button("", icon=":material/send:", type="primary", width="stretch") and (texto.strip() or anexo):
                     try:
-                        chat.enviar(canal, eu, texto, todos)
+                        if anexo is not None and anexo.size > 8 * 1024 * 1024:
+                            raise ValueError("o print passa de 8 MB")
+                        chat.enviar(canal, eu, texto, todos, anexo.getvalue() if anexo is not None else None)
                         st.rerun(scope="fragment")
                     except Exception as exc:
                         st.session_state.chat_erro = str(exc)[:300]
             if st.session_state.get("chat_erro"):
-                st.error("A mensagem não foi gravada. Confira no Supabase se as tabelas chat_mensagens e chat_leituras existem "
-                         "(bloco 16 do supabase/migrations.sql).", icon=":material/error:")
+                st.error("A mensagem não foi gravada. Confira no Supabase se as tabelas do chat existem "
+                         "(blocos 16 e 16b do supabase/migrations.sql).", icon=":material/error:")
                 st.caption(f"Detalhe técnico: {st.session_state.chat_erro}")
                 if st.button("Fechar aviso", key="chat_erro_ok"):
                     st.session_state.pop("chat_erro", None); st.rerun(scope="fragment")
             # a janela do chat é desenhada mesmo fechada: a conversa só conta como lida quando o usuário age nela
             if nao.get(canal) and st.button(f"Marcar {nao[canal]} mensagem(ns) como lida(s)", key="chat_lido", width="stretch", icon=":material/done_all:"):
                 chat.marcar_lido(login, canal); st.rerun(scope="fragment")
-
 
 _chat()
 
