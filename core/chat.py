@@ -93,7 +93,10 @@ def enviar(canal: str, autor: dict, texto: str, todos_estados: list[str]) -> Non
     trecho = texto if len(texto) <= 160 else texto[:157] + "..."
     if canal.startswith("dm:"):
         outro = [u for u in canal[3:].split("|") if u != autor["usuario"]]
-        nt.enviar(outro, "chat", f"Mensagem privada de {nome}", trecho)
+        try:
+            nt.enviar(outro, "chat", f"Mensagem privada de {nome}", trecho)
+        except Exception:
+            pass                                   # sem a tabela de notificações, a mensagem continua gravada
         return
     # público: avisa quem foi marcado com @login ou @primeiro nome (e que participa do estado)
     uf = canal[3:]
@@ -107,4 +110,7 @@ def enviar(canal: str, autor: dict, texto: str, todos_estados: list[str]) -> Non
         chaves = {_sem_acento(u["usuario"]), _sem_acento(str(u.get("nome") or "").split(" ")[0])}
         if chaves & marcados:
             alvo.append(u["usuario"])
-    nt.enviar(alvo, "chat", f"{nome} marcou você no Público {uf}", trecho)
+    try:
+        nt.enviar(alvo, "chat", f"{nome} marcou você no Público {uf}", trecho)
+    except Exception:
+        pass
