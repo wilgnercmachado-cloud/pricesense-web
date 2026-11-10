@@ -326,6 +326,13 @@ body.foco .kpis,body.foco .linha2{display:grid}
 .bkp-banner button:hover{background:rgba(255,255,255,.26)}
 .at-pill{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;margin-left:10px;border-radius:999px;font-size:11px;color:var(--muted);border:1px solid var(--line);background:var(--surface);white-space:nowrap}
 .at-pill i{width:7px;height:7px;border-radius:50%;background:var(--up);box-shadow:0 0 0 3px color-mix(in srgb,var(--up) 22%,transparent)}
+.blk{display:inline-flex;align-items:center;gap:3px;margin-left:6px;padding:1px 6px;border-radius:5px;background:color-mix(in srgb,var(--down) 14%,transparent);color:var(--down);font:700 9.5px 'Geist Mono',monospace;letter-spacing:.04em;cursor:help;vertical-align:1px}
+.blk svg{width:10px;height:10px}
+#chBlk em{font-style:normal;font-family:'Geist Mono',monospace;font-size:11px;opacity:.7;margin-left:2px}
+.blkc label{display:block;font-size:11.5px;color:var(--muted);margin:10px 0 5px}.blkc label small{color:var(--faint)}
+.bmot{display:flex;flex-wrap:wrap;gap:6px}.bmot .chip.on{background:color-mix(in srgb,var(--down) 14%,transparent);color:var(--down);border-color:var(--down)}
+.blkc textarea{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:9px;background:var(--field);color:var(--ink);padding:8px;font:12.5px 'Geist',sans-serif;resize:vertical}
+.bavi{color:var(--down);font-size:12px;min-height:14px;margin:6px 0 0}
 #chOpt em{font-style:normal;font-family:'Geist Mono',monospace;font-size:11px;opacity:.7;margin-left:2px}
 #root{display:block} #app{height:100%}
 </style>
@@ -1577,7 +1584,7 @@ body.foco .kpis,body.foco .linha2{display:grid}
 </head><body><div id="root"></div>
 <script>
 const APP_PRICE = (() => {
-const MARCACAO = "<div id=\"app\">\n  <div class=\"topo\">\n    <div class=\"marca\"><h1 id=\"titulo\"></h1><small id=\"escopo\"></small></div>\n    <div class=\"kstrip\" id=\"kpis\"></div>\n  </div>\n  <div class=\"linha2\">\n    <div class=\"glass histc\">\n      <div class=\"hhead\"><span class=\"htit\">Concorr\u00eancia <small id=\"histSub\"></small></span><div class=\"hchips\" id=\"hChips\"></div>\n        <span class=\"hseg\" id=\"hSeg\"><button data-hm=\"v\" class=\"on\">Varejo</button><button data-hm=\"a\">Atacado</button></span></div>\n      <div id=\"hist\"></div>\n    </div>\n    <div class=\"glass resumo\" id=\"resumo\"></div>\n  </div>\n  <div class=\"gridbox glass\">\n    <div class=\"tools\">\n      <input type=\"search\" id=\"q\" placeholder=\"Buscar produto, filial ou concorrente\">\n      <button class=\"chip\" data-rg=\"4\" data-ic=\"obj\" data-tip=\"Itens sem pesquisa que foram para a margem objetiva\">Aplicado objetiva</button>\n      <button class=\"chip\" data-rg=\"3\" data-ic=\"piso\" data-tip=\"Itens que pararam na margem m\u00ednima\">Aplicado m\u00ednima</button>\n      <button class=\"chip\" data-rg=\"2\" data-ic=\"teto\" data-tip=\"Itens que pararam na margem m\u00e1xima\">Aplicado m\u00e1xima</button>\n      <span class=\"csep\"></span>\n      <button class=\"chip\" data-fx=\"neg\" data-ic=\"tdDn\" data-tip=\"Novo varejo abaixo do custo\">Negativos</button>\n      <button class=\"chip\" data-fx=\"pos\" data-ic=\"tdUp\" data-tip=\"Novo varejo acima do custo\">Positivos</button>\n      <button class=\"chip\" data-fx=\"ipf\" data-ic=\"alerta\" data-tip=\"IP novo acima de 100,9%: mais caro que o mercado\">IP fora</button>\n      <button class=\"chip\" id=\"chAce\" data-fx=\"ace\" data-ic=\"check\" data-tip=\"S\u00f3 os pre\u00e7os com aceite: o que vai para a importa\u00e7\u00e3o\">Aceitos <em>0</em></button>\n      <button class=\"chip\" id=\"chOpt\" data-fx=\"opt\" data-ic=\"robo\" data-tip=\"S\u00f3 os itens ajustados pelo Optimus\" style=\"display:none\">Optimus <em>0</em></button>\n      <span class=\"cnt\" id=\"cnt\"></span>\n    </div>\n    <div id=\"scroll\" tabindex=\"0\"><div class=\"hdr\" id=\"hdr\"></div><div id=\"body\"></div></div>\n  </div>\n</div>\n<nav class=\"dock glass\" id=\"dock\">\n  <button class=\"ib robo\" id=\"bOpt\" data-tip=\"Optimus: an\u00e1lise inteligente dos itens filtrados\" data-ic=\"robo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib gr\" id=\"bAll\" data-tip=\"Aceitar todos os itens filtrados que est\u00e3o fora da regra de corte\" data-ic=\"check\"></button>\n  <button class=\"ib\" id=\"bProx\" data-tip=\"Pr\u00f3ximo pre\u00e7o pendente (N)\" data-ic=\"prox\"></button>\n  <button class=\"ib\" id=\"bNone\" data-tip=\"Retirar aceite dos itens filtrados\" data-ic=\"x\"></button>\n  <button class=\"ib\" id=\"bReset\" data-tip=\"Voltar pre\u00e7os e aceites para a sugest\u00e3o do motor\" data-ic=\"undo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib\" id=\"bRegras\" data-tip=\"Regra de neg\u00f3cio e regra de altera\u00e7\u00e3o\" data-ic=\"regra\"></button>\n  <button class=\"ib\" id=\"bCols\" data-tip=\"Colunas e vis\u00e3o salva no seu perfil\" data-ic=\"cols\"></button>\n  <button class=\"ib\" id=\"bRnd\" data-tip=\"Regra de arredondamento\" data-ic=\"rnd\"></button>\n  <button class=\"ib\" id=\"bPiso\" data-tip=\"Piso de margem por estado\" data-ic=\"piso\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib pri\" id=\"bExp\" data-tip=\"Importa\u00e7\u00e3o (layout PRICE do Pre\u00e7o Bot)\" data-ic=\"up\"></button>\n  <button class=\"ib\" id=\"bProp\" data-tip=\"Importa\u00e7\u00e3o de proporcionais (filhos do produto PAI)\" data-ic=\"prop\"></button>\n  <button class=\"ib\" id=\"bBkp\" data-tip=\"Backup: a precifica\u00e7\u00e3o dos \u00faltimos 3 dias, como estava antes de importar\" data-ic=\"bkp\"></button>\n  <button class=\"ib\" id=\"bFoco\" data-tip=\"Modo foco em tela cheia\" data-ic=\"foco\"></button>\n  <button class=\"ib\" id=\"bTema\" data-tip=\"Alternar tema claro ou escuro\" data-ic=\"tema\"></button>\n</nav>\n<div class=\"pop glass\" id=\"pRegras\"></div>\n<div class=\"pop glass larga\" id=\"pCols\"></div>\n<div class=\"pop glass\" id=\"pRnd\"></div>\n<div class=\"pop glass\" id=\"pPiso\"></div>\n<div class=\"pop glass\" id=\"pExp\"></div>\n<div class=\"pop glass\" id=\"pProp\"></div>\n<div class=\"pop glass larga\" id=\"pOpt\"></div>\n<div class=\"pop glass larga\" id=\"pBkp\"></div>\n<div class=\"modal\" id=\"modal\"></div>\n<div id=\"tip\"></div><div class=\"toast\" id=\"toast\"></div>\n";
+const MARCACAO = "<div id=\"app\">\n  <div class=\"topo\">\n    <div class=\"marca\"><h1 id=\"titulo\"></h1><small id=\"escopo\"></small></div>\n    <div class=\"kstrip\" id=\"kpis\"></div>\n  </div>\n  <div class=\"linha2\">\n    <div class=\"glass histc\">\n      <div class=\"hhead\"><span class=\"htit\">Concorr\u00eancia <small id=\"histSub\"></small></span><div class=\"hchips\" id=\"hChips\"></div>\n        <span class=\"hseg\" id=\"hSeg\"><button data-hm=\"v\" class=\"on\">Varejo</button><button data-hm=\"a\">Atacado</button></span></div>\n      <div id=\"hist\"></div>\n    </div>\n    <div class=\"glass resumo\" id=\"resumo\"></div>\n  </div>\n  <div class=\"gridbox glass\">\n    <div class=\"tools\">\n      <input type=\"search\" id=\"q\" placeholder=\"Buscar produto, filial ou concorrente\">\n      <button class=\"chip\" data-rg=\"4\" data-ic=\"obj\" data-tip=\"Itens sem pesquisa que foram para a margem objetiva\">Aplicado objetiva</button>\n      <button class=\"chip\" data-rg=\"3\" data-ic=\"piso\" data-tip=\"Itens que pararam na margem m\u00ednima\">Aplicado m\u00ednima</button>\n      <button class=\"chip\" data-rg=\"2\" data-ic=\"teto\" data-tip=\"Itens que pararam na margem m\u00e1xima\">Aplicado m\u00e1xima</button>\n      <span class=\"csep\"></span>\n      <button class=\"chip\" data-fx=\"neg\" data-ic=\"tdDn\" data-tip=\"Novo varejo abaixo do custo\">Negativos</button>\n      <button class=\"chip\" data-fx=\"pos\" data-ic=\"tdUp\" data-tip=\"Novo varejo acima do custo\">Positivos</button>\n      <button class=\"chip\" data-fx=\"ipf\" data-ic=\"alerta\" data-tip=\"IP novo acima de 100,9%: mais caro que o mercado\">IP fora</button>\n      <button class=\"chip\" id=\"chBlk\" data-fx=\"blk\" data-ic=\"lock\" data-tip=\"Itens com BLOCK do comercial\">Block <em>0</em></button>\n      <button class=\"chip\" id=\"chAce\" data-fx=\"ace\" data-ic=\"check\" data-tip=\"S\u00f3 os pre\u00e7os com aceite: o que vai para a importa\u00e7\u00e3o\">Aceitos <em>0</em></button>\n      <button class=\"chip\" id=\"chOpt\" data-fx=\"opt\" data-ic=\"robo\" data-tip=\"S\u00f3 os itens ajustados pelo Optimus\" style=\"display:none\">Optimus <em>0</em></button>\n      <span class=\"cnt\" id=\"cnt\"></span>\n    </div>\n    <div id=\"scroll\" tabindex=\"0\"><div class=\"hdr\" id=\"hdr\"></div><div id=\"body\"></div></div>\n  </div>\n</div>\n<nav class=\"dock glass\" id=\"dock\">\n  <button class=\"ib robo\" id=\"bOpt\" data-tip=\"Optimus: an\u00e1lise inteligente dos itens filtrados\" data-ic=\"robo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib gr\" id=\"bAll\" data-tip=\"Aceitar todos os itens filtrados que est\u00e3o fora da regra de corte\" data-ic=\"check\"></button>\n  <button class=\"ib\" id=\"bProx\" data-tip=\"Pr\u00f3ximo pre\u00e7o pendente (N)\" data-ic=\"prox\"></button>\n  <button class=\"ib\" id=\"bNone\" data-tip=\"Retirar aceite dos itens filtrados\" data-ic=\"x\"></button>\n  <button class=\"ib\" id=\"bReset\" data-tip=\"Voltar pre\u00e7os e aceites para a sugest\u00e3o do motor\" data-ic=\"undo\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib\" id=\"bRegras\" data-tip=\"Regra de neg\u00f3cio e regra de altera\u00e7\u00e3o\" data-ic=\"regra\"></button>\n  <button class=\"ib\" id=\"bCols\" data-tip=\"Colunas e vis\u00e3o salva no seu perfil\" data-ic=\"cols\"></button>\n  <button class=\"ib\" id=\"bRnd\" data-tip=\"Regra de arredondamento\" data-ic=\"rnd\"></button>\n  <button class=\"ib\" id=\"bPiso\" data-tip=\"Piso de margem por estado\" data-ic=\"piso\"></button>\n  <span class=\"sep\"></span>\n  <button class=\"ib pri\" id=\"bExp\" data-tip=\"Importa\u00e7\u00e3o (layout PRICE do Pre\u00e7o Bot)\" data-ic=\"up\"></button>\n  <button class=\"ib\" id=\"bProp\" data-tip=\"Importa\u00e7\u00e3o de proporcionais (filhos do produto PAI)\" data-ic=\"prop\"></button>\n  <button class=\"ib\" id=\"bBkp\" data-tip=\"Backup: a precifica\u00e7\u00e3o dos \u00faltimos 3 dias, como estava antes de importar\" data-ic=\"bkp\"></button>\n  <button class=\"ib\" id=\"bXlsA\" data-tip=\"Exportar a an\u00e1lise da grade para Excel\" data-ic=\"xls\"></button>\n  <button class=\"ib\" id=\"bFoco\" data-tip=\"Modo foco em tela cheia\" data-ic=\"foco\"></button>\n  <button class=\"ib\" id=\"bTema\" data-tip=\"Alternar tema claro ou escuro\" data-ic=\"tema\"></button>\n</nav>\n<div class=\"pop glass\" id=\"pRegras\"></div>\n<div class=\"pop glass larga\" id=\"pCols\"></div>\n<div class=\"pop glass\" id=\"pRnd\"></div>\n<div class=\"pop glass\" id=\"pPiso\"></div>\n<div class=\"pop glass\" id=\"pExp\"></div>\n<div class=\"pop glass\" id=\"pProp\"></div>\n<div class=\"pop glass larga\" id=\"pOpt\"></div>\n<div class=\"pop glass larga\" id=\"pBkp\"></div>\n<div class=\"modal\" id=\"modal\"></div>\n<div id=\"tip\"></div><div class=\"toast\" id=\"toast\"></div>\n";
 /* ===================== protocolo de componente do Streamlit (sem biblioteca) ===================== */
 const ST = {
   send(type, extra){ window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type }, extra || {}), '*'); },
@@ -1619,7 +1626,7 @@ async function montar(A){
 const ic = (n, cor) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="${cor || 'currentColor'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${P_[n]}</svg>`;
 document.querySelectorAll('[data-ic2]').forEach(h => h.insertAdjacentHTML('afterbegin', ic(h.dataset.ic2, 'var(--primary)')));
 
-  Object.assign(P_, { troca: '<path d="M7 4 3 8l4 4"/><path d="M3 8h13a4 4 0 0 1 0 8h-2"/><path d="m17 20 4-4-4-4"/>', tema: '<circle cx="12" cy="12" r="9"/><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"/>', bkp: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>', cols: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>', save: '<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h8V3M8 21v-7h8v7"/>',
+  Object.assign(P_, { lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>', xls: '<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="m9 12 6 6M15 12l-6 6"/>', troca: '<path d="M7 4 3 8l4 4"/><path d="M3 8h13a4 4 0 0 1 0 8h-2"/><path d="m17 20 4-4-4-4"/>', tema: '<circle cx="12" cy="12" r="9"/><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"/>', bkp: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>', cols: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>', save: '<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h8V3M8 21v-7h8v7"/>',
     seta_c: '<path d="m6 15 6-6 6 6"/>', prox: '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>',
     robo: '<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4"/><circle cx="12" cy="3" r="1"/><circle cx="9" cy="13.5" r="1.4"/><circle cx="15" cy="13.5" r="1.4"/><path d="M9.5 17h5M2 13v2M22 13v2"/>',
     prop: '<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/><path d="M11 7h4a2 2 0 0 1 2 2v4"/>',
@@ -1791,7 +1798,15 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   /* atacado com desconto acima de 15% sobe até o primeiro preço válido dentro do limite */
   function piso15(na, nv){ const lim = nv * (1 - DESC_MAX); if (!(na > 0) || na >= lim - 1e-9) return na;
     for (let c = Math.ceil(lim * 100); c <= Math.round(nv * 100); c++) { const r = roundAtacado(c / 100, nv); if (r >= lim - 1e-9 && r <= nv) return r; } return nv; }
-  const podeAceitar = i => MUD[i] || REAP[i];
+  /* ---------- visão (Pricing x Comercial) e BLOCK do comercial ---------- */
+  const COMERCIAL = A.modo_visao === 'comercial', ADMIN = !!A.admin, EU = A.usuario || '';
+  const codTxt = t => String(t || '').split(' - ')[0].trim();
+  const BKI = new Array(N).fill(null);
+  { const mapa = new Map((A.blocks || []).map(b => [`${b.filial}|${b.produto}`, b]));
+    if (mapa.size) for (let i = 0; i < N; i++) { const b = mapa.get(`${codTxt(D.filiais[D.fi[i]])}|${codTxt(D.produtos[D.pi[i]])}`); if (b) BKI[i] = b; } }
+  const blkLiberado = i => { const b = BKI[i]; if (!b) return true; const pv = +b.preco_vencedor || 0;
+    return OV.has(i) && pv > 0 && Math.abs(OV.get(i) / pv - 1) >= 0.02 - 1e-9; };          // bloqueado: só preço manual 2% ou mais longe do vencedor do block
+  const podeAceitar = i => !COMERCIAL && (MUD[i] || REAP[i]) && blkLiberado(i);
   const aceito = i => (MUD[i] || REAP[i]) && ACE.get(i) === true;   // nada vem aceito sozinho: o aceite é dado pelo usuário ou pelo Aceitar todos
   const calcTudo = () => { for (let i = 0; i < N; i++) calc(i); };
 
@@ -1903,7 +1918,9 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   col('ok', 'Aceite', 'Identificação', 62, i => `<span class="ok-box${podeAceitar(i) ? (aceito(i) ? ' on' : '') : ' na'}" data-ok="${i}">${ic('check')}</span>`, i => (MUD[i] ? (aceito(i) ? 2 : 1) : 0));
   col('fil', 'Filial', 'Identificação', 140, i => esc(curto(D.filiais[D.fi[i]])), i => D.filiais[D.fi[i]], '', () => D.filiais.map(curto));
   const SUB = i => D.subst && D.subst[i] ? D.subst[i] : 0;
-  col('prod', 'Produto', 'Identificação', 280, i => SUB(i) ? `${esc(D.produtos[D.pi[i]])}<span class="subp" data-tip="Troca de PAI: o produto PAI ${SUB(i)} está sem estoque nesta filial, então este similar 100% de maior venda é precificado no lugar dele.">${ic('troca')}${SUB(i)}</span>` : esc(D.produtos[D.pi[i]]), i => D.produtos[D.pi[i]], '', () => D.produtos);
+  const seloBlk = i => { const b = BKI[i]; if (!b) return '';
+    return `<span class="blk" data-tip="${esc(`BLOCK do comercial: ${b.motivo}${b.observacao ? ' (' + b.observacao + ')' : ''}. Por ${b.usuario} em ${String(b.criado_em || '').slice(0, 10).split('-').reverse().join('/')}. Preço vencedor do block: ${brl(+b.preco_vencedor)} (${titulo_(curto(b.concorrente || '').split(' - ')[0])}${b.data_pesquisa ? ', ' + b.data_pesquisa : ''}). Dura pelo menos 3 dias e até esse preço sair da análise; só aceita preço manual pelo menos 2% diferente dele.`)}">${ic('lock')}BLOCK</span>`; };
+  col('prod', 'Produto', 'Identificação', 280, i => (SUB(i) ? `${esc(D.produtos[D.pi[i]])}<span class="subp" data-tip="Troca de PAI: o produto PAI ${SUB(i)} está sem estoque nesta filial, então este similar 100% de maior venda é precificado no lugar dele.">${ic('troca')}${SUB(i)}</span>` : esc(D.produtos[D.pi[i]])) + seloBlk(i), i => D.produtos[D.pi[i]], '', () => D.produtos);
   col('cv', 'Curva', 'Identificação', 58, i => `<span class="cv cv${'ABC'[D.curva[i]]}">${'ABC'[D.curva[i]]}</span>`, i => D.curva[i]);
   col('uf', 'Estado', 'Identificação', 110, i => esc(D.ufs[D.ui[i]]), i => D.ufs[D.ui[i]], '', () => D.ufs);
   col('comp', 'Comprador', 'Identificação', 160, i => esc(D.compradores[D.bi[i]]), i => D.compradores[D.bi[i]], '', () => D.compradores);
@@ -1928,9 +1945,9 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     const t = TPC[D.tcol[i]]; return t ? `<span class="tpi" style="color:${t[2]}" data-tip="Coleta: ${t[0]}">${ic(t[1])}</span>` : '–'; }, i => D.orig[i] ? 9 : D.tcol[i]);
   col('dt', 'Data pesquisa', 'Mercado', 84, i => D.orig[i] ? '<span style="color:var(--faint)">moda</span>' : esc(D.datas[D.dti[i]] || '–'), i => D.datas[D.dti[i]] || '');
   col('ip', 'IP atual', 'Mercado', 70, i => ipFmt(D.vm[i] / D.vmk[i]), i => D.vmk[i] > 0 ? D.vm[i] / D.vmk[i] : 0, 'r num');
-  col('nv', 'Novo varejo', 'Novo preço', 98, i => `<input type="text" data-e="v" data-i="${i}" class="${OV.has(i) ? 'man' : ''}" value="${nf2.format(NV[i])}">`, i => NV[i], 'r edc');
-  col('na', 'Novo atacado', 'Novo preço', 98, i => `<input type="text" data-e="a" data-i="${i}" class="${OVA.has(i) ? 'man' : ''}" value="${NA[i] > 0 ? nf2.format(NA[i]) : ''}">`, i => NA[i], 'r edc');
-  col('nm', 'Margem nova', 'Novo preço', 86, i => { const v = (NV[i] - D.cu[i]) / NV[i]; return `<input type="text" data-e="m" data-i="${i}" class="${v < 0 ? 'neg' : ''}" value="${nf1.format(v * 100)}">`; }, i => (NV[i] - D.cu[i]) / NV[i], 'r ed');
+  col('nv', 'Novo varejo', 'Novo preço', 98, i => `<input type="text" data-e="v" data-i="${i}" ${COMERCIAL ? 'readonly tabindex="-1"' : ''} class="${OV.has(i) ? 'man' : ''}" value="${nf2.format(NV[i])}">`, i => NV[i], 'r edc');
+  col('na', 'Novo atacado', 'Novo preço', 98, i => `<input type="text" data-e="a" data-i="${i}" ${COMERCIAL ? 'readonly tabindex="-1"' : ''} class="${OVA.has(i) ? 'man' : ''}" value="${NA[i] > 0 ? nf2.format(NA[i]) : ''}">`, i => NA[i], 'r edc');
+  col('nm', 'Margem nova', 'Novo preço', 86, i => { const v = (NV[i] - D.cu[i]) / NV[i]; return `<input type="text" data-e="m" data-i="${i}" ${COMERCIAL ? 'readonly tabindex="-1"' : ''} class="${v < 0 ? 'neg' : ''}" value="${nf1.format(v * 100)}">`; }, i => (NV[i] - D.cu[i]) / NV[i], 'r ed');
   col('nma', 'Margem atacado nova', 'Novo preço', 92, i => NA[i] > 0 ? (v => vneg(v, pct(v)))((NA[i] - D.cu[i]) / NA[i]) : '–', i => NA[i] > 0 ? (NA[i] - D.cu[i]) / NA[i] : -9, 'r num');
   col('ipn', 'IP novo', 'Novo preço', 70, i => ipFmt(NV[i] / D.vmk[i]), i => D.vmk[i] > 0 ? NV[i] / D.vmk[i] : 0, 'r num');
   col('var', 'Delta preço', 'Novo preço', 84, i => { const v = NV[i] / D.vm[i] - 1; return `<span class="${v > 1e-4 ? 'pos' : v < -1e-4 ? 'neg' : ''}">${v > 0 ? '+' : ''}${pct(v)}</span>`; }, i => NV[i] / D.vm[i] - 1, 'r num');
@@ -1979,7 +1996,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     for (let i = 0; i < N; i++) {
       if (F.travas.size && !F.travas.has(RG[i])) continue;
       if (F.extra.size) { const neg = NV[i] < D.cu[i] - 1e-9, ipf = D.vmk[i] > 0 && NV[i] / D.vmk[i] > 1.009;
-        if ((F.extra.has('neg') && !neg) || (F.extra.has('pos') && neg) || (F.extra.has('ipf') && !ipf) || (F.extra.has('opt') && !OPT.has(i)) || (F.extra.has('ace') && !aceito(i))) continue; }
+        if ((F.extra.has('neg') && !neg) || (F.extra.has('pos') && neg) || (F.extra.has('ipf') && !ipf) || (F.extra.has('opt') && !OPT.has(i)) || (F.extra.has('ace') && !aceito(i)) || (F.extra.has('blk') && !BKI[i])) continue; }
       if (F.regra >= 0 && RG[i] !== F.regra) continue;
       if (F.corte === 9 && !(MUD[i] && !aceito(i))) continue;
       if (F.corte >= 0 && F.corte < 9 && !(MUD[i] && (CT[i] & (1 << F.corte)))) continue;
@@ -2029,6 +2046,37 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     calc(i); salvar(i); atualizar(false); if (SEL === i) { resumo(i); historico(i); }
   });
   /* janela de confirmação própria (a do navegador é bloqueada dentro do componente) */
+  /* janela do BLOCK: motivo obrigatório; observação obrigatória em "Outros" */
+  function abrirBlock(i){ const m = $('modal'), mot = A.motivos_block || ['Falta de investimento', 'Possível erro de pesquisa', 'Outros'];
+    m.innerHTML = `<div class="mcard glass blkc"><h4>${ic('lock', 'var(--down)')}BLOCK do comercial</h4>
+      <p>${esc(curto(D.produtos[D.pi[i]]))}, ${esc(curto(D.filiais[D.fi[i]]))}. Novo preço sugerido ${brl(NV[i])} abaixo do custo ${brl(D.cu[i])} (margem ${pct((NV[i] - D.cu[i]) / NV[i])}).
+        Preço vencedor: ${brl(D.vmk[i])} (${esc(titulo_(curto(D.concs[D.ki[i]]).split(' - ')[0]))}, ${esc(D.datas[D.dti[i]] || '')}).</p>
+      <label>Motivo</label><div class="bmot">${mot.map(x => `<button class="chip" data-mot="${esc(x)}">${esc(x)}</button>`).join('')}</div>
+      <label>Observação <small id="bObsReq"></small></label><textarea id="bObs" rows="3" placeholder="Detalhe o motivo (ex.: pedir foto da gôndola no próximo dia)"></textarea>
+      <p class="bavi" id="bAvi"></p>
+      <p style="font-size:11.5px;color:var(--muted)">O item fica travado para o Pricing por pelo menos 3 dias e até esse preço vencedor sair da análise. Você ou o administrador podem retirar antes.</p>
+      <div class="macts"><button class="tx" data-r="0">Cancelar</button><button class="tx pri" data-r="1">${ic('lock')}Bloquear</button></div></div>`;
+    m.classList.add('on'); let escolha = null;
+    m.querySelectorAll('[data-mot]').forEach(b => b.onclick = () => { escolha = b.dataset.mot; m.querySelectorAll('[data-mot]').forEach(x => x.classList.toggle('on', x === b));
+      $('bObsReq').textContent = escolha === 'Outros' ? '(obrigatória em Outros)' : '(opcional)'; $('bAvi').textContent = ''; });
+    m.querySelector('[data-r="0"]').onclick = () => m.classList.remove('on');
+    m.querySelector('[data-r="1"]').onclick = () => { const obs = $('bObs').value.trim();
+      if (!escolha) { $('bAvi').textContent = 'Escolha o motivo do BLOCK.'; return; }
+      if (escolha === 'Outros' && !obs) { $('bAvi').textContent = 'Em "Outros", descreva o motivo na observação.'; return; }
+      const reg = { filial: +codTxt(D.filiais[D.fi[i]]), produto: +codTxt(D.produtos[D.pi[i]]), estado: D.ufs[D.ui[i]] || '', motivo: escolha, observacao: obs,
+        preco_vencedor: D.vmk[i], concorrente: D.concs[D.ki[i]] || '', data_pesquisa: D.datas[D.dti[i]] || '' };
+      ST.valor({ acao: 'block', ...reg, ts: Date.now() });
+      BKI[i] = { ...reg, id: 'novo-' + Date.now(), usuario: EU, criado_em: new Date().toISOString() };
+      m.classList.remove('on'); atualizar(false); if (SEL === i) resumo(i); toast('BLOCK registrado: o item fica travado para o Pricing'); };
+  }
+  /* comercial: exporta a análise da grade (colunas visíveis, linhas do filtro) */
+  function exportarAnalise(){ if (!window.XLSX) { toast('Biblioteca de Excel ainda carregando'); return; }
+    const vis = COLS.filter(c => c[0] !== 'ok');
+    const cab = [...vis.map(c => c[1]), 'BLOCK', 'Motivo do BLOCK'];
+    const linhas = VIS.map(i => [...vis.map(c => c[0] === 'rg' ? rotRegra(i) : c[0] === 'ct' ? (MUD[i] ? (CT[i] ? CORTES.filter((_, k) => CT[i] & (1 << k)).map(x => x[0]).join(' / ') : 'Dentro da regra') : '') : (() => { const v = c[4](i); return typeof v === 'number' && isFinite(v) ? Math.round(v * 100) / 100 : v; })()),
+      BKI[i] ? 'Sim' : '', BKI[i] ? BKI[i].motivo + (BKI[i].observacao ? ' - ' + BKI[i].observacao : '') : '']);
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([cab, ...linhas]), 'Analise');
+    XLSX.writeFile(wb, `PriceMetrics_Analise_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`); toast(nf0.format(linhas.length) + ' linhas no Excel'); }
   function confirmar(titulo, texto){ return new Promise(ok => { const m = $('modal');
     m.innerHTML = `<div class="mcard glass"><h4>${ic('alerta', 'var(--amber)')}${esc(titulo)}</h4><p>${esc(texto)}</p><div class="macts"><button class="tx" data-r="0">Cancelar</button><button class="tx pri" data-r="1">Seguir</button></div></div>`;
     m.classList.add('on'); const fim = r => { m.classList.remove('on'); ok(r); };
@@ -2047,7 +2095,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
       const pos = VIS.indexOf(+t.dataset.i) + (e.key === 'ArrowUp' ? -1 : 1), campo = t.dataset.e;
       t.blur(); setTimeout(() => focarCelula(campo, pos), 80); }
     if (e.key === 'Escape') { t.value = t.defaultValue; t.blur(); } });
-  on(body, 'mousedown', e => { if (e.target.tagName === 'INPUT') return; const c = e.target.closest('.edc'); if (!c) return;
+  on(body, 'mousedown', e => { if (COMERCIAL || e.target.tagName === 'INPUT') return; const c = e.target.closest('.edc'); if (!c) return;
     const inp = c.querySelector('input[type=text]'); if (inp) { e.preventDefault(); inp.focus(); inp.select(); } });
   on(body, 'focusin', e => { if (e.target.tagName === 'INPUT' && e.target.type === 'text' && e.target.dataset.e) setTimeout(() => e.target.select(), 0); });
   document.querySelectorAll('.ctx').forEach(x => x.remove());
@@ -2055,6 +2103,11 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   const fechaCtx = () => cm.classList.remove('on');
   on(body, 'contextmenu', e => { const r = e.target.closest('.row'); if (!r) return; e.preventDefault(); const i = +r.dataset.i; selecionar(i);
     const it = (acao, icone, txt, des) => `<button data-ctx="${acao}" ${des ? 'disabled' : ''}>${ic(icone)}${txt}</button>`;
+    const podeTirar = BKI[i] && (ADMIN || BKI[i].usuario === EU);
+    if (COMERCIAL) { const abaixo = NV[i] < D.cu[i] - 1e-9;
+      cm.innerHTML = `<div class="ctx-t">${esc(curto(D.produtos[D.pi[i]]))}<small>${esc(curto(D.filiais[D.fi[i]]))}</small></div>`
+        + (BKI[i] ? it('desbloquear', 'x', 'Retirar BLOCK', !podeTirar) : it('block', 'lock', abaixo ? 'BLOCK (novo preço abaixo do custo)' : 'BLOCK: só com novo preço abaixo do custo', !abaixo));
+      cm.style.left = Math.min(e.clientX, innerWidth - 260) + 'px'; cm.style.top = Math.min(e.clientY, innerHeight - cm.offsetHeight - 10) + 'px'; cm.dataset.i = i; cm.classList.add('on'); return; }
     cm.innerHTML = `<div class="ctx-t">${esc(curto(D.produtos[D.pi[i]]))}<small>${esc(curto(D.filiais[D.fi[i]]))}</small></div>`
       + it('aceitar', 'check', 'Aceitar preço', !podeAceitar(i) || aceito(i)) + it('anular', 'x', 'Anular aceite', !aceito(i))
       + '<span class="ctx-s"></span>' + it('objetiva', 'obj', `Aplicar objetiva (R$ ${nf2.format(roundVarejo(OB[i]))})`) + it('optimus', 'robo', 'Aplicar Optimus', semPesq(i))
@@ -2062,6 +2115,12 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     cm.classList.add('on'); const w = cm.offsetWidth, h = cm.offsetHeight;
     cm.style.left = Math.min(e.clientX, innerWidth - w - 8) + 'px'; cm.style.top = Math.min(e.clientY, innerHeight - h - 8) + 'px'; cm.dataset.i = i; });
   on(cm, 'click', async e => { const b = e.target.closest('[data-ctx]'); if (!b || b.disabled) return; const i = +cm.dataset.i, a = b.dataset.ctx; fechaCtx();
+    if (a === 'block') { abrirBlock(i); return; }
+    if (a === 'desbloquear') { const bl = BKI[i]; if (!bl) return;
+      if (!(await confirmar('Retirar BLOCK', `Retirar o BLOCK de ${curto(D.produtos[D.pi[i]])} em ${curto(D.filiais[D.fi[i]])} (${bl.motivo})? O item volta a poder ser aceito pelo Pricing.`))) return;
+      ST.valor({ acao: 'desbloquear', id: bl.id, filial: +codTxt(D.filiais[D.fi[i]]), produto: +codTxt(D.produtos[D.pi[i]]), ts: Date.now() });
+      for (let k = 0; k < N; k++) if (BKI[k] && BKI[k].id === bl.id) BKI[k] = null;
+      atualizar(false); if (SEL === i) resumo(i); toast('BLOCK retirado'); return; }
     if (a === 'aceitar') { ACE.set(i, true); }
     if (a === 'anular') { ACE.set(i, false); }
     if (a === 'objetiva') { const f = roundVarejo(OB[i]);
@@ -2082,7 +2141,10 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     for (let d = 1; d <= VIS.length; d++) { const k = (Math.max(k0, -1) + d) % VIS.length, i = VIS[k]; if (MUD[i] && !aceito(i)) {
       const y = k * H; sc.scrollTop = Math.max(0, y - sc.clientHeight / 3); selecionar(i); return; } }
     toast('Nenhum preço pendente de aceite neste filtro'); }
-  function alternarAceite(i){ if (!podeAceitar(i)) return; ACE.set(i, !aceito(i)); salvar(i); atualizar(false); if (SEL === i) resumo(i); }
+  function alternarAceite(i){
+    if (!COMERCIAL && BKI[i] && !blkLiberado(i) && (MUD[i] || REAP[i])) { const b = BKI[i];
+      toast(`Item com BLOCK do comercial (${b.motivo}). Só aceita preço manual pelo menos 2% diferente do vencedor ${brl(+b.preco_vencedor)}.`); return; }
+    if (!podeAceitar(i)) return; ACE.set(i, !aceito(i)); salvar(i); atualizar(false); if (SEL === i) resumo(i); }
   function selecionar(i){ SEL = i; render(); resumo(i); historico(i); }
   on(document, 'keydown', e => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || !VIS.length) return;
@@ -2558,6 +2620,10 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   on($('pBkp'), 'click', e => { if (e.target.closest('#kSalvar')) { backup(false); toast('Salvando o backup de hoje'); return; }
     const b = e.target.closest('[data-abrir]'); if (b) { ST.valor({ acao: 'abrir_backup', dia: b.dataset.abrir, ts: Date.now() }); toast('Abrindo o backup de ' + diaBr(b.dataset.abrir)); } });
   /* tema do site: aciona o mesmo botão do topo (as cores da mesa mudam sem recarregar) */
+  $('bXlsA').onclick = () => exportarAnalise();
+  if (COMERCIAL) { ['bOpt', 'bAll', 'bProx', 'bNone', 'bReset', 'bRnd', 'bPiso', 'bExp', 'bProp', 'bBkp', 'chAce', 'chOpt'].forEach(id => { const el = $(id); if (el) el.style.display = 'none'; });
+    ORDEM = ORDEM.filter(x => x !== 'ok'); aplicaColunas(); }
+  else { const el = $('bXlsA'); if (el) el.style.display = 'none'; }
   $('bTema').onclick = () => { try { const b = window.parent.document.querySelector('.st-key-ps_tema button'); if (b) b.click(); } catch (e) { toast('Use o botão de tema no topo do site'); } };
   $('bBkp').onclick = e => { montaBkp(); abrir('pBkp', e.currentTarget); };
   if (HIST) { const r = HIST.resumo || {}, ban = document.createElement('div'); ban.className = 'bkp-banner';
@@ -2566,7 +2632,8 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
 
   /* ---------- ações ---------- */
   function atualizar(refiltrar = true){ kpis(); chipOptimus(); if (refiltrar) filtrar(); render(); }
-  function chipOptimus(){ const ca = $('chAce'); if (ca) { let n = 0; for (let i = 0; i < N; i++) if (aceito(i)) n++; ca.querySelector('em').textContent = nf0.format(n); }
+  function chipOptimus(){ const cb = $('chBlk'); if (cb) { let n = 0; for (let i = 0; i < N; i++) if (BKI[i]) n++; cb.querySelector('em').textContent = nf0.format(n); }
+    const ca = $('chAce'); if (ca) { let n = 0; for (let i = 0; i < N; i++) if (aceito(i)) n++; ca.querySelector('em').textContent = nf0.format(n); }
     const c = $('chOpt'); if (!c) return; c.style.display = OPT.size ? '' : 'none'; c.querySelector('em').textContent = nf0.format(OPT.size); if (!OPT.size && F.extra.has('opt')) { F.extra.delete('opt'); c.classList.remove('on'); } }
   on($('q'), 'input', e => { F.q = e.target.value; clearTimeout(e.target._t); e.target._t = setTimeout(() => { filtrar(); sc.scrollTop = 0; render(); }, 150); });
   document.querySelectorAll('.chip').forEach(b => on(b, 'click', () => {
