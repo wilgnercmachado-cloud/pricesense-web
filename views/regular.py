@@ -20,9 +20,10 @@ from core import reports
 from ui import components as ui
 from ui import theme
 
+from ui.components import pasta_telas as _pasta_telas
 RAIZ = Path(__file__).resolve().parent.parent
 # Componente bidirecional: a mesa roda no navegador e devolve ao Python só a visão que o usuário salvar.
-_MESA = components.declare_component("mesa_precificacao", path=str(RAIZ / "ui" / "metrics_comp"))
+_MESA = components.declare_component("mesa_precificacao", path=_pasta_telas())
 TELA = "pricing_regular"
 FILTROS = ["Estado", "Diretor regional", "Filial", "Departamento", "Comprador", "Categoria"]
 PADRAO = {"cesta": True, "pesquisa": "Com pesquisa", **{f: [] for f in FILTROS}}   # padrão: com pesquisa e só cesta, todos os estados

@@ -10,8 +10,9 @@ import streamlit.components.v1 as components
 from core import db
 from ui import theme
 
+from ui.components import pasta_telas as _pasta_telas
 RAIZ = Path(__file__).resolve().parent.parent
-_BOT = components.declare_component("price_bot", path=str(RAIZ / "ui" / "metrics_comp"))
+_BOT = components.declare_component("price_bot", path=_pasta_telas())
 
 
 def render() -> None:

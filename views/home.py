@@ -10,8 +10,9 @@ import streamlit.components.v1 as components
 from core import auth, mercado as mc, profimetrics as pf, reports, state
 from ui import theme
 
+from ui.components import pasta_telas as _pasta_telas
 RAIZ = Path(__file__).resolve().parent.parent
-_HOME = components.declare_component("home_metrics", path=str(RAIZ / "ui" / "metrics_comp"))
+_HOME = components.declare_component("home_metrics", path=_pasta_telas())
 DESCR = {"preco_bot": ("PriceBot", "sell", "Cole preços, aplique a régua e gere a importação"),
          "promo": ("Metrics Promo", "campaign", "Valide encartes, conflitos e o calendário de campanhas"),
          "pesquisa": ("Pesquisa de Mercado", "query_stats", "30 dias de coletas, ranking e tendência por estado"),

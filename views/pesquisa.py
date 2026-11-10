@@ -12,8 +12,9 @@ from core import mercado as mc
 from ui import components as ui
 from ui import theme
 
+from ui.components import pasta_telas as _pasta_telas
 RAIZ = Path(__file__).resolve().parent.parent
-_MERCADO = components.declare_component("market_metrics", path=str(RAIZ / "ui" / "metrics_comp"))
+_MERCADO = components.declare_component("market_metrics", path=_pasta_telas())
 
 
 def _tokens() -> str:

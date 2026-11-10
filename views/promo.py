@@ -17,8 +17,9 @@ from core import db, promo_engine as pe
 from ui import components as ui
 from ui import theme
 
+from ui.components import pasta_telas as _pasta_telas
 RAIZ = Path(__file__).resolve().parent.parent
-_PROMO = components.declare_component("promo_metrics", path=str(RAIZ / "ui" / "metrics_comp"))
+_PROMO = components.declare_component("promo_metrics", path=_pasta_telas())
 
 
 def _carregar(arquivos) -> None:
