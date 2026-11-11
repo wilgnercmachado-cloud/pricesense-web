@@ -3571,8 +3571,8 @@ const ic = (n, cor) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="$
   const ultDia = P.dias.length ? P.dias[P.dias.length - 1] : '';
 
   $('hero').innerHTML = `<div class="eyebrow"><span class="live"></span>Inteligência de mercado ${ultDia ? '<b>pesquisa até ' + esc(ultDia) + '</b>' : ''}</div>
-    <h1>Inteligência de mercado para <span class="grad">decisões de preço</span>,<br>e relatórios de mercado.</h1>
-    <p>${A.saudacao ? esc(A.saudacao) + '. ' : ''}${esc(A.base || '')}</p>`;
+    <h1>Olá, <span class="grad">${esc(String(A.saudacao || 'Olá').replace(/^Olá,?\s*/, '') || '')}</span></h1>
+    <p>${esc(A.base || '')}</p>`;
   /* letreiro dos estados (bolsa) */
   const tk = E.map(e => { const d = d7(e.uf); return `<span class="tq"><b>${esc(sigla(e.uf))}</b><i>IP</i>${nf1.format(e.ip * 100)}<em class="${d > 0 ? 'neg' : 'pos'}">${d > 0 ? '▲' : '▼'} ${nf1.format(Math.abs(d) * 100)}</em>
       <i>captura</i>${mi(e.opor_cesta + e.opor_nao)}<i>investimento</i><span class="neg">${mi(e.inv_cesta + e.inv_nao)}</span></span>`; }).join('');
