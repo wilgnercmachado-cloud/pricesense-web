@@ -113,6 +113,7 @@ with st.container(key="ps_tema"):
         theme.aplicar()  # grava as cores antes do rerun, para a troca ser imediata
         st.rerun()
     ui.menu_ao_passar_mouse()
+    ui.avatar_no_menu(state.primeiro_nome(), st.session_state.get("usuario_logado") or "", st.session_state.get("foto_perfil") or "")
 
 presenca.pulso()
 
