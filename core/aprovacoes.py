@@ -9,7 +9,7 @@ import uuid
 from core import db
 
 TIPOS = {"profimetrics": "Regras de margem (Profimetrics)", "proporcoes": "Base PROP% (proporcionais)", "trava": "Trava mínima (acordo)", "parametros": "Formação de preço (curvas e delta)",
-         "margens": "Nova margem objetiva, mínima e máxima"}
+         "margens": "Nova margem objetiva, mínima e máxima", "target": "Preço target (fornecedor)"}
 
 
 def enviar(tipo: str, usuario: str, nome_arquivo: str, conteudo: bytes, resumo: dict) -> str:
@@ -75,6 +75,16 @@ def aprovar(pedido: dict, admin: str, progresso=None, itens_editados: list[dict]
     elif pedido["tipo"] == "parametros":
         from core import parametros as pm
         msg = pm.aplicar_pedido(bruto.getvalue(), admin)
+    elif pedido["tipo"] == "target":
+        from core import notificacoes as nt, target as tg
+        bruto.name = pedido.get("nome_arquivo") or "target.xlsx"
+        r = tg.salvar(tg.ler_planilha(bruto), pedido["usuario"], admin)
+        msg = f"{r['linhas']} preços target válidos até {r['ate'][8:10]}/{r['ate'][5:7]}"
+        try:
+            nt.enviar([pedido["usuario"]], "target_aprovado", "Preço target aprovado",
+                      f"{admin} aprovou o seu arquivo de preço target: {msg}. Já vale na PriceMetrics.")
+        except Exception:
+            pass
     elif pedido["tipo"] == "trava":
         from core import trava as tv
         bruto.name = pedido.get("nome_arquivo") or "trava.xlsx"
@@ -93,6 +103,12 @@ def aprovar(pedido: dict, admin: str, progresso=None, itens_editados: list[dict]
 
 def recusar(pedido: dict, admin: str) -> None:
     _decidir(pedido["id"], "recusado", admin)
+    if pedido.get("tipo") == "target":
+        try:
+            from core import notificacoes as nt
+            nt.enviar([pedido["usuario"]], "target_recusado", "Preço target recusado", f"{admin} recusou o arquivo {pedido.get('nome_arquivo')}.")
+        except Exception:
+            pass
     if pedido.get("tipo") == "margens":
         try:
             from core import notificacoes as nt

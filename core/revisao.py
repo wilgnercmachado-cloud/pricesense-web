@@ -157,6 +157,29 @@ def pedir(usuario: str, nome: str, itens: list[dict], filiais: list[int], escopo
         pass
 
 
+def _codigo_produto(it: dict) -> int:
+    """Código do produto do pedido: campo "codigo", o número antes do nome ("12345 - NOME") ou, em pedidos antigos que
+    vieram só com o nome, o código achado pelo nome na base atual."""
+    import re
+    if str(it.get("codigo") or "").strip().isdigit():
+        return int(it["codigo"])
+    m = re.match(r"\s*(\d+)\s*-", str(it.get("produto") or ""))
+    if m:
+        return int(m.group(1))
+    nome = str(it.get("produto") or "").strip().upper()
+    try:
+        from views.regular import base_atual
+        fonte = base_atual()
+        if fonte is not None:
+            cats = pd.Series(fonte[0]["Produto"].astype(str).unique())
+            ach = cats[cats.str.split(" - ", n=1).str[-1].str.strip().str.upper() == nome]
+            if len(ach):
+                return int(str(ach.iloc[0]).split(" - ")[0])
+    except Exception:
+        pass
+    raise ValueError(f"Não encontrei o código do produto \"{it.get('produto')}\" na base atual.")
+
+
 def aplicar(pedido: dict, itens: list[dict], admin: str) -> str:
     """Grava as margens aprovadas (já com as edições do administrador) nas regras do Profimetrics, nas zonas das filiais do pedido."""
     from core import profimetrics as pf
@@ -170,7 +193,7 @@ def aplicar(pedido: dict, itens: list[dict], admin: str) -> str:
     atual = regras.drop_duplicates(["produto", "zona"], keep="last").set_index(["produto", "zona"]) if len(regras) else None
     linhas = []
     for it in itens:
-        prod = int(str(it["produto"]).split(" - ")[0])
+        prod = _codigo_produto(it)
         for z in zonas:
             merch = float(atual.loc[(prod, z), "merch"]) if atual is not None and (prod, z) in atual.index else np.nan
             linhas.append({"produto": prod, "zona": int(z), "zona_nome": nomes.get(z, str(z)), "mrg_obj": float(it["obj"]),
