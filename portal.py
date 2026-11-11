@@ -114,6 +114,7 @@ with st.container(key="ps_tema"):
         st.rerun()
     ui.menu_ao_passar_mouse()
     ui.avatar_no_menu(state.primeiro_nome(), st.session_state.get("usuario_logado") or "", st.session_state.get("foto_perfil") or "")
+    login.gravar_lembranca(st.session_state.get("usuario_login", ""))
 
 presenca.pulso()
 
