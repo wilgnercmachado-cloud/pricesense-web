@@ -206,7 +206,7 @@ def render() -> None:
     t = theme.tokens()
     nomes = ["canvas", "surface", "surface_solid", "field", "raised", "ink", "muted", "faint", "line", "line_strong", "primary", "primary_hover",
              "primary_soft", "up", "up_soft", "down", "amber", "amber_soft"]
-    tokens = "".join(f"--{k.replace('_', '-')}:{t[k]};" for k in nomes) + f"--shadow:{t['shadow']};"
+    tokens = "".join(f"--{k.replace('_', '-')}:{t[k]};" for k in nomes) + f"--shadow:{t['shadow']};" + theme.extra_componente()
     ret = _PROMO(app="promo", historico=db.campanhas_historico(), dados=dados, chave=chave, tokens=tokens, fonte=theme.FONTE_URL, usuario=st.session_state.get("usuario_login", ""),
            tipos=_tipos_oferta(), altura=900, key="promo_metrics", default=None)
     if isinstance(ret, dict) and ret.get("acao") == "campanhas" and ret.get("ts") != st.session_state.get("_promo_ts"):

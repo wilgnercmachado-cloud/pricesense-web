@@ -575,7 +575,7 @@ def _tokens_css() -> str:
     t = theme.tokens()
     nomes = ["canvas", "surface", "surface_solid", "field", "raised", "ink", "muted", "faint", "line", "line_strong", "primary", "primary_hover",
              "primary_soft", "up", "up_soft", "down", "amber", "amber_soft"]
-    return "".join(f"--{k.replace('_', '-')}:{t[k]};" for k in nomes) + f"--shadow:{t['shadow']};"
+    return "".join(f"--{k.replace('_', '-')}:{t[k]};" for k in nomes) + f"--shadow:{t['shadow']};" + theme.extra_componente()
 
 
 @st.cache_resource(show_spinner=False, max_entries=3)
