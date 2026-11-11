@@ -92,7 +92,7 @@ def aprovar(pedido: dict, admin: str, progresso=None, itens_editados: list[dict]
         msg = f"{r['linhas']} travas mínimas"
     else:
         r = pp.salvar(pp.ler_planilha(bruto), progresso=progresso)
-        msg = f"{r['salvas'] + r['fora_da_dim']} relações"
+        msg = f"{r['enviadas']} relações enviadas ({r['substituidas']} substituídas, {r['mantidas']} mantidas; {r['total']} no total)"
     _decidir(pedido["id"], "aprovado", admin, msg)
     try:
         db.sb().storage.from_("relatorios").remove([pedido["caminho"]])

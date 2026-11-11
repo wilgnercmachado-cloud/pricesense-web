@@ -1,7 +1,7 @@
 """Proporcionais: produtos filhos precificados a partir do produto PAI (ex.: pacote 2,5 kg = 250% do PAI).
 
-As proporções ficam na própria dim_produto (colunas id_pai e proporcao). Só interessam as
-diferentes de 100; cada novo envio substitui a proporção do mesmo produto.
+As proporções ficam na própria dim_produto (colunas id_pai e proporcao) e a base completa no Storage.
+Cada envio SOMA à base: substitui a relação dos produtos enviados e mantém o que não foi enviado.
 """
 from __future__ import annotations
 
@@ -61,14 +61,18 @@ def salvar(df: pd.DataFrame, progresso=None) -> dict:
     atualizar_proporcoes do Supabase (uma chamada por lote); sem ela, atualiza produto a produto.
     """
     # a base completa fica guardada no Storage: é ela que define PAI e similares na precificação,
-    # inclusive dos produtos que ainda não existem na dim_produto
+    # inclusive dos produtos que ainda não existem na dim_produto.
+    # Um envio SOMA à base: o produto enviado substitui a relação que já existia; o que não veio continua.
     import gzip as _gz
-    completo = df[["id_produto", "id_pai", "proporcao"]].drop_duplicates("id_produto", keep="last")
+    novo = df[["id_produto", "id_pai", "proporcao"]].drop_duplicates("id_produto", keep="last")
+    antes = _base_atual_completa()
+    mantidos = antes[~antes["id_produto"].isin(novo["id_produto"])] if len(antes) else antes
+    completo = pd.concat([mantidos, novo], ignore_index=True).drop_duplicates("id_produto", keep="last")
     db.sb().storage.from_("relatorios").upload(ARQUIVO, _gz.compress(completo.to_csv(index=False).encode(), 6),
                                                {"content-type": "application/gzip", "upsert": "true"})
-    # a função do banco só atualiza quem já existe na dim_produto: não precisa consultar antes
+    # no banco, só os produtos enviados mudam (a função só mexe em quem já existe na dim_produto)
     registros = [{"id_produto": int(a), "id_pai": int(b), "proporcao": float(c)}
-                 for a, b, c in zip(completo["id_produto"], completo["id_pai"], completo["proporcao"])]
+                 for a, b, c in zip(novo["id_produto"], novo["id_pai"], novo["proporcao"])]
     salvas = 0
     try:
         from concurrent.futures import ThreadPoolExecutor
@@ -92,7 +96,37 @@ def salvar(df: pd.DataFrame, progresso=None) -> dict:
                 if progresso and n % 50 == 0:
                     progresso(n / len(registros))
     carregar.clear()
-    return {"salvas": salvas, "fora_da_dim": max(0, len(completo) - salvas)}
+    return {"salvas": salvas, "fora_da_dim": max(0, len(novo) - salvas), "enviadas": int(len(novo)),
+            "substituidas": int(len(antes) - len(mantidos)) if len(antes) else 0, "mantidas": int(len(mantidos)), "total": int(len(completo))}
+
+
+def _base_atual_completa() -> pd.DataFrame:
+    """Base PROP% que já está gravada (arquivo do Storage), somada às relações que existem na dim_produto e não estão no
+    arquivo (assim, um arquivo que tenha ficado incompleto é recomposto pelo banco). Sem cache: lida na hora do envio."""
+    import gzip as _gz
+    import io as _io
+    arq = pd.DataFrame(columns=["id_produto", "id_pai", "proporcao"])
+    try:
+        arq = pd.read_csv(_io.BytesIO(_gz.decompress(db.sb().storage.from_("relatorios").download(ARQUIVO))))[["id_produto", "id_pai", "proporcao"]]
+    except Exception:
+        pass
+    linhas, pagina = [], 0
+    try:
+        while True:
+            lote = (db.sb().table("dim_produto").select("id_produto, id_pai, proporcao").gt("proporcao", 0).order("id_produto")
+                    .range(pagina * 1000, pagina * 1000 + 999).execute().data or [])
+            linhas.extend(lote)
+            if len(lote) < 1000:
+                break
+            pagina += 1
+    except Exception:
+        pass
+    dim = pd.DataFrame(linhas, columns=["id_produto", "id_pai", "proporcao"]).dropna()
+    base = pd.concat([dim[~dim["id_produto"].isin(arq["id_produto"])], arq], ignore_index=True) if len(dim) else arq
+    if not len(base):
+        return pd.DataFrame(columns=["id_produto", "id_pai", "proporcao"])
+    base = base.dropna().astype({"id_produto": "int64", "id_pai": "int64", "proporcao": "float64"})
+    return base[base["id_produto"] != base["id_pai"]].drop_duplicates("id_produto", keep="last")
 
 
 ARQUIVO = "config/proporcoes.csv.gz"
