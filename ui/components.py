@@ -410,12 +410,16 @@ if (!d.__psGaveta) { d.__psGaveta = true;            /* botão ✕ das gavetas: 
 if (!d.__psZoomFix2) { d.__psZoomFix2 = true;
   const SEL = '[data-testid="stTopNavPopoverBody"], [data-testid="stPopoverBody"], [data-testid$="Dropdown"]';
   let ultimoMenu = null;   /* último item do menu do topo em que o mouse passou (vale para qualquer versão do Streamlit) */
-  const marca = e => { const x = e.target.closest && e.target.closest('header [data-testid="stTopNavSection"], header [aria-haspopup]'); if (x) ultimoMenu = x; };
+  const NAV_ITEM = '[data-testid="stTopNavSection"], [data-testid="stTopNav"] [aria-haspopup], [data-testid="stTopNav"] [role="button"]';
+  const marca = e => { const x = e.target.closest && e.target.closest(NAV_ITEM);
+    if (x && x.getBoundingClientRect().top < 120) ultimoMenu = x.closest('[data-testid="stTopNavSection"]') || x; };
   d.addEventListener('mouseover', marca, true); d.addEventListener('click', marca, true);
-  const ehMenuTopo = el => el.getAttribute('data-testid') === 'stTopNavPopoverBody' || (!el.closest('header') && !!el.querySelector('[data-testid="stTopNavLink"]'));
+  const ehMenuTopo = el => el.getAttribute('data-testid') === 'stTopNavPopoverBody' || (!el.closest('[data-testid="stTopNav"]') && !!el.querySelector('[data-testid="stTopNavLink"]'));
   const ancora = el => {
     const tid = el.getAttribute('data-testid') || '';
-    if (ehMenuTopo(el)) return [...d.querySelectorAll('[data-testid="stTopNavSection"]')].find(x => x.getAttribute('aria-expanded') === 'true') || ultimoMenu;
+    if (ehMenuTopo(el)) { const aberto = [...d.querySelectorAll('[data-testid="stTopNavSection"], [data-testid="stTopNav"] [aria-expanded="true"]')]
+        .find(x => x.getAttribute('aria-expanded') === 'true' || x.querySelector('[aria-expanded="true"]'));
+      return ultimoMenu && ultimoMenu.isConnected ? ultimoMenu : aberto; }
     if (tid === 'stPopoverBody') { if (el.querySelector('.ps-gaveta')) return null; return [...d.querySelectorAll('[data-testid="stPopoverButton"]')].find(x => x.getAttribute('aria-expanded') === 'true'); }
     const ae = d.activeElement;
     const sel = ae && ae.closest ? (ae.closest('[data-baseweb="select"]') || ae.closest('[data-testid="stMultiSelect"], [data-testid="stSelectbox"]')) : null;   /* campo que abriu a lista */
@@ -424,21 +428,28 @@ if (!d.__psZoomFix2) { d.__psZoomFix2 = true;
   const lerTr = el => { const vx = parseFloat(el.style.getPropertyValue('--ps-zx')), vy = parseFloat(el.style.getPropertyValue('--ps-zy'));
     if (el.classList.contains('ps-zfix') && isFinite(vx) && isFinite(vy)) return [vx, vy];
     const m = (el.style.transform || '').match(/translate(?:3d)?\\(\\s*(-?[\\d.]+)px\\s*,\\s*(-?[\\d.]+)px/); return m ? [parseFloat(m[1]), parseFloat(m[2])] : null; };
+  /* corrige com um deslocamento extra (propriedade CSS "translate", que soma com a posição que o Streamlit der),
+     então funciona tanto se o Streamlit posicionar com transform quanto com left/top, em qualquer versão */
   const corrige = el => {
     const a = ancora(el); if (!a) return;
-    const tr = lerTr(el); if (!tr) return;
     const r = el.getBoundingClientRect(), b = a.getBoundingClientRect(), cw = parseFloat(w.getComputedStyle(el).width) || el.offsetWidth;
     if (!r.width || !cw) return;
     const s = r.width / cw;                                        // pixels de tela por pixel da página (o zoom real, seja qual for o navegador)
     const alvoX = Math.max(8, Math.min(b.left, w.innerWidth - r.width - 8));
-    const abaixo = (r.top + r.bottom) / 2 >= (b.top + b.bottom) / 2;
+    const abaixo = (r.top + r.bottom) / 2 >= (b.top + b.bottom) / 2 || ehMenuTopo(el);
     const alvoY = abaixo ? b.bottom + 6 : b.top - 6 - r.height;
     const dx = (alvoX - r.left) / s, dy = (alvoY - r.top) / s;
-    if (Math.abs(dx) < 1.5 && Math.abs(dy) < 1.5 && el.classList.contains('ps-zfix')) return;
-    el.style.setProperty('--ps-zx', (tr[0] + dx).toFixed(1) + 'px'); el.style.setProperty('--ps-zy', (tr[1] + dy).toFixed(1) + 'px');
-    el.classList.add('ps-zfix');
+    if (Math.abs(dx) < 1.5 && Math.abs(dy) < 1.5) return;
+    const ox = parseFloat(el.style.getPropertyValue('--ps-dx')) || 0, oy = parseFloat(el.style.getPropertyValue('--ps-dy')) || 0;
+    el.style.setProperty('--ps-dx', (ox + dx).toFixed(1) + 'px'); el.style.setProperty('--ps-dy', (oy + dy).toFixed(1) + 'px');
+    el.classList.add('ps-zoff');
   };
-  let pend = 0; const varre = () => { if (pend) return; pend = w.requestAnimationFrame(() => { pend = 0; d.querySelectorAll(SEL).forEach(corrige); }); };
+  const menusSoltos = () => { const out = new Set();
+    d.querySelectorAll('[data-testid="stTopNavLink"]').forEach(l => { if (l.closest('[data-testid="stTopNav"]')) return;
+      let e = l.parentElement; while (e && e !== d.body) { if ((e.style.transform || '').includes('translate')) { out.add(e); break; } e = e.parentElement; } });
+    return out; };
+  let pend = 0; const varre = () => { if (pend) return; pend = w.requestAnimationFrame(() => { pend = 0;
+    const lista = new Set(d.querySelectorAll(SEL)); menusSoltos().forEach(x => lista.add(x)); lista.forEach(corrige); }); };
   new w.MutationObserver(varre).observe(d.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['style', 'aria-expanded'] });
   w.addEventListener('resize', varre); varre();
 }

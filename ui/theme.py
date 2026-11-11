@@ -311,7 +311,8 @@ def _css_base(t: dict, v: str) -> str:
 html, body, .stApp, button, input, textarea, select, [data-testid="stMarkdownContainer"] {{ font-family: var(--ps-font); }}
 html {{ zoom: var(--ps-zoom, .8); }}
 iframe[data-testid="stCustomComponentV1"] {{ width: 100% !important; }}
-.ps-zfix {{ transform: translate(var(--ps-zx), var(--ps-zy)) !important; }}   /* menus abrem embaixo de onde foram chamados, mesmo com o zoom de 80% */
+.ps-zfix {{ transform: translate(var(--ps-zx), var(--ps-zy)) !important; }}
+.ps-zoff {{ translate: var(--ps-dx, 0px) var(--ps-dy, 0px) !important; }}   /* deslocamento que alinha o menu embaixo de quem o abriu */   /* menus abrem embaixo de onde foram chamados, mesmo com o zoom de 80% */
 [data-testid="stMain"] {{ height: calc(100vh / var(--ps-zoom, .8)) !important; max-height: calc(100vh / var(--ps-zoom, .8)) !important; }}   /* área rolável ocupa a tela inteira mesmo com o zoom */   /* com o zoom do site, o Streamlit mede a largura das telas HTML a menos */   /* o site abre em 80% em qualquer máquina; o zoom do navegador continua funcionando por cima */
 [data-testid="stIconMaterial"], .ms {{ font-family: 'Material Symbols Rounded' !important; font-weight: 400; }}
 .stApp {{
