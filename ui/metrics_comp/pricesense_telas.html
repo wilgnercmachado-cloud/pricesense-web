@@ -1288,6 +1288,48 @@ html,body{overflow:hidden}
 .sk-msg{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);margin:4px 0 10px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
+<style id="css-margem" media="not all">
+.mtab td:last-child,.mtab th:last-child{min-width:200px}.dg{white-space:nowrap}
+html,body{margin:0;background:transparent;color:var(--ink);font-family:'Geist',system-ui,sans-serif}
+#app{padding:4px 2px 10px}
+.mtopo{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:10px}
+.mtopo h1{margin:0;font-size:20px;letter-spacing:-.02em}.mtopo h1 b{color:var(--primary)}.mtopo small{color:var(--muted);font-size:12px}
+.mk{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.mk div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:7px 12px;min-width:110px;box-shadow:var(--shadow)}
+.mk span{display:block;font-size:10.5px;color:var(--muted)}.mk b{font:600 15px 'Geist Mono',monospace}
+.mbar{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.mbar input{height:32px;border:1px solid var(--line);border-radius:10px;background:var(--field);color:var(--ink);padding:0 10px;min-width:260px;font:13px 'Geist',sans-serif}
+.mchip{height:30px;padding:0 11px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 11.5px 'Geist',sans-serif;cursor:pointer}
+.mchip.on{background:var(--primary);color:#fff;border-color:transparent}.mchip em{font-style:normal;opacity:.7;margin-left:4px;font-family:'Geist Mono',monospace}
+.menv{margin-left:auto;height:34px;padding:0 14px;border:0;border-radius:10px;background:var(--primary);color:#fff;font:700 12.5px 'Geist',sans-serif;cursor:pointer;box-shadow:0 8px 22px -10px var(--primary)}
+.menv:disabled{opacity:.45;cursor:default}
+.mtab{border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow);overflow:auto;max-height:calc(100vh - 150px)}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:12px}
+th{position:sticky;top:0;z-index:2;background:var(--surface-solid);color:var(--muted);font-weight:600;font-size:10.5px;text-align:right;padding:8px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th.l,td.l{text-align:left}th.sug{color:var(--primary)}
+td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;font-family:'Geist Mono',monospace;font-size:11.5px}
+tr.cat td{background:color-mix(in srgb,var(--primary) 5%,var(--surface-solid));font-weight:600;cursor:pointer}
+tr.cat:hover td{background:color-mix(in srgb,var(--primary) 10%,var(--surface-solid))}
+tr.cat td.l{font-family:'Geist',sans-serif;font-size:12.5px}tr.prod td.l{font-family:'Geist',sans-serif;padding-left:28px}
+.car{display:inline-block;width:14px;color:var(--primary)}
+.ces{margin-left:6px;font:700 9px 'Geist Mono',monospace;padding:1px 5px;border-radius:5px;background:var(--amber-soft);color:var(--amber)}
+.av{display:block;font:500 10.5px 'Geist',sans-serif;color:var(--amber);margin-top:1px}
+td input.sg{width:56px;height:24px;border:1px solid var(--line);border-radius:7px;background:var(--field);color:var(--primary);text-align:right;font:600 11.5px 'Geist Mono',monospace;padding:0 6px}
+td input.sg.mx{color:var(--up)}td input.sg.ed{border-color:var(--amber);box-shadow:0 0 0 2px var(--amber-soft)}
+.dg{display:inline-block;padding:2px 8px;border-radius:999px;font:600 10.5px 'Geist',sans-serif}
+.dg.ok{background:var(--up-soft);color:var(--up)}.dg.cr{background:color-mix(in srgb,var(--down) 14%,transparent);color:var(--down)}
+.dg.at{background:var(--amber-soft);color:var(--amber)}.dg.in{background:var(--raised);color:var(--muted)}
+.neg{color:var(--down)}.pos{color:var(--up)}
+input[type=checkbox]{accent-color:var(--primary)}
+.mmod{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:50}
+.mmod.on{display:flex}.mcx{width:min(520px,94vw);background:var(--surface-solid);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow)}
+.mcx h4{margin:0 0 6px}.mcx p{color:var(--muted);font-size:12.5px}.mcx label{display:flex;gap:8px;align-items:center;font-size:13px;margin:6px 0}
+.mcx textarea{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:9px;background:var(--field);color:var(--ink);padding:8px;font:12.5px 'Geist',sans-serif}
+.macx{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}.macx button{height:34px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 12.5px 'Geist',sans-serif;cursor:pointer}
+.macx .pri{background:var(--primary);color:#fff;border-color:transparent}
+#mtoast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--surface-solid);border:1px solid var(--line);border-radius:10px;padding:8px 14px;font-size:12.5px;opacity:0;transition:opacity .25s;pointer-events:none}
+#mtoast.on{opacity:1}
+</style>
 <style id="css-promo" media="not all">
 #pCal{width:min(1060px,92vw)!important}
 .cres{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0}
@@ -2179,6 +2221,26 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
       sel.forEach((i, n) => SUGI[i] = { ...itens[n], id: 'nova-' + Date.now() + '-' + n, usuario: EU, status: 'pendente', criado_em: new Date().toISOString() });
       m.classList.remove('on'); atualizar(false); toast(`Sugestão enviada para ${sel.length} filial(is)`); };
     setTimeout(() => $('sgV').focus(), 50); }
+  /* nova margem objetiva, mínima e máxima para o produto (zona desta filial ou estado inteiro): vai para aprovação do administrador */
+  function sugerirMargem(i){ const m = $('modal'), uf = String(D.ufs[D.ui[i]] || '').split(' - ')[0].trim();
+    const v0 = x => isFinite(x) ? nf1.format(x) : '';
+    m.innerHTML = `<div class="mcard glass blkc"><h4>${ic('pct', 'var(--primary)')}Sugerir nova margem</h4>
+      <p>${esc(curto(D.produtos[D.pi[i]]))}. Hoje: objetiva ${v0(UOBJ[i])}%, mínima ${v0(UMIN[i])}%, máxima ${v0(UMAX[i])}%. Vai para aprovação do administrador, que pode editar antes de gravar.</p>
+      <div class="sgrid" style="grid-template-columns:1fr 1fr 1fr"><div><label>Objetiva (%)</label><input id="mgO" value="${v0(UOBJ[i])}"></div><div><label>Mínima (%)</label><input id="mgMi" value="${v0(UMIN[i])}"></div><div><label>Máxima (%)</label><input id="mgMx" value="${v0(UMAX[i])}"></div></div>
+      <label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="radio" name="mgE" value="filial" checked> Só a zona de preço desta filial (${esc(curto(D.filiais[D.fi[i]]))})</label>
+      <label style="display:flex;gap:8px;align-items:center"><input type="radio" name="mgE" value="estado"> Estado ${esc(uf)} inteiro</label>
+      <textarea id="mgObs" rows="2" placeholder="Observação para o administrador (opcional)"></textarea><p class="bavi" id="mgAvi"></p>
+      <div class="macts"><button class="tx" data-r="0">Cancelar</button><button class="tx pri" data-r="1">${ic('send')}Enviar para aprovação</button></div></div>`;
+    m.classList.add('on'); const num = t => parseFloat(String(t).replace(/\./g, '').replace(',', '.'));
+    m.querySelector('[data-r="0"]').onclick = () => m.classList.remove('on');
+    m.querySelector('[data-r="1"]').onclick = () => { const o = num($('mgO').value), mi = num($('mgMi').value), mx = num($('mgMx').value), av = $('mgAvi');
+      if (![o, mi, mx].every(isFinite)) { av.textContent = 'Preencha as três margens.'; return; }
+      if (mi > o) { av.textContent = 'A mínima não pode passar da objetiva.'; return; }
+      if (mx < o + 5 - 1e-9) { av.textContent = 'A máxima precisa ficar pelo menos 5 pontos acima da objetiva.'; return; }
+      ST.valor({ acao: 'sugerir_margem', produto: curto(D.produtos[D.pi[i]]), filial: +codTxt(D.filiais[D.fi[i]]), estado: uf, obj: o, min: mi, max: mx,
+        obj_atual: isFinite(UOBJ[i]) ? UOBJ[i] : null, min_atual: isFinite(UMIN[i]) ? UMIN[i] : null, max_atual: isFinite(UMAX[i]) ? UMAX[i] : null,
+        escopo: (m.querySelector('input[name=mgE]:checked') || {}).value || 'filial', obs: $('mgObs').value.trim(), ts: Date.now() });
+      m.classList.remove('on'); toast('Pedido de nova margem enviado para aprovação do administrador'); }; }
   /* comprador sugere preço: varejo + atacado (começa igual ao varejo), motivo da lista e observação */
   function abrirSugestao(i){ const m = $('modal'), mot = A.motivos_sugestao || ['Negociação com fornecedor', 'Acordo comercial', 'Erro de pesquisa', 'Estratégia da categoria', 'Outros'];
     m.innerHTML = `<div class="mcard glass blkc"><h4>${ic('send', 'var(--primary)')}Sugerir preço ao Pricing</h4>
@@ -2283,11 +2345,13 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     const podeTirar = BKI[i] && (ADMIN || BKI[i].usuario === EU);
     if (COMERCIAL) { const abaixo = NV[i] < D.cu[i] - 1e-9;
       cm.innerHTML = `<div class="ctx-t">${esc(curto(D.produtos[D.pi[i]]))}<small>${esc(curto(D.filiais[D.fi[i]]))}</small></div>`
-        + it('sugerir', 'send', sugPend(i) && SUGI[i].usuario === EU ? 'Alterar minha sugestão de preço' : 'Sugerir preço ao Pricing') + '<span class="ctx-s"></span>'
+        + it('sugerir', 'send', sugPend(i) && SUGI[i].usuario === EU ? 'Alterar minha sugestão de preço' : 'Sugerir preço ao Pricing')
+        + it('margem', 'pct', 'Sugerir nova margem (objetiva, mínima e máxima)') + '<span class="ctx-s"></span>'
         + (BKI[i] ? it('desbloquear', 'x', 'Retirar BLOCK', !podeTirar) : it('block', 'lock', abaixo ? 'BLOCK (novo preço abaixo do custo)' : 'BLOCK: só com novo preço abaixo do custo', !abaixo));
       cm.style.left = Math.min(e.clientX, innerWidth - 260) + 'px'; cm.style.top = Math.min(e.clientY, innerHeight - cm.offsetHeight - 10) + 'px'; cm.dataset.i = i; cm.classList.add('on'); return; }
     cm.innerHTML = `<div class="ctx-t">${esc(curto(D.produtos[D.pi[i]]))}<small>${esc(curto(D.filiais[D.fi[i]]))}</small></div>`
       + (sugPend(i) ? it('aceitar_sug', 'send', `Aceitar sugestão comprador (${brl(+SUGI[i].varejo)})`) + it('rejeitar_sug', 'x', 'Rejeitar sugestão comprador') + '<span class="ctx-s"></span>' : '')
+      + it('margem', 'pct', 'Sugerir nova margem (objetiva, mínima e máxima)')
       + it('aceitar', 'check', 'Aceitar preço', !podeAceitar(i) || aceito(i)) + it('anular', 'x', 'Anular aceite', !aceito(i))
       + '<span class="ctx-s"></span>' + it('objetiva', 'obj', `Aplicar objetiva (R$ ${nf2.format(roundVarejo(OB[i]))})`) + it('optimus', 'robo', 'Aplicar Optimus', semPesq(i))
       + '<span class="ctx-s"></span>' + it('motor', 'undo', 'Sugestão do motor', !OV.has(i) && !OVA.has(i) && !ACE.has(i));
@@ -2296,6 +2360,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   on(cm, 'click', async e => { const b = e.target.closest('[data-ctx]'); if (!b || b.disabled) return; const i = +cm.dataset.i, a = b.dataset.ctx; fechaCtx();
     if (a === 'block') { abrirBlock(i); return; }
     if (a === 'sugerir') { abrirSugestao(i); return; }
+    if (a === 'margem') { sugerirMargem(i); return; }
     if (a === 'aceitar_sug') { aceitarSug([i]); return; }
     if (a === 'rejeitar_sug') { rejeitarSug(i); return; }
     if (a === 'desbloquear') { const bl = BKI[i]; if (!bl) return;
@@ -3281,6 +3346,112 @@ const ic = (n, cor) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="$
 
 return montar;
 })();
+const APP_MARGEM = (() => {
+const ST = { altura(h){ window.parent.postMessage({ isStreamlitMessage: true, type: 'streamlit:setFrameHeight', height: h }, '*'); },
+  valor(v){ window.parent.postMessage({ isStreamlitMessage: true, type: 'streamlit:setComponentValue', value: v, dataType: 'json' }, '*'); } };
+let CTL = null;
+function montar(A){
+  if (CTL) CTL.abort(); CTL = new AbortController(); const SIG = { signal: CTL.signal };
+  const on = (alvo, ev, fn) => alvo.addEventListener(ev, fn, SIG);
+  document.getElementById('estilo-tema').textContent = `@import url('${A.fonte}');:root{${A.tokens}}`;
+  const $ = id => document.getElementById(id);
+  const P = A.pacote || { categorias: [] }, FX = P.faixa || [0.989, 1.009], DIST = P.distancia_max || 5;
+  const nf0 = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }), nf1 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
+        nf2 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const pc = v => v == null || !isFinite(v) ? '–' : `<span class="${v < 0 ? 'neg' : ''}">${nf1.format(v)}%</span>`;
+  const din = v => v == null || !isFinite(v) ? '–' : nf2.format(v);
+  const CATS = P.categorias.map((c, k) => ({ ...c, k, aberta: false, sel: false, produtos: c.produtos.map((p, j) => ({ ...p, k: `${k}-${j}`, sel: false,
+    o_obj: p.s_obj, o_min: p.s_min, o_max: p.s_max })) }));
+  let FILTRO = '', DG = '';
+  /* simulação: preço objetivo = custo ÷ (1 − objetiva); na cesta o preço fica o atual */
+  const precoObj = p => p.s_obj != null && p.cu > 0 && p.s_obj < 100 ? p.cu / (1 - p.s_obj / 100) : null;
+  const precoMax = p => p.s_max != null && p.cu > 0 && p.s_max < 100 ? p.cu / (1 - p.s_max / 100) : null;
+  const precoSim = p => p.cesta ? p.vm : (precoObj(p) ?? p.vm);
+  const ipProd = p => p.moda > 0 ? precoSim(p) / p.moda : NaN;
+  const diag = (ip, cons) => cons != null && cons < 0.5 ? ['in', 'Falta consistência na pesquisa'] : !isFinite(ip) ? ['in', 'Sem pesquisa']
+    : ip > FX[1] ? ['cr', 'Zona crítica'] : ip < FX[0] ? ['at', 'Zona de atenção'] : ['ok', 'Dentro da faixa'];
+  function agregado(c){ let q = 0, rec = 0, luc = 0, pm = 0, mq = 0, ve = 0, va = 0, mt = 0, cons = 0, o = 0, mi = 0, mx = 0, wr = 0, mm = 0, wm = 0;
+    for (const p of c.produtos) { const qq = p.q || 0, pr = precoSim(p); q += qq; rec += pr * qq; luc += (pr - p.cu) * qq; ve += p.venda || 0;
+      if (p.moda > 0) { pm += pr * qq; mq += p.moda * qq; }
+      if (p.mg_ant != null) { va += p.mg_ant * (p.venda || 0); }
+      if (p.mg_merc != null) { mm += p.mg_merc * (p.venda || 0); wm += p.venda || 0; }
+      cons += (p.consist ?? 0) * (p.venda || 0);
+      if (p.obj != null) { o += p.obj * (p.venda || 0); mi += (p.min ?? 0) * (p.venda || 0); mx += (p.max ?? 0) * (p.venda || 0); wr += p.venda || 0; } }
+    return { venda: ve, mg_ant: ve ? va / ve : null, mg_merc: wm ? mm / wm : null, mg_sim: rec ? luc / rec * 100 : null, ip: mq ? pm / mq : NaN, cons: ve ? cons / ve : 0,
+      obj: wr ? o / wr : null, min: wr ? mi / wr : null, max: wr ? mx / wr : null }; }
+  const visivel = p => (!FILTRO || p.nome.toLowerCase().includes(FILTRO)) && (!DG || diag(ipProd(p), p.consist)[0] === DG);
+  const inp = (p, campo, cls = '') => `<input class="sg ${cls}${p[campo] !== p['o_' + campo.slice(2)] ? ' ed' : ''}" data-k="${p.k}" data-c="${campo}" value="${p[campo] == null ? '' : nf1.format(p[campo])}">`;
+  const inpCat = (c, campo, v) => `<input class="sg" data-cat="${c.k}" data-c="${campo}" value="${v == null ? '' : nf1.format(v)}" title="Aplica a todos os produtos da categoria">`;
+  function linhas(){ let h = '', nProd = 0;
+    for (const c of CATS) { const vis = c.produtos.filter(visivel); if (!vis.length) continue; const a = agregado(c), [dc, dt] = diag(a.ip, a.cons);
+      h += `<tr class="cat" data-cat="${c.k}"><td class="l"><input type="checkbox" data-selcat="${c.k}" ${c.produtos.every(p => p.sel) ? 'checked' : ''}> <span class="car">${c.aberta ? '▾' : '▸'}</span>${esc(c.nome)} <small style="color:var(--muted);font-weight:400">${c.produtos.length} produtos</small>${c.aviso ? `<span class="av">${esc(c.aviso)}</span>` : ''}</td>
+        <td>R$ ${nf0.format(a.venda)}</td><td>${pc(a.mg_ant)}</td><td>${pc(c.meta)}</td><td>${pc(a.mg_merc)}</td><td>${pc(a.mg_sim)}</td><td>${pc(a.obj)}</td><td>${pc(a.min)}</td><td>${pc(a.max)}</td>
+        <td>${inpCat(c, 's_obj', c.s_obj)}</td><td>${inpCat(c, 's_min', 0)}</td><td>${inpCat(c, 's_max', c.s_obj != null ? c.s_obj + DIST : null)}</td><td>–</td><td>–</td>
+        <td>${isFinite(a.ip) ? nf1.format(a.ip * 100) : '–'}</td><td><span class="dg ${dc}" title="Com as sugestões, a categoria realiza ${a.mg_sim == null ? '–' : nf1.format(a.mg_sim) + '%'} de margem (meta ${c.meta == null ? '–' : nf1.format(c.meta) + '%'}), ponderada pela venda.">${dt}</span></td></tr>`;
+      if (c.aberta) for (const p of vis) { nProd++; const ip = ipProd(p), [d1, d2] = diag(ip, p.consist);
+        h += `<tr class="prod"><td class="l"><input type="checkbox" data-sel="${p.k}" ${p.sel ? 'checked' : ''}> ${esc(p.nome)}${p.cesta ? '<span class="ces">CESTA</span>' : ''}</td>
+          <td>R$ ${nf0.format(p.venda || 0)}</td><td>${pc(p.mg_ant)}</td><td>${pc(p.meta)}</td><td>${pc(p.mg_merc)}</td><td>${pc(precoSim(p) > 0 ? (precoSim(p) - p.cu) / precoSim(p) * 100 : null)}</td><td>${pc(p.obj)}</td><td>${pc(p.min)}</td><td>${pc(p.max)}</td>
+          <td>${inp(p, 's_obj')}</td><td>${inp(p, 's_min')}</td><td>${inp(p, 's_max', 'mx')}</td><td>${din(precoObj(p))}</td><td>${din(precoMax(p))}</td>
+          <td>${isFinite(ip) ? nf1.format(ip * 100) : '–'}</td><td><span class="dg ${d1}" title="Custo médio ${din(p.cu)} · preço atual ${din(p.vm)} · moda ${din(p.moda)} · pesquisa consistente em ${nf0.format((p.consist || 0) * 100)}% do volume${p.cesta ? ' · item da cesta: na simulação fica no preço atual' : ''}">${d2}</span></td></tr>`; } }
+    return h; }
+  function resumo(){ let ve = 0, va = 0, rec = 0, luc = 0, pm = 0, mq = 0, mt = 0, mv = 0, sel = 0;
+    for (const c of CATS) { for (const p of c.produtos) { const qq = p.q || 0, pr = precoSim(p); ve += p.venda || 0; if (p.mg_ant != null) va += p.mg_ant * (p.venda || 0);
+      rec += pr * qq; luc += (pr - p.cu) * qq; if (p.moda > 0) { pm += pr * qq; mq += p.moda * qq; } if (p.meta != null) { mt += p.meta * (p.venda || 0); mv += p.venda || 0; } if (p.sel) sel++; } }
+    $('mk').innerHTML = `<div><span>Venda mensal</span><b>R$ ${nf0.format(ve)}</b></div><div><span>Margem mês anterior</span><b>${ve ? nf1.format(va / ve) + '%' : '–'}</b></div>
+      <div><span>Meta de margem</span><b>${mv ? nf1.format(mt / mv) + '%' : '–'}</b></div><div><span>Margem com as sugestões</span><b>${rec ? nf1.format(luc / rec * 100) + '%' : '–'}</b></div>
+      <div><span>IP com as sugestões</span><b>${mq ? nf1.format(pm / mq * 100) : '–'}</b></div>`;
+    $('env').disabled = !sel; $('env').textContent = sel ? `Enviar ${sel} sugestão(ões) para aprovação` : 'Marque produtos para enviar'; }
+  function render(){ $('corpo').innerHTML = linhas(); resumo(); }
+  document.getElementById('root').innerHTML = `<div id="app"><div class="mtopo"><div><h1>Revisão de <b>margem</b></h1><small>${esc(A.escopo)} · base de ${esc(A.atualizado)} · margem do mês anterior = lucro ÷ venda da loja nos mesmos dias do mês anterior</small></div><div class="mk" id="mk"></div></div>
+    <div class="mbar"><input id="q" placeholder="Buscar produto"><button class="mchip on" data-dg="">Todos</button><button class="mchip" data-dg="ok">Dentro da faixa</button>
+      <button class="mchip" data-dg="cr">Zona crítica</button><button class="mchip" data-dg="at">Zona de atenção</button><button class="mchip" data-dg="in">Falta consistência</button>
+      <button class="mchip" id="abrir">Abrir todas</button><button class="menv" id="env" disabled>Marque produtos para enviar</button></div>
+    <div class="mtab"><table><thead><tr><th class="l">Categoria / produto</th><th>Venda mensal</th><th>Margem mês ant. (loja)</th><th>Meta de margem</th><th>Margem de mercado</th><th>Margem com a sugestão</th>
+      <th>Margem objetiva</th><th>Margem mínima</th><th>Margem máxima</th><th class="sug">Sugestão objetiva</th><th class="sug">Sugestão mínima</th><th class="sug">Sugestão máxima</th>
+      <th>Preço objetivo</th><th>Preço máximo</th><th>IP simulado</th><th class="l">Diagnóstico</th></tr></thead><tbody id="corpo"></tbody></table></div>
+    <div class="mmod" id="mod"></div><div id="mtoast"></div></div>`;
+  const toast = t => { const e = $('mtoast'); e.textContent = t; e.classList.add('on'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('on'), 2600); };
+  const num = t => { const v = parseFloat(String(t).replace(/\./g, '').replace(',', '.')); return isFinite(v) ? v : null; };
+  const acharP = k => { const [a, b] = k.split('-').map(Number); return CATS[a].produtos[b]; };
+  function ajustar(p, campo, v){
+    if (campo === 's_obj') { p.s_obj = v; if (v != null && (p.s_max == null || p.s_max < v + DIST)) p.s_max = Math.round((v + DIST) * 10) / 10; }
+    else if (campo === 's_max') { if (v != null && p.s_obj != null && v < p.s_obj + DIST) { v = Math.round((p.s_obj + DIST) * 10) / 10; toast(`A máxima fica pelo menos ${DIST} pontos acima da objetiva`); } p.s_max = v; }
+    else p.s_min = v; }
+  on($('corpo'), 'change', e => { const t = e.target;
+    if (t.dataset.sel) { acharP(t.dataset.sel).sel = t.checked; render(); return; }
+    if (t.dataset.selcat) { CATS[+t.dataset.selcat].produtos.forEach(p => p.sel = t.checked); render(); return; }
+    if (t.dataset.c && t.dataset.k) { const p = acharP(t.dataset.k); ajustar(p, t.dataset.c, num(t.value)); p.sel = true; render(); return; }
+    if (t.dataset.c && t.dataset.cat) { const c = CATS[+t.dataset.cat], v = num(t.value);
+      for (const p of c.produtos) { if (t.dataset.c === 's_obj' && p.cesta) continue; ajustar(p, t.dataset.c, v); p.sel = true; }   // objetiva da categoria vale no fundo de sortimento
+      if (t.dataset.c === 's_obj') c.s_obj = v; c.aberta = true; render(); toast(t.dataset.c === 's_obj' ? 'Objetiva aplicada aos itens não cesta da categoria' : 'Aplicado a todos os produtos da categoria'); } });
+  on($('corpo'), 'click', e => { if (e.target.tagName === 'INPUT') return; const tr = e.target.closest('tr.cat'); if (!tr) return; const c = CATS[+tr.dataset.cat]; c.aberta = !c.aberta; render(); });
+  on($('q'), 'input', e => { FILTRO = e.target.value.trim().toLowerCase(); if (FILTRO) CATS.forEach(c => c.aberta = true); render(); });
+  document.querySelectorAll('[data-dg]').forEach(b => on(b, 'click', () => { DG = b.dataset.dg; document.querySelectorAll('[data-dg]').forEach(x => x.classList.toggle('on', x === b)); if (DG) CATS.forEach(c => c.aberta = true); render(); }));
+  on($('abrir'), 'click', () => { const abrir = !CATS.every(c => c.aberta); CATS.forEach(c => c.aberta = abrir); $('abrir').textContent = abrir ? 'Fechar todas' : 'Abrir todas'; render(); });
+  on($('env'), 'click', () => { const itens = []; for (const c of CATS) for (const p of c.produtos) if (p.sel) {
+      if (p.s_obj == null || p.s_max == null) continue;
+      itens.push({ produto: p.nome, obj: p.s_obj, min: p.s_min ?? 0, max: p.s_max, obj_atual: p.obj, min_atual: p.min, max_atual: p.max }); }
+    if (!itens.length) { toast('Os produtos marcados estão sem margem sugerida'); return; }
+    const m = $('mod');
+    m.innerHTML = `<div class="mcx"><h4>Enviar ${itens.length} sugestão(ões) de margem</h4><p>Vai para aprovação do administrador, que pode editar antes de gravar. Você recebe o aviso quando for aprovado, com as modificações, se houver.</p>
+      <label><input type="radio" name="esc" value="recorte" checked> ${A.tem_filiais ? 'Só as filiais selecionadas' : 'Estado inteiro'} (${esc(A.escopo)})</label>
+      ${A.tem_filiais ? `<label><input type="radio" name="esc" value="estado"> Aplicar no estado ${esc(A.uf)} inteiro</label>` : ''}
+      <textarea id="obs" rows="2" placeholder="Observação para o administrador (opcional)"></textarea>
+      <div class="macx"><button data-r="0">Cancelar</button><button class="pri" data-r="1">Enviar para aprovação</button></div></div>`;
+    m.classList.add('on');
+    m.querySelector('[data-r="0"]').onclick = () => m.classList.remove('on');
+    m.querySelector('[data-r="1"]').onclick = () => { const escopo = (m.querySelector('input[name=esc]:checked') || {}).value === 'estado' || !A.tem_filiais ? 'estado' : 'recorte';
+      ST.valor({ acao: 'enviar', itens, escopo, obs: $('obs').value.trim(), ts: Date.now() });
+      for (const c of CATS) for (const p of c.produtos) p.sel = false; m.classList.remove('on'); render(); toast('Enviado para aprovação do administrador'); };
+  });
+  render();
+  const alt = () => { const h = Math.max(560, Math.round((window.parent.innerHeight - window.frameElement.getBoundingClientRect().top - 10) / (parseFloat(window.parent.getComputedStyle(window.parent.document.documentElement).zoom) || 1)));
+    document.getElementById('root').style.height = h + 'px'; ST.altura(h); };
+  try { alt(); on(window.parent, 'resize', alt); } catch (e) { ST.altura(900); }
+}
+return montar;
+})();
 const APP_HOME = (() => {
 const MARCACAO = "<div class=\"aurora\"><i></i><i></i><i></i></div><div class=\"malha\"></div>\n<div id=\"app\" class=\"home\">\n  <section class=\"hero\" id=\"hero\"></section>\n  <div class=\"tick glass\" id=\"tick\"></div>\n  <div class=\"cards\" id=\"cards\"></div>\n  <div class=\"hrow\">\n    <section class=\"glass hb\"><h3 data-ic2=\"pulso\">Preg\u00e3o por estado <small>ao vivo na \u00faltima pesquisa</small></h3><div class=\"board\" id=\"board\"></div></section>\n    <section class=\"glass hb hb2\"><h3 data-ic2=\"cash\">Captura x investimento <small>R$ por m\u00eas</small></h3><div id=\"duelo\"></div></section>\n  </div>\n  <div class=\"hrow2\">\n    <section><h3 class=\"sec\">Ferramentas</h3><div class=\"tools\" id=\"tools\"></div></section>\n    <section><h3 class=\"sec\">Relat\u00f3rios de mercado</h3><div class=\"rels\" id=\"rels\"></div></section>\n  </div>\n</div>\n<div id=\"tip\"></div>\n";
 const ST = { altura(h){ window.parent.postMessage({ isStreamlitMessage: true, type: 'streamlit:setFrameHeight', height: h }, '*'); }, valor(v){ window.parent.postMessage({ isStreamlitMessage: true, type: 'streamlit:setComponentValue', value: v, dataType: 'json' }, '*'); } };
@@ -3770,10 +3941,11 @@ return montar;
     document.getElementById('css-bot').media = app === 'bot' ? 'all' : 'not all';
     document.getElementById('css-market').media = app === 'market' ? 'all' : 'not all';
     document.getElementById('css-home').media = app === 'home' ? 'all' : 'not all';
+    document.getElementById('css-margem').media = app === 'margem' ? 'all' : 'not all';
     let carr = document.getElementById('ps-carr');
     if (!carr) { carr = document.createElement('div'); carr.id = 'ps-carr'; carr.innerHTML = '<div class="pc-anel"></div><div class="pc-volta"></div><div class="pc-nucleo"></div><span>Carregando</span>'; document.body.appendChild(carr); }
     carr.className = 'on';
-    Promise.resolve(({ promo: APP_PROMO, bot: APP_BOT, market: APP_MARKET, home: APP_HOME }[app] || APP_PRICE)(a)).finally(() => { carr.className = ''; });
+    Promise.resolve(({ promo: APP_PROMO, bot: APP_BOT, market: APP_MARKET, home: APP_HOME, margem: APP_MARGEM }[app] || APP_PRICE)(a)).finally(() => { carr.className = ''; });
   };
   window.addEventListener('message', ev => { const d = ev.data; if (d && d.type === 'streamlit:render') desenhar(d); });
   if (window.__psRender) desenhar(window.__psRender);
