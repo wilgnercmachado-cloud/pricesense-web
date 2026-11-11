@@ -633,8 +633,8 @@ def _profimetrics(secao: str) -> None:
                 barra = st.progress(0.0, text="Cruzando com a dim_produto e gravando as proporções")
                 r = pp.salvar(pp.ler_planilha(arq_p), progresso=lambda x: barra.progress(x, text="Gravando as proporções"))
                 barra.empty()
-                st.toast(f"Base PROP% gravada: {ui.numero(r['salvas'] + r['fora_da_dim'])} relações valem na precificação "
-                         f"({ui.numero(r['salvas'])} também na dim_produto).", icon=":material/check_circle:")
+                st.toast(f"Base PROP% atualizada: {ui.numero(r['enviadas'])} enviadas ({ui.numero(r['substituidas'])} substituídas), "
+                         f"{ui.numero(r['mantidas'])} mantidas; {ui.numero(r['total'])} relações valem na precificação.", icon=":material/check_circle:")
                 st.rerun()
             except pp.ErroProporcao as exc:
                 st.error(str(exc), icon=":material/error:")
