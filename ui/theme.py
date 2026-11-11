@@ -316,14 +316,14 @@ iframe[data-testid="stCustomComponentV1"] {{ width: 100% !important; }}
 /* conta no menu do topo: só a foto num círculo minimalista com luz neon */
 [data-testid="stTopNavSection"]:has(> .ps-avatar) {{ padding: 0 4px !important; gap: 0 !important; }}
 [data-testid="stTopNavSection"]:has(> .ps-avatar) > span:not(.ps-avatar), [data-testid="stTopNavSection"]:has(> .ps-avatar) > div[aria-hidden] {{ display: none !important; }}
-.ps-avatar {{ position: relative; width: 26px; height: 26px; border-radius: 50%; flex: none; display: grid; place-items: center; overflow: visible;
-  background: linear-gradient(135deg, var(--ps-primary), #7A3FD1); color: #fff; font: 700 11px var(--ps-font); letter-spacing: .02em;
-  box-shadow: 0 0 0 2px var(--ps-surface-solid), 0 0 0 3.5px var(--ps-primary), 0 0 14px 2px color-mix(in srgb, var(--ps-primary) 60%, transparent);
+.ps-avatar {{ position: relative; width: 22px; height: 22px; border-radius: 50%; flex: none; display: grid; place-items: center; overflow: visible;
+  background: linear-gradient(135deg, var(--ps-primary), #7A3FD1); color: #fff; font: 700 9.5px var(--ps-font); letter-spacing: .02em;
+  box-shadow: 0 0 0 1.5px var(--ps-surface-solid), 0 0 0 3px var(--ps-primary), 0 0 10px 1px color-mix(in srgb, var(--ps-primary) 60%, transparent);
   animation: ps-aura 3.2s ease-in-out infinite; transition: transform .2s; }}
 .ps-avatar img {{ width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }}
 [data-testid="stTopNavSection"]:hover > .ps-avatar, [data-testid="stTopNavSection"][aria-expanded="true"] > .ps-avatar {{ transform: scale(1.08); }}
-@keyframes ps-aura {{ 0%, 100% {{ box-shadow: 0 0 0 2px var(--ps-surface-solid), 0 0 0 3.5px var(--ps-primary), 0 0 10px 1px color-mix(in srgb, var(--ps-primary) 45%, transparent); }}
-  50% {{ box-shadow: 0 0 0 2px var(--ps-surface-solid), 0 0 0 3.5px var(--ps-primary), 0 0 20px 4px color-mix(in srgb, var(--ps-primary) 70%, transparent); }} }}
+@keyframes ps-aura {{ 0%, 100% {{ box-shadow: 0 0 0 1.5px var(--ps-surface-solid), 0 0 0 3px var(--ps-primary), 0 0 8px 0 color-mix(in srgb, var(--ps-primary) 45%, transparent); }}
+  50% {{ box-shadow: 0 0 0 1.5px var(--ps-surface-solid), 0 0 0 3px var(--ps-primary), 0 0 15px 3px color-mix(in srgb, var(--ps-primary) 70%, transparent); }} }}
 .ps-zoff {{ translate: var(--ps-dx, 0px) var(--ps-dy, 0px) !important; }}   /* deslocamento que alinha o menu embaixo de quem o abriu */   /* menus abrem embaixo de onde foram chamados, mesmo com o zoom de 80% */
 [data-testid="stMain"] {{ height: calc(100vh / var(--ps-zoom, .8)) !important; max-height: calc(100vh / var(--ps-zoom, .8)) !important; }}   /* área rolável ocupa a tela inteira mesmo com o zoom */   /* com o zoom do site, o Streamlit mede a largura das telas HTML a menos */   /* o site abre em 80% em qualquer máquina; o zoom do navegador continua funcionando por cima */
 [data-testid="stIconMaterial"], .ms {{ font-family: 'Material Symbols Rounded' !important; font-weight: 400; }}
@@ -885,6 +885,41 @@ header[data-testid="stHeader"] {{
   background: linear-gradient(135deg, var(--ps-primary), var(--ps-up)); color: #fff; font-weight: 600; font-size: 1.2rem; }}
 
 /* ---------- login ---------- */
+/* ---------- entrada: fundo vivo, palavra girando, cartão com borda neon e a foto de quem já entrou ---------- */
+.st-key-ps_login_bg {{ position: fixed !important; inset: 0; z-index: 0; pointer-events: none; opacity: .9; }}
+.st-key-ps_login_bg iframe {{ position: fixed !important; inset: 0; width: 100vw !important; height: calc(100vh / var(--ps-zoom, .8)) !important; }}
+[data-testid="stMainBlockContainer"]:has(.st-key-psc_login) > div {{ position: relative; z-index: 1; }}
+.ps-login-live {{ width: 8px; height: 8px; border-radius: 50%; background: var(--ps-up); margin-left: 6px; box-shadow: 0 0 0 0 color-mix(in srgb, var(--ps-up) 60%, transparent);
+  animation: ps-vivo 1.8s infinite; }}
+.ps-login-brand small {{ font: 600 .7rem var(--ps-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--ps-up); }}
+@keyframes ps-vivo {{ 0% {{ box-shadow: 0 0 0 0 color-mix(in srgb, var(--ps-up) 55%, transparent); }} 70% {{ box-shadow: 0 0 0 9px transparent; }} 100% {{ box-shadow: 0 0 0 0 transparent; }} }}
+.ps-rot {{ display: inline-block; height: 1.12em; overflow: hidden; vertical-align: bottom; }}
+.ps-rot > span {{ display: flex; flex-direction: column; animation: ps-rot 11s cubic-bezier(.7,0,.3,1) infinite; }}
+.ps-rot em {{ font-style: normal; line-height: 1.12em; height: 1.12em; background: linear-gradient(90deg, var(--ps-primary), var(--ps-up));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }}
+@keyframes ps-rot {{ 0%, 18% {{ transform: translateY(0); }} 23%, 41% {{ transform: translateY(-1.12em); }} 46%, 64% {{ transform: translateY(-2.24em); }}
+  69%, 87% {{ transform: translateY(-3.36em); }} 92%, 100% {{ transform: translateY(-4.48em); }} }}
+.st-key-ps_login_graf {{ border-radius: 22px; padding: 6px 4px 0; background: color-mix(in srgb, var(--ps-surface-solid) 55%, transparent);
+  border: 1px solid var(--ps-line); backdrop-filter: blur(10px); box-shadow: 0 30px 70px -40px color-mix(in srgb, var(--ps-primary) 60%, transparent); margin-top: 1.4rem; }}
+.st-key-psc_login {{ position: relative; isolation: isolate; border-radius: 26px !important; overflow: hidden; border: 0 !important;
+  background: color-mix(in srgb, var(--ps-surface-solid) 82%, transparent) !important; backdrop-filter: blur(18px);
+  box-shadow: 0 40px 90px -40px color-mix(in srgb, var(--ps-primary) 70%, transparent) !important; padding: 26px 24px !important; }}
+.st-key-psc_login::before {{ content: ""; position: absolute; inset: -60%; z-index: -1;
+  background: conic-gradient(from 0deg, transparent 0 60%, var(--ps-primary) 72%, var(--ps-up) 82%, transparent 92%); animation: ps-gira 6s linear infinite; }}
+.st-key-psc_login::after {{ content: ""; position: absolute; inset: 1.5px; z-index: -1; border-radius: 25px; background: var(--ps-surface-solid); }}
+@keyframes ps-gira {{ to {{ transform: rotate(360deg); }} }}
+.ps-login-ola {{ display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; margin-bottom: .6rem; }}
+.ps-login-ola h2 {{ margin: .5rem 0 0; font-size: 1.45rem; letter-spacing: -.03em; }}
+.ps-login-ola .sub {{ margin: 0; color: var(--ps-muted); font-size: .9rem; }}
+.ps-login-av {{ width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; color: #fff; font: 700 1.5rem var(--ps-font);
+  background: linear-gradient(135deg, var(--ps-primary), #7A3FD1); animation: ps-aura-g 3s ease-in-out infinite; }}
+.ps-login-av.marca {{ background: var(--ps-surface-solid); }} .ps-login-av.marca img {{ width: 40px; height: 40px; }} .ps-login-av.marca span {{ display: none; }}
+.ps-login-av img {{ width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }}
+@keyframes ps-aura-g {{ 0%, 100% {{ box-shadow: 0 0 0 3px var(--ps-surface-solid), 0 0 0 5px var(--ps-primary), 0 0 18px 2px color-mix(in srgb, var(--ps-primary) 45%, transparent); }}
+  50% {{ box-shadow: 0 0 0 3px var(--ps-surface-solid), 0 0 0 5px var(--ps-primary), 0 0 34px 8px color-mix(in srgb, var(--ps-primary) 70%, transparent); }} }}
+.ps-sug-t {{ margin: -4px 0 -6px; font-size: .78rem; color: var(--ps-muted); }}
+.ps-login-pills span {{ border-color: color-mix(in srgb, var(--c) 35%, var(--ps-line)) !important; }}
+.ps-login-pills span i {{ background: var(--c); box-shadow: 0 0 10px var(--c); }}
 .ps-login-brand {{ display: flex; align-items: center; gap: 10px; margin-bottom: 2.2rem; }}
 .ps-login-brand img {{ width: 34px; height: 34px; }}
 .ps-login-brand span {{ font-weight: 600; font-size: 1.35rem; letter-spacing: -.03em; color: var(--ps-ink); }}

@@ -440,9 +440,10 @@ if (!d.__psGaveta) { d.__psGaveta = true;            /* botão ✕ das gavetas: 
     if (!sec) return;
     let av = sec.querySelector('.ps-avatar');
     const chave = foto ? foto.slice(-40) : 'ini:' + ini;
-    if (!av) { av = d.createElement('span'); av.className = 'ps-avatar'; sec.insertBefore(av, sec.firstChild); sec.classList.add('ps-conta'); }
+    if (!av) { av = d.createElement('span'); av.className = 'ps-avatar'; sec.insertBefore(av, sec.firstChild); sec.classList.add('ps-conta');
+      av.style.cssText = 'width:22px;height:22px;min-width:22px;max-width:22px;max-height:22px;'; }
     if (av.dataset.chave !== chave) { av.dataset.chave = chave;
-      av.innerHTML = foto ? `<img src="${foto}" alt="">` : `<b>${ini.replace(/[<>&"]/g, '')}</b>`; }
+      av.innerHTML = foto ? `<img src="${foto}" alt="" style="width:22px;height:22px;border-radius:50%;object-fit:cover;display:block">` : `<b>${ini.replace(/[<>&"]/g, '')}</b>`; }
     sec.title = completo + ' · Meu perfil'; };
   if (w.__psAvatarObs) { try { w.__psAvatarObs.disconnect(); } catch (e) {} }
   if (w.__psAvatarTimer) w.clearInterval(w.__psAvatarTimer);
