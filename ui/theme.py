@@ -11,17 +11,18 @@ _URL_GEIST = "https://fonts.googleapis.com/css2?family=Geist:wght@300..700&displ
 _URL_MONO = "https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400..600&display=swap"
 
 TOKENS = {
+    # Modo escuro: terminal de inteligência de mercado, espaço profundo com neon ciano e violeta
     "Dark": {
-        "canvas": "#060A13", "canvas2": "#0A1122", "field": "#0E1628",
-        "surface": "rgba(20,29,52,.52)", "surface_solid": "#0F1729", "raised": "rgba(255,255,255,.05)",
-        "ink": "#E9EEF7", "muted": "#8D97AD", "faint": "#5B6680",
-        "line": "rgba(255,255,255,.09)", "line_strong": "rgba(255,255,255,.18)", "line_hex": "#1F2A42",
-        "primary": "#5B8CFF", "primary_hover": "#7FA6FF", "primary_soft": "rgba(91,140,255,.15)",
-        "up": "#2BD99F", "up_soft": "rgba(43,217,159,.13)", "down": "#FF5C7A", "down_soft": "rgba(255,92,122,.13)",
-        "amber": "#F5B547", "amber_soft": "rgba(245,181,71,.15)",
-        "glow1": "rgba(91,140,255,.20)", "glow2": "rgba(43,217,159,.09)", "grid": "rgba(255,255,255,.035)",
-        "highlight": "rgba(255,255,255,.07)",
-        "shadow": "0 1px 0 rgba(255,255,255,.04) inset, 0 20px 40px -24px rgba(0,0,0,.8)",
+        "canvas": "#02040D", "canvas2": "#060B22", "field": "#081230",
+        "surface": "rgba(8,18,46,.58)", "surface_solid": "#071030", "raised": "rgba(0,229,255,.05)",
+        "ink": "#E4F6FF", "muted": "#8AB0C8", "faint": "#4E6A88",
+        "line": "rgba(0,229,255,.13)", "line_strong": "rgba(0,229,255,.30)", "line_hex": "#123058",
+        "primary": "#00E5FF", "primary_hover": "#7AF3FF", "primary_soft": "rgba(0,229,255,.13)",
+        "up": "#3DFFA8", "up_soft": "rgba(61,255,168,.12)", "down": "#FF4D9A", "down_soft": "rgba(255,77,154,.13)",
+        "amber": "#FFC24D", "amber_soft": "rgba(255,194,77,.14)",
+        "glow1": "rgba(0,229,255,.20)", "glow2": "rgba(155,92,255,.22)", "grid": "rgba(0,229,255,.055)",
+        "highlight": "rgba(0,229,255,.08)",
+        "shadow": "0 0 0 1px rgba(0,229,255,.06) inset, 0 22px 50px -26px rgba(0,229,255,.35)",
     },
     "Light": {
         "canvas": "#EDF1F7", "canvas2": "#F8FAFD", "field": "#FFFFFF",
@@ -35,6 +36,19 @@ TOKENS = {
         "highlight": "rgba(255,255,255,.7)",
         "shadow": "0 1px 0 rgba(255,255,255,.8) inset, 0 18px 40px -26px rgba(15,23,42,.35)",
     },
+    # Modo Optimus (estrela): preto absoluto, fibra de carbono e neon azul e vermelho
+    "Optimus": {
+        "canvas": "#030305", "canvas2": "#08090E", "field": "#0C0E15",
+        "surface": "rgba(12,14,22,.66)", "surface_solid": "#0B0D14", "raised": "rgba(255,255,255,.04)",
+        "ink": "#F3F6FB", "muted": "#9BA4B6", "faint": "#5C6476",
+        "line": "rgba(46,120,255,.17)", "line_strong": "rgba(46,120,255,.36)", "line_hex": "#1A2234",
+        "primary": "#2F7BFF", "primary_hover": "#6AA3FF", "primary_soft": "rgba(47,123,255,.16)",
+        "up": "#29C5FF", "up_soft": "rgba(41,197,255,.14)", "down": "#FF2D55", "down_soft": "rgba(255,45,85,.15)",
+        "amber": "#FFB020", "amber_soft": "rgba(255,176,32,.15)",
+        "glow1": "rgba(47,123,255,.26)", "glow2": "rgba(255,45,85,.20)", "grid": "rgba(255,255,255,.03)",
+        "highlight": "rgba(255,255,255,.06)",
+        "shadow": "0 0 0 1px rgba(47,123,255,.08) inset, 0 24px 54px -26px rgba(47,123,255,.45)",
+    },
 }
 # apelidos usados pelas telas
 for _t in TOKENS.values():
@@ -43,8 +57,49 @@ for _t in TOKENS.values():
               varejo=_t["primary"], atacado=_t["down"], pdv=_t["amber"])
 
 
+MODOS = ["Light", "Dark", "Optimus"]          # sol, lua e estrela (o botão do topo passa de um para o outro)
+
+
 def modo() -> str:
-    return "Dark" if st.session_state.get("tema") == "Dark" else "Light"
+    m = st.session_state.get("tema")
+    if m in ("Quantum", "Prisma"):           # nomes antigos: Quantum virou o escuro; Prisma deu lugar ao Optimus
+        m = st.session_state["tema"] = "Dark" if m == "Quantum" else "Optimus"
+    return m if m in TOKENS else "Light"
+
+
+def escuro() -> bool:
+    """Fundo escuro (lua ou estrela Optimus): logos, gráficos e o tema nativo do Streamlit seguem o escuro."""
+    return modo() in ("Dark", "Optimus")
+
+
+def proximo_modo() -> str:
+    return MODOS[(MODOS.index(modo()) + 1) % len(MODOS)]
+
+
+def extra_componente() -> str:
+    """Efeitos do modo Quantum dentro das telas HTML (Início, PriceMetrics, Promo, PriceBot, Pesquisa).
+    As telas recebem as cores como variáveis em :root{...}; aqui fechamos esse bloco, acrescentamos as regras e reabrimos."""
+    if modo() == "Optimus":
+        return ("}"
+                "body{background:radial-gradient(900px 480px at 0% -10%,rgba(47,123,255,.16),transparent 60%),radial-gradient(900px 480px at 100% -10%,rgba(255,45,85,.13),transparent 60%),repeating-linear-gradient(45deg,rgba(255,255,255,.012) 0 2px,transparent 2px 6px) !important}"
+                ".glass,.kc,.card,.pop,.mcard{border-color:rgba(47,123,255,.22) !important;box-shadow:0 0 0 1px rgba(47,123,255,.06) inset,0 -1px 0 rgba(255,45,85,.25) inset,0 0 30px -14px rgba(47,123,255,.55) !important}"
+                ".kc b{text-shadow:0 0 12px rgba(47,123,255,.45)}"
+                ".chip.on,.seg .on,button.pri{background:linear-gradient(120deg,#2F7BFF,#FF2D55) !important;color:#fff !important;border-color:transparent !important;box-shadow:0 0 18px -6px rgba(47,123,255,.8)}"
+                ".row.sel{background:linear-gradient(90deg,rgba(47,123,255,.16),rgba(255,45,85,.08)) !important;box-shadow:inset 3px 0 0 #2F7BFF}"
+                ".row:hover{background:rgba(47,123,255,.06)}"
+                "::selection{background:rgba(255,45,85,.35)}"
+                ":root{")
+    if modo() != "Dark":
+        return ""
+    return ("}"
+            "body{background:radial-gradient(900px 500px at 85% -10%,rgba(0,229,255,.10),transparent 60%),radial-gradient(800px 500px at -10% 30%,rgba(155,92,255,.12),transparent 60%) !important}"
+            ".glass,.kc,.card,.pop,.mcard{border-color:rgba(0,229,255,.16) !important;box-shadow:0 0 0 1px rgba(0,229,255,.05) inset,0 0 28px -14px rgba(0,229,255,.45) !important}"
+            ".kc b,.big,.num b{text-shadow:0 0 12px rgba(0,229,255,.35)}"
+            ".chip.on,.seg .on,button.pri{background:linear-gradient(135deg,#00E5FF,#9B5CFF) !important;color:#02040D !important;border-color:transparent !important}"
+            ".row.sel{background:linear-gradient(90deg,rgba(0,229,255,.12),rgba(155,92,255,.06)) !important;box-shadow:inset 3px 0 0 #00E5FF}"
+            ".hd,.thead,.cab{background:linear-gradient(180deg,rgba(0,229,255,.06),transparent) !important}"
+            "::selection{background:rgba(0,229,255,.35)}"
+            ":root{")
 
 
 def tokens() -> dict:
@@ -53,7 +108,7 @@ def tokens() -> dict:
 
 def _tema_nativo(t: dict) -> None:
     opcoes = {
-        "theme.base": "dark" if modo() == "Dark" else "light",
+        "theme.base": "dark" if escuro() else "light",
         "theme.primaryColor": t["primary"], "theme.backgroundColor": t["canvas"],
         "theme.secondaryBackgroundColor": t["field"], "theme.textColor": t["ink"],
         "theme.borderColor": t["line_hex"], "theme.dataframeBorderColor": t["line_hex"],
@@ -77,8 +132,133 @@ def aplicar() -> None:
     st.html(f"<style>{_css(t)}</style>")
 
 
+def _css_optimus() -> str:
+    """Modo estrela (Optimus): preto absoluto com textura de fibra de carbono, luzes de neon azul e vermelho nas bordas da tela,
+    uma barra de luz que corre de azul para vermelho no topo, títulos e botões em gradiente azul → vermelho."""
+    return """
+/* ================= MODO OPTIMUS (estrela): black com neon azul e vermelho ================= */
+.stApp {
+  background-color: #030305 !important;
+  background-image:
+    radial-gradient(1000px 560px at -8% -12%, rgba(47,123,255,.30), transparent 60%),
+    radial-gradient(1000px 560px at 108% -12%, rgba(255,45,85,.24), transparent 60%),
+    radial-gradient(900px 420px at 50% 115%, rgba(47,123,255,.12), transparent 60%),
+    repeating-linear-gradient(45deg, rgba(255,255,255,.014) 0 2px, transparent 2px 6px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,.010) 0 2px, transparent 2px 6px),
+    linear-gradient(180deg, #08090E, #030305 680px) !important;
+  background-attachment: fixed !important;
+}
+/* luzes laterais: azul à esquerda, vermelho à direita, pulsando devagar */
+.stApp::before, .stApp::after { content: ""; position: fixed; top: 0; bottom: 0; width: 2px; pointer-events: none; z-index: 2; }
+.stApp::before { left: 0; background: linear-gradient(180deg, transparent, #2F7BFF 30%, #2F7BFF 70%, transparent);
+  box-shadow: 0 0 18px 4px rgba(47,123,255,.55), 0 0 60px 10px rgba(47,123,255,.25); animation: pso-pulso 3.2s ease-in-out infinite; }
+.stApp::after { right: 0; background: linear-gradient(180deg, transparent, #FF2D55 30%, #FF2D55 70%, transparent);
+  box-shadow: 0 0 18px 4px rgba(255,45,85,.55), 0 0 60px 10px rgba(255,45,85,.22); animation: pso-pulso 3.2s ease-in-out infinite 1.6s; }
+@keyframes pso-pulso { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+/* barra de luz no topo: corre de azul para vermelho */
+header[data-testid="stHeader"] { background: rgba(3,3,5,.82) !important; border-bottom: 0 !important; }
+header[data-testid="stHeader"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  background: linear-gradient(90deg, #2F7BFF, #8A5CFF, #FF2D55, #2F7BFF); background-size: 300% 100%;
+  box-shadow: 0 0 14px rgba(47,123,255,.6), 0 0 22px rgba(255,45,85,.35); animation: pso-barra 6s linear infinite; }
+@keyframes pso-barra { to { background-position: 300% 0; } }
+/* ilha do menu e botões do topo */
+header [data-testid="stTopNav"], .st-key-ps_tema button, #ps-fs, .st-key-ps_sino [data-testid="stPopoverButton"] {
+  background: rgba(10,12,18,.85) !important; border: 1px solid rgba(47,123,255,.38) !important;
+  box-shadow: 0 0 0 1px rgba(255,45,85,.10) inset, 0 0 20px -6px rgba(47,123,255,.65) !important; }
+[data-testid="stTopNavLink"][aria-current="page"], [data-testid="stTopNavLink"]:hover {
+  background: linear-gradient(120deg, rgba(47,123,255,.22), rgba(255,45,85,.16)) !important; box-shadow: 0 0 14px -4px rgba(47,123,255,.7); }
+/* títulos: branco → azul → vermelho */
+h1, h2, .ps-hero h1 b, .ps-cab h1 { background: linear-gradient(95deg, #FFFFFF 0%, #8FB8FF 40%, #2F7BFF 62%, #FF2D55 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+/* botões principais: azul → vermelho com brilho */
+[data-testid="stBaseButton-primary"], [data-testid="stBaseButton-primaryFormSubmit"] {
+  background: linear-gradient(120deg, #2F7BFF, #FF2D55) !important; color: #fff !important; border: 0 !important;
+  box-shadow: 0 0 22px -6px rgba(47,123,255,.85), 0 10px 26px -12px rgba(255,45,85,.7) !important; }
+[data-testid="stBaseButton-primary"]:hover, [data-testid="stBaseButton-primaryFormSubmit"]:hover { filter: brightness(1.12); }
+[data-testid="stBaseButton-primary"] p, [data-testid="stBaseButton-primaryFormSubmit"] p { color: #fff !important; font-weight: 700; }
+/* cartões, gavetas, janelas e menus: vidro preto com contorno azul e um fio vermelho embaixo */
+[data-testid="stPopoverBody"], [data-testid="stTopNavPopoverBody"], [class*="st-key-psc_"], [data-testid="stExpander"] details {
+  background: rgba(8,10,16,.94) !important; border: 1px solid rgba(47,123,255,.30) !important;
+  box-shadow: 0 -2px 0 rgba(255,45,85,.55) inset, 0 0 40px -18px rgba(47,123,255,.6) !important; }
+[data-baseweb="input"]:focus-within, [data-baseweb="select"] > div:focus-within, [data-testid="stTextInputRootElement"]:focus-within {
+  border-color: #2F7BFF !important; box-shadow: 0 0 0 3px rgba(47,123,255,.22), 0 0 16px -4px rgba(255,45,85,.5) !important; }
+/* chat e notificações */
+.st-key-ps_chat [data-testid="stPopoverButton"] { background: linear-gradient(135deg, #2F7BFF, #FF2D55) !important;
+  box-shadow: 0 0 24px -4px rgba(47,123,255,.8), 0 0 30px -8px rgba(255,45,85,.6); }
+.ps-msg.eu { background: linear-gradient(135deg, #2F7BFF, #C21E45) !important; }
+.ps-pop { background: rgba(8,10,16,.95) !important; border-color: rgba(47,123,255,.4) !important; box-shadow: 0 0 30px -10px rgba(47,123,255,.6), 0 -2px 0 rgba(255,45,85,.6) inset !important; }
+::selection { background: rgba(255,45,85,.35); }
+"""
+
+
+def _css_quantum() -> str:
+    """Modo escuro: céu estrelado discreto, grade fina, brilho neon e títulos em gradiente."""
+    return """
+/* ================= MODO ESCURO: terminal de inteligência, neon ciano e violeta ================= */
+.stApp {
+  background-image:
+    radial-gradient(1200px 700px at 88% -14%, rgba(0,229,255,.18), transparent 62%),
+    radial-gradient(1000px 640px at -14% 22%, rgba(155,92,255,.20), transparent 60%),
+    radial-gradient(700px 420px at 50% 120%, rgba(61,255,168,.07), transparent 60%),
+    radial-gradient(1.2px 1.2px at 12% 18%, rgba(255,255,255,.75), transparent 60%),
+    radial-gradient(1px 1px at 72% 12%, rgba(255,255,255,.6), transparent 60%),
+    radial-gradient(1.4px 1.4px at 38% 66%, rgba(122,243,255,.8), transparent 60%),
+    radial-gradient(1px 1px at 86% 54%, rgba(255,255,255,.55), transparent 60%),
+    radial-gradient(1.2px 1.2px at 22% 84%, rgba(196,160,255,.75), transparent 60%),
+    radial-gradient(1px 1px at 58% 36%, rgba(255,255,255,.5), transparent 60%),
+    linear-gradient(rgba(0,229,255,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,.05) 1px, transparent 1px),
+    linear-gradient(180deg, #060B22, #02040D 720px) !important;
+  background-size: auto, auto, auto, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 44px 44px, 44px 44px, auto !important;
+  background-attachment: fixed !important;
+}
+/* varredura de radar bem sutil atravessando a tela */
+.stApp::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: linear-gradient(180deg, transparent 0%, rgba(0,229,255,.045) 50%, transparent 100%); background-size: 100% 260px;
+  background-repeat: no-repeat; animation: psq-scan 9s linear infinite; }
+@keyframes psq-scan { from { background-position: 0 -260px; } to { background-position: 0 calc(100vh / var(--ps-zoom, .8)); } }
+/* estrelas piscando */
+.stApp::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .7;
+  background-image: radial-gradient(1.6px 1.6px at 30% 22%, #7AF3FF, transparent 60%), radial-gradient(1.4px 1.4px at 64% 78%, #C4A0FF, transparent 60%),
+    radial-gradient(1.2px 1.2px at 90% 30%, #fff, transparent 60%), radial-gradient(1.4px 1.4px at 8% 60%, #7AF3FF, transparent 60%);
+  animation: psq-pisca 4.5s ease-in-out infinite alternate; }
+@keyframes psq-pisca { from { opacity: .25; } to { opacity: .85; } }
+/* ilha do menu e botões do topo com borda neon */
+header [data-testid="stTopNav"], .st-key-ps_tema button, #ps-fs, .st-key-ps_sino [data-testid="stPopoverButton"] {
+  border-color: rgba(0,229,255,.28) !important; box-shadow: 0 0 0 1px rgba(0,229,255,.06) inset, 0 0 22px -8px rgba(0,229,255,.55) !important; }
+header[data-testid="stHeader"] { background: linear-gradient(180deg, rgba(2,4,13,.85), rgba(2,4,13,.55)) !important;
+  border-bottom: 1px solid rgba(0,229,255,.14) !important; }
+[data-testid="stTopNavLink"][aria-current="page"], [data-testid="stTopNavLink"]:hover {
+  background: linear-gradient(135deg, rgba(0,229,255,.16), rgba(155,92,255,.14)) !important; }
+/* títulos e destaques em gradiente ciano → violeta */
+h1, h2, .ps-hero h1 b, .ps-cab h1 { background: linear-gradient(90deg, #E4F6FF 0%, #7AF3FF 45%, #C4A0FF 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+/* botões principais em gradiente neon */
+[data-testid="stBaseButton-primary"], [data-testid="stBaseButton-primaryFormSubmit"] {
+  background: linear-gradient(135deg, #00E5FF, #9B5CFF) !important; color: #02040D !important; border: 0 !important;
+  box-shadow: 0 10px 30px -12px rgba(0,229,255,.75) !important; }
+[data-testid="stBaseButton-primary"] p, [data-testid="stBaseButton-primaryFormSubmit"] p { color: #02040D !important; font-weight: 700; }
+/* cartões, gavetas e janelas com vidro escuro e contorno luminoso */
+[data-testid="stPopoverBody"], [data-testid="stTopNavPopoverBody"], [class*="st-key-psc_"], [data-testid="stExpander"] details {
+  border-color: rgba(0,229,255,.20) !important; box-shadow: 0 0 0 1px rgba(0,229,255,.05) inset, 0 30px 70px -30px rgba(0,229,255,.40) !important; }
+/* campos com foco neon */
+[data-baseweb="input"]:focus-within, [data-baseweb="select"] > div:focus-within, [data-testid="stTextInputRootElement"]:focus-within {
+  border-color: #00E5FF !important; box-shadow: 0 0 0 3px rgba(0,229,255,.18) !important; }
+/* chat e notificações no mesmo clima */
+.st-key-ps_chat [data-testid="stPopoverButton"] { background: linear-gradient(135deg, #00E5FF, #9B5CFF) !important; box-shadow: 0 14px 34px -12px rgba(0,229,255,.8); }
+.ps-msg.eu { background: linear-gradient(135deg, #00B8D9, #7B4DFF) !important; }
+.ps-pop { border-color: rgba(0,229,255,.28) !important; box-shadow: 0 0 30px -10px rgba(0,229,255,.55) !important; }
+::selection { background: rgba(0,229,255,.35); }
+"""
+
+
 def _css(t: dict) -> str:
     v = "\n".join(f"  --ps-{k.replace('_', '-')}: {val};" for k, val in t.items() if k != "shadow")
+    extra = _css_quantum() if modo() == "Dark" else _css_optimus() if modo() == "Optimus" else ""
+    return _css_base(t, v) + extra
+
+
+def _css_base(t: dict, v: str) -> str:
     return f"""
 @import url('{FONTE_URL}');
 :root {{
@@ -673,7 +853,7 @@ header[data-testid="stHeader"] {{
 
 
 def cor_categoria(nome: str) -> str:
-    paleta = (["#7FA6FF", "#FF7A93", "#2BD99F", "#F5B547", "#B794FF", "#4CC9F0", "#FF8FC7", "#9AA5BD"] if modo() == "Dark"
+    paleta = (["#7FA6FF", "#FF7A93", "#2BD99F", "#F5B547", "#B794FF", "#4CC9F0", "#FF8FC7", "#9AA5BD"] if escuro()
               else ["#2D4BFF", "#E11D48", "#0E9F6E", "#C47A0A", "#7A3FD1", "#0B8DB0", "#C2367A", "#566176"])
     return paleta[sum(ord(c) for c in (nome or "")) % len(paleta)]
 

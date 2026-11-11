@@ -29,7 +29,7 @@ def grafico(dados: dict, moda: float | None = None, altura: int = 430) -> None:
     t = theme.tokens()
     cores = {k: t[k] for k in ("ink", "muted", "faint", "primary", "up", "down", "amber", "surface_solid", "line_hex")}
     nomes = {"var_conc": "Varejo concorrente", "atac_conc": "Atacado concorrente", "var_pdv": "Varejo PDV", "atac_pdv": "Atacado PDV"}
-    payload = json.dumps({"dados": dados, "moda": moda, "cores": cores, "nomes": nomes, "escuro": theme.modo() == "Dark"})
+    payload = json.dumps({"dados": dados, "moda": moda, "cores": cores, "nomes": nomes, "escuro": theme.escuro()})
     components.html(f"""<!doctype html><html><head><meta charset="utf-8">
 <style>
 @import url('{theme.FONTE_URL}');

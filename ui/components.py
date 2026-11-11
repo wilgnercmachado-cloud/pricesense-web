@@ -71,7 +71,7 @@ def tamanho_legivel(n: int | None) -> str:
 
 
 def marca_html() -> str:
-    svg = (ASSETS / f"marca_{'dark' if theme.modo() == 'Dark' else 'light'}.svg").read_bytes()
+    svg = (ASSETS / f"marca_{'dark' if theme.escuro() else 'light'}.svg").read_bytes()
     return f"<img alt='' src='data:image/svg+xml;base64,{base64.b64encode(svg).decode()}'><span>PriceSense</span>"
 
 
