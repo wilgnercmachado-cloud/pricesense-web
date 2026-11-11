@@ -1289,6 +1289,8 @@ html,body{overflow:hidden}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
 <style id="css-margem" media="not all">
+.mtab tr.on td{background:color-mix(in srgb,var(--primary) 12%,var(--surface-solid)) !important}.mtab tr.on td:first-child{box-shadow:inset 3px 0 0 var(--primary)}
+.mtab:focus{outline:none}.mtab td.calc{color:var(--muted);font-style:italic;text-align:center}.mtab .pos{color:var(--up)}.qt{color:var(--muted);font-weight:400}
 .mtab td:last-child,.mtab th:last-child{min-width:200px}.dg{white-space:nowrap}
 html,body{margin:0;background:transparent;color:var(--ink);font-family:'Geist',system-ui,sans-serif}
 #app{padding:4px 2px 10px}
@@ -3368,67 +3370,97 @@ return montar;
 const APP_MARGEM = (() => {
 const ST = { altura(h){ window.parent.postMessage({ isStreamlitMessage: true, type: 'streamlit:setFrameHeight', height: h }, '*'); },
   valor(v){ window.parent.postMessage({ isStreamlitMessage: true, type: 'streamlit:setComponentValue', value: v, dataType: 'json' }, '*'); } };
+/* régua de arredondamento: a mesma da PriceMetrics (final 8) */
+const RG8 = { A: [5,8,9], B: [5,8,9], C: [0,5,8,9] };
+const fx = c => c <= 1099 ? 'A' : c <= 1999 ? 'B' : c <= 4000 ? 'C' : 'D';
+const VCm = (() => { const V = {}; for (const f of ['A','B','C','D']) { V[f] = []; for (let c = 0; c < 100; c++) { const p = Math.floor(c/10), u = c % 10; let o;
+  if (f === 'A') o = RG8.A.includes(u); else if (f === 'B') o = p >= 1 && p <= 9 && RG8.B.includes(u);
+  else if (f === 'C') o = u === 0 ? (p >= 3 && p <= 9 && [5,9].includes(p)) : (p >= 3 && p <= 9 && RG8.C.includes(u));
+  else o = u === 0 ? (p >= 3 && p <= 9 && [5,9].includes(p)) : (p >= 3 && p <= 9 && u === 9);
+  if (o) V[f].push(c); } } return V; })();
+const cands = pc => { const f = fx(pc), b = Math.floor(pc/100), l = []; for (const bb of [b-1,b,b+1]) for (const c of VCm[f]) l.push(bb*100+c); return l; };
+const rvC = pc => { if (pc <= 0) return 0; const l = cands(pc); if (!l.length || l.includes(pc)) return pc; let m = l[0], d = Infinity; for (const k of l) { const x = Math.abs(k - pc); if (x < d) { d = x; m = k; } } return m; };
+const roundV = p => p > 0 ? rvC(Math.round(p * 100)) / 100 : 0;
+function arredM(alvo, ref, mn){ const a = Math.round(alvo*100), r = Math.round(ref*100), ok = c => cands(c).includes(c); let v;
+  if (ok(a)) v = a; else if (ok(r)) v = r; else { const l = cands(a).filter(x => x <= a); v = l.length ? Math.max(...l) : rvC(a); }
+  if (mn && v / 100 < mn - 1e-9) { const m = Math.round(mn*100), l = cands(m).filter(x => x >= m); v = l.length ? Math.min(...l) : rvC(m); }
+  return v / 100; }
 let CTL = null;
 function montar(A){
   if (CTL) CTL.abort(); CTL = new AbortController(); const SIG = { signal: CTL.signal };
   const on = (alvo, ev, fn) => alvo.addEventListener(ev, fn, SIG);
   document.getElementById('estilo-tema').textContent = `@import url('${A.fonte}');:root{${A.tokens}}`;
   const $ = id => document.getElementById(id);
-  const P = A.pacote || { categorias: [] }, FX = P.faixa || [0.989, 1.009], DIST = P.distancia_max || 5;
+  const P = A.pacote || { categorias: [] }, FX = P.faixa || [0.989, 1.009], DIST = P.distancia_max || 5, PISO = P.piso_cesta ?? -15;
   const nf0 = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }), nf1 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
         nf2 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const pc = v => v == null || !isFinite(v) ? '–' : `<span class="${v < 0 ? 'neg' : ''}">${nf1.format(v)}%</span>`;
   const din = v => v == null || !isFinite(v) ? '–' : nf2.format(v);
-  const CATS = P.categorias.map((c, k) => ({ ...c, k, aberta: false, sel: false, produtos: c.produtos.map((p, j) => ({ ...p, k: `${k}-${j}`, sel: false,
-    o_obj: p.s_obj, o_min: p.s_min, o_max: p.s_max })) }));
-  let FILTRO = '', DG = '';
-  /* simulação: preço objetivo = custo ÷ (1 − objetiva); na cesta o preço fica o atual */
+  const brl = v => v == null || !isFinite(v) ? '–' : `<span class="${v < -0.5 ? 'neg' : ''}">${v < 0 ? '−' : ''}R$ ${nf0.format(Math.abs(v))}</span>`;
+  const ganho = v => v == null || !isFinite(v) ? '–' : `<span class="${v > 0.5 ? 'pos' : v < -0.5 ? 'neg' : ''}">${v >= 0 ? '+' : '−'}R$ ${nf0.format(Math.abs(v))}</span>`;
+  const CATS = P.categorias.map((c, k) => ({ ...c, k, aberta: false, produtos: c.produtos.map((p, j) => ({ ...p, k: `${k}-${j}`, sel: false,
+    o_obj: p.s_obj, o_min: p.s_min, o_max: p.s_max, calc: false })) }));
+  let FILTRO = '', DG = '', SELR = -1;
+  const ITENS = {};                                      // itens (filial + produto) carregados para refazer a simulação na hora
+  /* simulação de um produto pelo motor da PriceMetrics (igual à do servidor) */
+  function simular(p){ const it = ITENS[p.nome]; if (!it) return;
+    let luc = 0, rec = 0, pm = 0, mq = 0;
+    for (let k = 0; k < it.cu.length; k++) { const c = it.cu[k], q = it.q[k]; if (!(c > 0)) continue; let pr;
+      const mx = p.s_max != null && p.s_max < 100 ? c / (1 - p.s_max / 100) : Infinity;
+      if (it.pes[k]) { const umin = it.ces[k] ? PISO : (p.s_min ?? 0), mn = c / (1 - umin / 100), alvo = it.ref[k] - 0.01;
+        if (alvo > mx) pr = roundV(Math.max(mx, mn)); else { const pf = Math.max(alvo, mn); pr = pf === alvo ? arredM(pf, it.ref[k], mn) : roundV(pf); } }
+      else pr = p.s_obj != null && p.s_obj < 100 ? roundV(c / (1 - p.s_obj / 100)) : it.vm[k];
+      luc += q * (pr - c); rec += q * pr; if (it.mo[k] > 0) { pm += q * pr; mq += q * it.mo[k]; } }
+    p.sim = { luc, rec, pm, mq }; p.calc = false; }
   const precoObj = p => p.s_obj != null && p.cu > 0 && p.s_obj < 100 ? p.cu / (1 - p.s_obj / 100) : null;
   const precoMax = p => p.s_max != null && p.cu > 0 && p.s_max < 100 ? p.cu / (1 - p.s_max / 100) : null;
-  const precoSim = p => p.cesta ? p.vm : (precoObj(p) ?? p.vm);
-  const ipProd = p => p.moda > 0 ? precoSim(p) / p.moda : NaN;
+  const mgSim = s => s && s.rec > 0 ? s.luc / s.rec * 100 : null, ipSim = s => s && s.mq > 0 ? s.pm / s.mq : NaN;
   const diag = (ip, cons) => cons != null && cons < 0.5 ? ['in', 'Falta consistência na pesquisa'] : !isFinite(ip) ? ['in', 'Sem pesquisa']
     : ip > FX[1] ? ['cr', 'Zona crítica'] : ip < FX[0] ? ['at', 'Zona de atenção'] : ['ok', 'Dentro da faixa'];
-  function agregado(c){ let q = 0, rec = 0, luc = 0, pm = 0, mq = 0, ve = 0, va = 0, mt = 0, cons = 0, o = 0, mi = 0, mx = 0, wr = 0, mm = 0, wm = 0;
-    for (const p of c.produtos) { const qq = p.q || 0, pr = precoSim(p); q += qq; rec += pr * qq; luc += (pr - p.cu) * qq; ve += p.venda || 0;
-      if (p.moda > 0) { pm += pr * qq; mq += p.moda * qq; }
-      if (p.mg_ant != null) { va += p.mg_ant * (p.venda || 0); }
-      if (p.mg_merc != null) { mm += p.mg_merc * (p.venda || 0); wm += p.venda || 0; }
-      cons += (p.consist ?? 0) * (p.venda || 0);
-      if (p.obj != null) { o += p.obj * (p.venda || 0); mi += (p.min ?? 0) * (p.venda || 0); mx += (p.max ?? 0) * (p.venda || 0); wr += p.venda || 0; } }
-    return { venda: ve, mg_ant: ve ? va / ve : null, mg_merc: wm ? mm / wm : null, mg_sim: rec ? luc / rec * 100 : null, ip: mq ? pm / mq : NaN, cons: ve ? cons / ve : 0,
-      obj: wr ? o / wr : null, min: wr ? mi / wr : null, max: wr ? mx / wr : null }; }
-  const visivel = p => (!FILTRO || p.nome.toLowerCase().includes(FILTRO)) && (!DG || diag(ipProd(p), p.consist)[0] === DG);
+  function agregado(c){ const a = { venda: 0, la: 0, va: 0, luc: 0, rec: 0, pm: 0, mq: 0, cons: 0, o: 0, mi: 0, mx: 0, wr: 0, mm: 0, wm: 0, calc: false };
+    for (const p of c.produtos) { const v = p.venda || 0, s = p.sim || {}; a.venda += v; a.la += p.lucro_ant || 0; if (p.mg_ant != null) a.va += p.mg_ant * v;
+      a.luc += s.luc || 0; a.rec += s.rec || 0; a.pm += s.pm || 0; a.mq += s.mq || 0; a.cons += (p.consist ?? 0) * v; if (p.calc) a.calc = true;
+      if (p.mg_merc != null) { a.mm += p.mg_merc * v; a.wm += v; }
+      if (p.obj != null) { a.o += p.obj * v; a.mi += (p.min ?? 0) * v; a.mx += (p.max ?? 0) * v; a.wr += v; } }
+    return { venda: a.venda, lucro_ant: a.la, mg_ant: a.venda ? a.va / a.venda : null, mg_merc: a.wm ? a.mm / a.wm : null, sim: { luc: a.luc, rec: a.rec, pm: a.pm, mq: a.mq },
+      cons: a.venda ? a.cons / a.venda : 0, obj: a.wr ? a.o / a.wr : null, min: a.wr ? a.mi / a.wr : null, max: a.wr ? a.mx / a.wr : null, calc: a.calc }; }
+  const visivel = p => (!FILTRO || p.nome.toLowerCase().includes(FILTRO)) && (!DG || diag(ipSim(p.sim), p.consist)[0] === DG);
   const inp = (p, campo, cls = '') => `<input class="sg ${cls}${p[campo] !== p['o_' + campo.slice(2)] ? ' ed' : ''}" data-k="${p.k}" data-c="${campo}" value="${p[campo] == null ? '' : nf1.format(p[campo])}">`;
   const inpCat = (c, campo, v) => `<input class="sg" data-cat="${c.k}" data-c="${campo}" value="${v == null ? '' : nf1.format(v)}" title="Aplica a todos os produtos da categoria">`;
-  function linhas(){ let h = '', nProd = 0;
-    for (const c of CATS) { const vis = c.produtos.filter(visivel); if (!vis.length) continue; const a = agregado(c), [dc, dt] = diag(a.ip, a.cons);
-      h += `<tr class="cat" data-cat="${c.k}"><td class="l"><input type="checkbox" data-selcat="${c.k}" ${c.produtos.every(p => p.sel) ? 'checked' : ''}> <span class="car">${c.aberta ? '▾' : '▸'}</span>${esc(c.nome)} <small style="color:var(--muted);font-weight:400">${c.produtos.length} produtos</small>${c.aviso ? `<span class="av">${esc(c.aviso)}</span>` : ''}</td>
-        <td>R$ ${nf0.format(a.venda)}</td><td>${pc(a.mg_ant)}</td><td>${pc(c.meta)}</td><td>${pc(a.mg_merc)}</td><td>${pc(a.mg_sim)}</td><td>${pc(a.obj)}</td><td>${pc(a.min)}</td><td>${pc(a.max)}</td>
-        <td>${inpCat(c, 's_obj', c.s_obj)}</td><td>${inpCat(c, 's_min', 0)}</td><td>${inpCat(c, 's_max', c.s_obj != null ? c.s_obj + DIST : null)}</td><td>–</td><td>–</td>
-        <td>${isFinite(a.ip) ? nf1.format(a.ip * 100) : '–'}</td><td><span class="dg ${dc}" title="Com as sugestões, a categoria realiza ${a.mg_sim == null ? '–' : nf1.format(a.mg_sim) + '%'} de margem (meta ${c.meta == null ? '–' : nf1.format(c.meta) + '%'}), ponderada pela venda.">${dt}</span></td></tr>`;
-      if (c.aberta) for (const p of vis) { nProd++; const ip = ipProd(p), [d1, d2] = diag(ip, p.consist);
-        h += `<tr class="prod"><td class="l"><input type="checkbox" data-sel="${p.k}" ${p.sel ? 'checked' : ''}> ${esc(p.nome)}${p.cesta ? '<span class="ces">CESTA</span>' : ''}</td>
-          <td>R$ ${nf0.format(p.venda || 0)}</td><td>${pc(p.mg_ant)}</td><td>${pc(p.meta)}</td><td>${pc(p.mg_merc)}</td><td>${pc(precoSim(p) > 0 ? (precoSim(p) - p.cu) / precoSim(p) * 100 : null)}</td><td>${pc(p.obj)}</td><td>${pc(p.min)}</td><td>${pc(p.max)}</td>
-          <td>${inp(p, 's_obj')}</td><td>${inp(p, 's_min')}</td><td>${inp(p, 's_max', 'mx')}</td><td>${din(precoObj(p))}</td><td>${din(precoMax(p))}</td>
-          <td>${isFinite(ip) ? nf1.format(ip * 100) : '–'}</td><td><span class="dg ${d1}" title="Custo médio ${din(p.cu)} · preço atual ${din(p.vm)} · moda ${din(p.moda)} · pesquisa consistente em ${nf0.format((p.consist || 0) * 100)}% do volume${p.cesta ? ' · item da cesta: na simulação fica no preço atual' : ''}">${d2}</span></td></tr>`; } }
+  const simCel = (s, la, calc) => calc ? '<td colspan="2" class="calc">calculando…</td>' : `<td>${brl(s.luc)}</td><td>${ganho(s.luc - (la || 0))}</td>`;
+  let LIN = [];                                          // linhas visíveis na ordem da tela (para a seta)
+  function linhas(){ let h = ''; LIN = [];
+    for (const c of CATS) { const vis = c.produtos.filter(visivel); if (!vis.length) continue; const a = agregado(c), [dc, dt] = diag(ipSim(a.sim), a.cons);
+      const r = LIN.length; LIN.push({ t: 'c', c });
+      h += `<tr class="cat${SELR === r ? ' on' : ''}" data-r="${r}" data-cat="${c.k}"><td class="l"><input type="checkbox" data-selcat="${c.k}" ${c.produtos.every(p => p.sel) ? 'checked' : ''}> <span class="car">${c.aberta ? '▾' : '▸'}</span>${esc(c.nome)} <small class="qt">${c.produtos.length} produtos</small></td>
+        <td>R$ ${nf0.format(a.venda)}</td><td>${brl(a.lucro_ant)}</td><td>${pc(a.mg_ant)}</td><td>${pc(c.meta)}</td><td>${pc(c.mg_merc)}</td><td>${pc(a.obj)}</td><td>${pc(a.min)}</td><td>${pc(a.max)}</td>
+        <td>${inpCat(c, 's_obj', null)}</td><td>${inpCat(c, 's_min', null)}</td><td>${inpCat(c, 's_max', null)}</td><td>–</td><td>–</td>
+        ${simCel(a.sim, a.lucro_ant, a.calc)}<td>${pc(mgSim(a.sim))}</td><td>${isFinite(ipSim(a.sim)) ? nf1.format(ipSim(a.sim) * 100) : '–'}</td>
+        <td class="l"><span class="dg ${dc}" title="Com as sugestões, a categoria realiza ${mgSim(a.sim) == null ? '–' : nf1.format(mgSim(a.sim)) + '%'} de margem (meta ${c.meta == null ? '–' : nf1.format(c.meta) + '%'}), com o volume dos últimos 30 dias.">${dt}</span></td></tr>`;
+      if (c.aberta) for (const p of vis) { const ip = ipSim(p.sim), [d1, d2] = diag(ip, p.consist), rr = LIN.length; LIN.push({ t: 'p', p });
+        h += `<tr class="prod${SELR === rr ? ' on' : ''}" data-r="${rr}"><td class="l"><input type="checkbox" data-sel="${p.k}" ${p.sel ? 'checked' : ''}> ${esc(p.nome)}${p.cesta ? '<span class="ces">CESTA</span>' : ''}</td>
+          <td>R$ ${nf0.format(p.venda || 0)}</td><td>${brl(p.lucro_ant)}</td><td>${pc(p.mg_ant)}</td><td>${pc(p.meta)}</td><td title="${esc(p.origem || '')}">${pc(p.mg_merc)}</td><td>${pc(p.obj)}</td><td>${pc(p.min)}</td><td>${pc(p.max)}</td>
+          <td title="Base: ${esc(p.origem || '')}, puxada para a meta até 3 pontos do mercado">${inp(p, 's_obj')}</td><td>${inp(p, 's_min')}</td><td>${inp(p, 's_max', 'mx')}</td><td>${din(precoObj(p))}</td><td>${din(precoMax(p))}</td>
+          ${simCel(p.sim || {}, p.lucro_ant, p.calc)}<td>${pc(mgSim(p.sim))}</td><td>${isFinite(ip) ? nf1.format(ip * 100) : '–'}</td>
+          <td class="l"><span class="dg ${d1}" title="Custo médio ${din(p.cu)} · preço atual ${din(p.vm)} · ${p.filiais} filial(is) · pesquisa consistente em ${nf0.format((p.consist || 0) * 100)}% do volume">${d2}</span></td></tr>`; } }
     return h; }
-  function resumo(){ let ve = 0, va = 0, rec = 0, luc = 0, pm = 0, mq = 0, mt = 0, mv = 0, sel = 0;
-    for (const c of CATS) { for (const p of c.produtos) { const qq = p.q || 0, pr = precoSim(p); ve += p.venda || 0; if (p.mg_ant != null) va += p.mg_ant * (p.venda || 0);
-      rec += pr * qq; luc += (pr - p.cu) * qq; if (p.moda > 0) { pm += pr * qq; mq += p.moda * qq; } if (p.meta != null) { mt += p.meta * (p.venda || 0); mv += p.venda || 0; } if (p.sel) sel++; } }
-    $('mk').innerHTML = `<div><span>Venda mensal</span><b>R$ ${nf0.format(ve)}</b></div><div><span>Margem mês anterior</span><b>${ve ? nf1.format(va / ve) + '%' : '–'}</b></div>
-      <div><span>Meta de margem</span><b>${mv ? nf1.format(mt / mv) + '%' : '–'}</b></div><div><span>Margem com as sugestões</span><b>${rec ? nf1.format(luc / rec * 100) + '%' : '–'}</b></div>
-      <div><span>IP com as sugestões</span><b>${mq ? nf1.format(pm / mq * 100) : '–'}</b></div>`;
+  function resumo(){ let ve = 0, va = 0, la = 0, luc = 0, rec = 0, pm = 0, mq = 0, mt = 0, mv = 0, sel = 0;
+    for (const c of CATS) { if (c.meta != null) {} for (const p of c.produtos) { const v = p.venda || 0, s = p.sim || {}; ve += v; la += p.lucro_ant || 0; if (p.mg_ant != null) va += p.mg_ant * v;
+      luc += s.luc || 0; rec += s.rec || 0; pm += s.pm || 0; mq += s.mq || 0; if (p.meta != null) { mt += p.meta * v; mv += v; } if (p.sel) sel++; } }
+    $('mk').innerHTML = `<div><span>Venda mensal</span><b>R$ ${nf0.format(ve)}</b></div><div><span>Lucro mês anterior</span><b>${brl(la)}</b></div>
+      <div><span>Margem mês anterior</span><b>${ve ? nf1.format(va / ve) + '%' : '–'}</b></div><div><span>Meta de margem</span><b>${mv ? nf1.format(mt / mv) + '%' : '–'}</b></div>
+      <div><span>Lucro com as sugestões</span><b>${brl(luc)}</b></div><div><span>Ganho de lucro</span><b>${ganho(luc - la)}</b></div>
+      <div><span>Margem com as sugestões</span><b>${rec ? nf1.format(luc / rec * 100) + '%' : '–'}</b></div><div><span>IP com as sugestões</span><b>${mq ? nf1.format(pm / mq * 100) : '–'}</b></div>`;
     $('env').disabled = !sel; $('env').textContent = sel ? `Enviar ${sel} sugestão(ões) para aprovação` : 'Marque produtos para enviar'; }
-  function render(){ $('corpo').innerHTML = linhas(); resumo(); }
-  document.getElementById('root').innerHTML = `<div id="app"><div class="mtopo"><div><h1>Revisão de <b>margem</b></h1><small>${esc(A.escopo)} · base de ${esc(A.atualizado)} · margem do mês anterior = lucro ÷ venda da loja nos mesmos dias do mês anterior</small></div><div class="mk" id="mk"></div></div>
+  function render(){ const sc = $('tab'), y = sc ? sc.scrollTop : 0; $('corpo').innerHTML = linhas(); resumo(); if (sc) sc.scrollTop = y; }
+  document.getElementById('root').innerHTML = `<div id="app"><div class="mtopo"><div><h1>Revisão de <b>margem</b></h1><small>${esc(A.escopo)} · base de ${esc(A.atualizado)} · lucro e margem do mês anterior = loja, mesmos dias do mês anterior · simulação com o volume dos últimos 30 dias</small></div><div class="mk" id="mk"></div></div>
     <div class="mbar"><input id="q" placeholder="Buscar produto"><button class="mchip on" data-dg="">Todos</button><button class="mchip" data-dg="ok">Dentro da faixa</button>
       <button class="mchip" data-dg="cr">Zona crítica</button><button class="mchip" data-dg="at">Zona de atenção</button><button class="mchip" data-dg="in">Falta consistência</button>
       <button class="mchip" id="abrir">Abrir todas</button><button class="menv" id="env" disabled>Marque produtos para enviar</button></div>
-    <div class="mtab"><table><thead><tr><th class="l">Categoria / produto</th><th>Venda mensal</th><th>Margem mês ant. (loja)</th><th>Meta de margem</th><th>Margem de mercado</th><th>Margem com a sugestão</th>
+    <div class="mtab" id="tab" tabindex="0"><table><thead><tr><th class="l">Categoria / produto</th><th>Venda mensal</th><th>Lucro mês ant.</th><th>Margem mês ant. (loja)</th><th>Meta de margem</th><th>Margem de mercado</th>
       <th>Margem objetiva</th><th>Margem mínima</th><th>Margem máxima</th><th class="sug">Sugestão objetiva</th><th class="sug">Sugestão mínima</th><th class="sug">Sugestão máxima</th>
-      <th>Preço objetivo</th><th>Preço máximo</th><th>IP simulado</th><th class="l">Diagnóstico</th></tr></thead><tbody id="corpo"></tbody></table></div>
+      <th>Preço objetivo</th><th>Preço máximo</th><th>Lucro simulado</th><th>Ganho de lucro</th><th>Margem simulada</th><th>IP simulado</th><th class="l">Diagnóstico</th></tr></thead><tbody id="corpo"></tbody></table></div>
     <div class="mmod" id="mod"></div><div id="mtoast"></div></div>`;
   const toast = t => { const e = $('mtoast'); e.textContent = t; e.classList.add('on'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('on'), 2600); };
   const num = t => { const v = parseFloat(String(t).replace(/\./g, '').replace(',', '.')); return isFinite(v) ? v : null; };
@@ -3437,25 +3469,48 @@ function montar(A){
     if (campo === 's_obj') { p.s_obj = v; if (v != null && (p.s_max == null || p.s_max < v + DIST)) p.s_max = Math.round((v + DIST) * 10) / 10; }
     else if (campo === 's_max') { if (v != null && p.s_obj != null && v < p.s_obj + DIST) { v = Math.round((p.s_obj + DIST) * 10) / 10; toast(`A máxima fica pelo menos ${DIST} pontos acima da objetiva`); } p.s_max = v; }
     else p.s_min = v; }
+  /* refazer a simulação: com os itens já carregados é na hora; senão pede ao servidor (chega em 1 a 3 segundos) */
+  function resimular(lista){ const faltam = [];
+    for (const p of lista) { if (ITENS[p.nome]) simular(p); else { p.calc = true; faltam.push(p.nome); } }
+    if (faltam.length) { try { window.parent.__psMgReq = { ts: Date.now(), produtos: faltam }; } catch (e) {} }
+    render(); }
+  const receber = () => { let r; try { r = window.parent.__psMgResp; } catch (e) { return; } if (!r || !r.itens) return;
+    let mudou = false; for (const [nome, it] of Object.entries(r.itens)) { if (!ITENS[nome]) { ITENS[nome] = it; mudou = true; } }
+    if (mudou) { for (const c of CATS) for (const p of c.produtos) if (p.calc && ITENS[p.nome]) simular(p); render(); } };
+  try { on(window.parent, 'ps-mg', receber); } catch (e) {}
   on($('corpo'), 'change', e => { const t = e.target;
     if (t.dataset.sel) { acharP(t.dataset.sel).sel = t.checked; render(); return; }
     if (t.dataset.selcat) { CATS[+t.dataset.selcat].produtos.forEach(p => p.sel = t.checked); render(); return; }
-    if (t.dataset.c && t.dataset.k) { const p = acharP(t.dataset.k); ajustar(p, t.dataset.c, num(t.value)); p.sel = true; render(); return; }
-    if (t.dataset.c && t.dataset.cat) { const c = CATS[+t.dataset.cat], v = num(t.value);
-      for (const p of c.produtos) { if (t.dataset.c === 's_obj' && p.cesta) continue; ajustar(p, t.dataset.c, v); p.sel = true; }   // objetiva da categoria vale no fundo de sortimento
-      if (t.dataset.c === 's_obj') c.s_obj = v; c.aberta = true; render(); toast(t.dataset.c === 's_obj' ? 'Objetiva aplicada aos itens não cesta da categoria' : 'Aplicado a todos os produtos da categoria'); } });
-  on($('corpo'), 'click', e => { if (e.target.tagName === 'INPUT') return; const tr = e.target.closest('tr.cat'); if (!tr) return; const c = CATS[+tr.dataset.cat]; c.aberta = !c.aberta; render(); });
-  on($('q'), 'input', e => { FILTRO = e.target.value.trim().toLowerCase(); if (FILTRO) CATS.forEach(c => c.aberta = true); render(); });
-  document.querySelectorAll('[data-dg]').forEach(b => on(b, 'click', () => { DG = b.dataset.dg; document.querySelectorAll('[data-dg]').forEach(x => x.classList.toggle('on', x === b)); if (DG) CATS.forEach(c => c.aberta = true); render(); }));
-  on($('abrir'), 'click', () => { const abrir = !CATS.every(c => c.aberta); CATS.forEach(c => c.aberta = abrir); $('abrir').textContent = abrir ? 'Fechar todas' : 'Abrir todas'; render(); });
+    if (t.dataset.c && t.dataset.k) { const p = acharP(t.dataset.k); ajustar(p, t.dataset.c, num(t.value)); p.sel = true; resimular([p]); return; }
+    if (t.dataset.c && t.dataset.cat) { const c = CATS[+t.dataset.cat], v = num(t.value); if (v == null) return;
+      for (const p of c.produtos) { if (t.dataset.c === 's_obj' && p.cesta) continue; ajustar(p, t.dataset.c, v); p.sel = true; }
+      c.aberta = true; resimular(c.produtos); toast(t.dataset.c === 's_obj' ? 'Objetiva aplicada aos itens não cesta da categoria' : 'Aplicado a todos os produtos da categoria'); } });
+  /* linha selecionada, como na PriceMetrics: clique marca; setas ↑ ↓ andam; → abre e ← fecha a categoria; Enter abre/fecha */
+  function selecionar(r, rolar = true){ if (r < 0 || r >= LIN.length) return; SELR = r;
+    $('corpo').querySelectorAll('tr.on').forEach(x => x.classList.remove('on'));
+    const tr = $('corpo').querySelector(`tr[data-r="${r}"]`); if (tr) { tr.classList.add('on'); if (rolar) tr.scrollIntoView({ block: 'nearest' }); } }
+  function alternar(r, abrir){ const l = LIN[r]; if (!l) return; const c = l.t === 'c' ? l.c : CATS.find(x => x.produtos.includes(l.p)); if (!c) return;
+    const novo = abrir == null ? !c.aberta : abrir; if (c.aberta === novo) return; c.aberta = novo; render();
+    const idx = LIN.findIndex(x => x.t === 'c' && x.c === c); selecionar(idx); }
+  on($('corpo'), 'click', e => { if (e.target.tagName === 'INPUT') { const tr = e.target.closest('tr'); if (tr) selecionar(+tr.dataset.r, false); return; }
+    const tr = e.target.closest('tr'); if (!tr) return; const r = +tr.dataset.r; if (tr.classList.contains('cat')) { selecionar(r, false); alternar(r); } else selecionar(r, false);
+    $('tab').focus({ preventScroll: true }); });
+  on(document, 'keydown', e => { if (e.target.tagName === 'INPUT' && e.target.id === 'q') return;
+    const emCampo = e.target.tagName === 'INPUT';
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); if (emCampo) e.target.blur(); selecionar(Math.max(0, Math.min(LIN.length - 1, (SELR < 0 ? -1 : SELR) + (e.key === 'ArrowDown' ? 1 : -1)))); }
+    else if (!emCampo && (e.key === 'ArrowRight' || e.key === 'ArrowLeft') && SELR >= 0) { e.preventDefault(); alternar(SELR, e.key === 'ArrowRight'); }
+    else if (!emCampo && e.key === 'Enter' && SELR >= 0) { e.preventDefault(); alternar(SELR); } });
+  on($('q'), 'input', e => { FILTRO = e.target.value.trim().toLowerCase(); if (FILTRO) CATS.forEach(c => c.aberta = true); SELR = -1; render(); });
+  document.querySelectorAll('[data-dg]').forEach(b => on(b, 'click', () => { DG = b.dataset.dg; document.querySelectorAll('[data-dg]').forEach(x => x.classList.toggle('on', x === b)); if (DG) CATS.forEach(c => c.aberta = true); SELR = -1; render(); }));
+  on($('abrir'), 'click', () => { const abrir = !CATS.every(c => c.aberta); CATS.forEach(c => c.aberta = abrir); $('abrir').textContent = abrir ? 'Fechar todas' : 'Abrir todas'; SELR = -1; render(); });
   on($('env'), 'click', () => { const itens = []; for (const c of CATS) for (const p of c.produtos) if (p.sel) {
       if (p.s_obj == null || p.s_max == null) continue;
-      itens.push({ produto: p.nome, obj: p.s_obj, min: p.s_min ?? 0, max: p.s_max, obj_atual: p.obj, min_atual: p.min, max_atual: p.max }); }
+      itens.push({ produto: p.nome, codigo: p.cod, obj: p.s_obj, min: p.s_min ?? 0, max: p.s_max, obj_atual: p.obj, min_atual: p.min, max_atual: p.max }); }
     if (!itens.length) { toast('Os produtos marcados estão sem margem sugerida'); return; }
     const m = $('mod');
     m.innerHTML = `<div class="mcx"><h4>Enviar ${itens.length} sugestão(ões) de margem</h4><p>Vai para aprovação do administrador, que pode editar antes de gravar. Você recebe o aviso quando for aprovado, com as modificações, se houver.</p>
-      <label><input type="radio" name="esc" value="recorte" checked> ${A.tem_filiais ? 'Só as filiais selecionadas' : 'Estado inteiro'} (${esc(A.escopo)})</label>
-      ${A.tem_filiais ? `<label><input type="radio" name="esc" value="estado"> Aplicar no estado ${esc(A.uf)} inteiro</label>` : ''}
+      <label><input type="radio" name="esc" value="recorte" checked> ${esc(A.escopo)}</label>
+      ${A.tem_filiais ? `<label><input type="radio" name="esc" value="estado"> Aplicar nos estados inteiros (${esc(A.uf)})</label>` : ''}
       <textarea id="obs" rows="2" placeholder="Observação para o administrador (opcional)"></textarea>
       <div class="macx"><button data-r="0">Cancelar</button><button class="pri" data-r="1">Enviar para aprovação</button></div></div>`;
     m.classList.add('on');
