@@ -155,3 +155,48 @@ def estados_permitidos() -> list[str] | None:
 
 def sigla_estado(valor) -> str:
     return str(valor or "").split(" - ")[0].strip().upper()
+
+
+
+_PARTICULAS = {"da", "de", "do", "das", "dos", "e", "di", "du", "del", "van", "von"}
+
+
+def _limpo(t: str) -> str:
+    import re
+    import unicodedata
+    t = unicodedata.normalize("NFKD", str(t)).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z]", "", t)
+
+
+def sugestoes_login(nome: str, limite: int = 4) -> list[str]:
+    """Sugestões de login a partir do nome (ex.: João da Costa Silva → joao.silva; se existir, joao.csilva, joao.costa, ...).
+    Só devolve logins que ainda não existem no Supabase."""
+    partes = [_limpo(p) for p in str(nome or "").split()]
+    partes = [p for p in partes if p and p not in _PARTICULAS]
+    if not partes:
+        return []
+    pri, ult, meio = partes[0], partes[-1], partes[1:-1]
+    cands = []
+    if len(partes) == 1:
+        cands = [pri] + [f"{pri}{n}" for n in range(1, 10)]
+    else:
+        cands.append(f"{pri}.{ult}")
+        for m in meio:
+            cands.append(f"{pri}.{m[0]}{ult}")
+        for m in meio:
+            cands.append(f"{pri}.{m}")
+        if meio:
+            cands.append(f"{pri}.{''.join(m[0] for m in meio)}{ult}")
+            cands.append(f"{pri}.{meio[0]}.{ult}")
+        cands.append(f"{pri[0]}.{ult}")
+        cands.append(f"{pri}{ult}")
+        cands += [f"{pri}.{ult}{n}" for n in range(1, 20)]
+    vistos, unicos = set(), []
+    for c in cands:
+        if c not in vistos:
+            vistos.add(c); unicos.append(c)
+    try:
+        existentes = {str(u.get("usuario") or "").lower() for u in db.listar_usuarios()}
+    except Exception:
+        existentes = set()
+    return [c for c in unicos if c not in existentes][:limite]
