@@ -1670,10 +1670,10 @@ async function montar(A){
   /* a PriceMetrics ocupa a janela inteira abaixo do topo: a grade rola por dentro e o menu lateral fica sempre à vista */
   let ALT = A.altura || 1200;
   const medirAltura = () => { try { const fe = window.frameElement, pw = window.parent; const main = pw.document.querySelector('[data-testid="stMain"]');
-      const z = parseFloat(pw.getComputedStyle(pw.document.documentElement).zoom) || 1;      // zoom do site (abre em 80%)
+      const z = (fe.offsetHeight ? fe.getBoundingClientRect().height / fe.offsetHeight : 1) || 1;      // zoom do site (abre em 80%)
       const topo = fe.getBoundingClientRect().top + (main ? main.scrollTop * z : 0); return Math.max(560, Math.round((pw.innerHeight - topo - 10) / z)); } catch (e) { return A.altura || 1200; } };
   const ajustarAltura = () => { if (document.fullscreenElement) return; ALT = medirAltura(); document.getElementById('root').style.height = ALT + 'px'; ST.altura(ALT); };
-  ajustarAltura(); try { on(window.parent, 'resize', () => { ajustarAltura(); }); } catch (e) {}
+  ajustarAltura(); [500, 1500, 3500].forEach(t => setTimeout(ajustarAltura, t)); try { on(window.parent, 'resize', () => { ajustarAltura(); }); } catch (e) {}
   document.getElementById('root').innerHTML = MARCACAO;
   const bin = atob(A.dados), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
   const D = JSON.parse(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).text());
@@ -3000,10 +3000,10 @@ async function montar(A){
   const $ = id => document.getElementById(id);
   let ALT = A.altura || 900;
   const medir = () => { try { const fe = window.frameElement, pw = window.parent, main = pw.document.querySelector('[data-testid="stMain"]');
-    const z = parseFloat(pw.getComputedStyle(pw.document.documentElement).zoom) || 1;
+    const z = (fe.offsetHeight ? fe.getBoundingClientRect().height / fe.offsetHeight : 1) || 1;
     return Math.max(640, Math.round((pw.innerHeight - fe.getBoundingClientRect().top - 10) / z)); } catch (e) { return ALT; } };
   const ajustar = () => { ALT = medir(); $('root').style.height = ALT + 'px'; ST.altura(ALT); };
-  ajustar(); try { on(window.parent, 'resize', ajustar); } catch (e) {}
+  ajustar(); [500, 1500, 3500].forEach(t => setTimeout(ajustar, t)); try { on(window.parent, 'resize', ajustar); } catch (e) {}
 
   const P_ = { check: '<path d="m5 12 5 5 9-10"/>', x: '<path d="M6 6l12 12M18 6 6 18"/>', undo: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
   up: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>', copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
@@ -3187,10 +3187,10 @@ async function montar(A){
   const $ = id => document.getElementById(id);
   let ALT = A.altura || 900;
   const medir = () => { try { const fe = window.frameElement, pw = window.parent, main = pw.document.querySelector('[data-testid="stMain"]');
-    const z = parseFloat(pw.getComputedStyle(pw.document.documentElement).zoom) || 1;
+    const z = (fe.offsetHeight ? fe.getBoundingClientRect().height / fe.offsetHeight : 1) || 1;
     return Math.max(660, Math.round((pw.innerHeight - fe.getBoundingClientRect().top - 10) / z)); } catch (e) { return ALT; } };
   const ajustar = () => { ALT = medir(); $('root').style.height = ALT + 'px'; ST.altura(ALT); };
-  ajustar(); try { on(window.parent, 'resize', ajustar); } catch (e) {}
+  ajustar(); [500, 1500, 3500].forEach(t => setTimeout(ajustar, t)); try { on(window.parent, 'resize', ajustar); } catch (e) {}
   const P_ = { check: '<path d="m5 12 5 5 9-10"/>', x: '<path d="M6 6l12 12M18 6 6 18"/>', undo: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
   up: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>', copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
   foco: '<circle cx="12" cy="12" r="3"/><path d="M3 9V5a2 2 0 0 1 2-2h4M15 3h4a2 2 0 0 1 2 2v4M21 15v4a2 2 0 0 1-2 2h-4M9 21H5a2 2 0 0 1-2-2v-4"/>',
@@ -3520,9 +3520,9 @@ function montar(A){
       for (const c of CATS) for (const p of c.produtos) p.sel = false; m.classList.remove('on'); render(); toast('Enviado para aprovação do administrador'); };
   });
   render();
-  const alt = () => { const h = Math.max(560, Math.round((window.parent.innerHeight - window.frameElement.getBoundingClientRect().top - 10) / (parseFloat(window.parent.getComputedStyle(window.parent.document.documentElement).zoom) || 1)));
+  const alt = () => { const h = Math.max(560, Math.round((window.parent.innerHeight - window.frameElement.getBoundingClientRect().top - 10) / ((window.frameElement.offsetHeight ? window.frameElement.getBoundingClientRect().height / window.frameElement.offsetHeight : 1) || 1)));
     document.getElementById('root').style.height = h + 'px'; ST.altura(h); };
-  try { alt(); on(window.parent, 'resize', alt); } catch (e) { ST.altura(900); }
+  try { alt(); [500, 1500, 3500].forEach(t => setTimeout(() => { try { alt(); } catch (e) {} }, t)); on(window.parent, 'resize', alt); } catch (e) { ST.altura(900); }
 }
 return montar;
 })();
@@ -3635,10 +3635,10 @@ async function montar(A){
   const $ = id => document.getElementById(id);
   let ALT = A.altura || 900;
   const medirAltura = () => { try { const fe = window.frameElement, pw = window.parent, main = pw.document.querySelector('[data-testid="stMain"]');
-    const z = parseFloat(pw.getComputedStyle(pw.document.documentElement).zoom) || 1;
+    const z = (fe.offsetHeight ? fe.getBoundingClientRect().height / fe.offsetHeight : 1) || 1;
     return Math.max(620, Math.round((pw.innerHeight - fe.getBoundingClientRect().top - 10) / z)); } catch (e) { return ALT; } };
   const ajustar = () => { if (document.fullscreenElement) return; ALT = medirAltura(); $('root').style.height = ALT + 'px'; ST.altura(ALT); };
-  ajustar(); try { on(window.parent, 'resize', ajustar); } catch (e) {}
+  ajustar(); [500, 1500, 3500].forEach(t => setTimeout(ajustar, t)); try { on(window.parent, 'resize', ajustar); } catch (e) {}
   const bin = atob(A.dados), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
   const D = JSON.parse(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).text());
   const N = D.preco.length;
