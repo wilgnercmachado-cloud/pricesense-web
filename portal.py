@@ -54,7 +54,7 @@ if not st.session_state.logado:
     st.navigation([pagina_login], position="hidden").run()
     st.stop()
 
-modo_logo = "dark" if theme.modo() == "Dark" else "light"
+modo_logo = "dark" if theme.escuro() else "light"
 st.logo(str(ASSETS / f"logo_{modo_logo}.svg"), size="large")
 
 admin_on = auth.eh_admin()
@@ -101,10 +101,13 @@ pagina = st.navigation(navegacao, position="top")
 
 # Botão de tema fixo no canto superior direito + menus que abrem ao passar o mouse.
 with st.container(key="ps_tema"):
-    escuro = theme.modo() == "Dark"
-    if st.button("", icon=":material/light_mode:" if escuro else ":material/dark_mode:", type="tertiary",
-                 key="ps_tema_btn", help="Modo claro" if escuro else "Modo escuro"):
-        st.session_state.tema = "Light" if escuro else "Dark"
+    # sol (claro) → lua (escuro) → estrela (Optimus): o ícone mostra o modo atual; o clique passa para o próximo
+    _icones = {"Light": ":material/light_mode:", "Dark": ":material/dark_mode:", "Optimus": ":material/star:"}
+    _nomes = {"Light": "claro", "Dark": "escuro", "Optimus": "Optimus"}
+    _prox = theme.proximo_modo()
+    if st.button("", icon=_icones[theme.modo()], type="tertiary", key="ps_tema_btn",
+                 help=f"Modo {_nomes[theme.modo()]}. Clique para o modo {_nomes[_prox]}"):
+        st.session_state.tema = _prox
         theme.aplicar()  # grava as cores antes do rerun, para a troca ser imediata
         st.rerun()
     ui.menu_ao_passar_mouse()
