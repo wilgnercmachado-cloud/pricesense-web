@@ -264,6 +264,119 @@ def _uploads(rel: dict, meta_base: dict) -> None:
             _profimetrics(aba)
 
 
+def _controle_ao_vivo(modo: str, df: pd.DataFrame, rel: dict) -> dict:
+    """Botão "Ao vivo": o analista inicia/encerra a precificação online dos estados; quem assiste vê os preços chegando.
+    Comercial assiste sempre aos seus estados; analistas escolhem assistir."""
+    from core import ao_vivo as av
+    ss = st.session_state
+    usuario = ss.get("usuario_login", "")
+    base = f"{rel.get('id')}:{rel.get('atualizado_em')}"
+    ufs = sorted({auth.sigla_estado(e) for e in df["Estado"].astype(str).unique() if str(e).strip()})
+    vig = av.vigentes(base)
+    ao_vivo = {uf: s for uf, s in vig.items() if s.get("ativo")}
+    minha = av.minha_ativa(base, usuario) if modo == "pricing" else None
+    outros = {uf: s for uf, s in ao_vivo.items() if s.get("analista") != usuario and uf in ufs}
+    n_live = len({s["id"] for s in ao_vivo.values() if any(u in ufs for u in av.estados_de(s))})
+    rotulo = "AO VIVO" if minha else (f"{n_live} ao vivo" if n_live else "")
+    with st.popover(rotulo, icon=":material/sensors:", help="Precificação online (ao vivo)"):
+        ui.gaveta_topo("Precificação online", "transmitindo" if minha else ("ao vivo agora" if n_live else "ninguém ao vivo"))
+        if modo == "pricing":
+            if minha:
+                st.markdown(f"**Você está transmitindo** {', '.join(av.estados_de(minha))}.")
+                st.caption("Cada ajuste de novo varejo, atacado, aceite ou Optimus chega em segundos para o Comercial e para quem estiver assistindo. "
+                           "Ao encerrar, os seus preços finais ficam congelados na visão comercial até chegar uma base nova.")
+                if st.button("Encerrar precificação online", type="primary", width="stretch", icon=":material/stop_circle:", key="av_fim"):
+                    av.encerrar(minha["id"]); ss.pop("av_assistir", None); st.rerun()
+            else:
+                livres = [u for u in ufs if u not in outros]
+                escolha = st.multiselect("Estados", livres, default=[], key="av_ufs", placeholder="Escolha os estados que vai precificar")
+                if outros:
+                    st.caption("Já ao vivo: " + "; ".join(f"{uf} com {s.get('analista_nome') or s.get('analista')}" for uf, s in sorted(outros.items())))
+                if st.button("Iniciar precificação online", type="primary", width="stretch", icon=":material/sensors:", key="av_ini", disabled=not escolha):
+                    try:
+                        av.iniciar(base, usuario, ss.get("usuario_logado") or usuario, escolha)
+                        ss.pop("av_assistir", None); st.rerun()
+                    except Exception as exc:
+                        st.error(str(exc), icon=":material/error:")
+                if outros:
+                    st.toggle("Assistir à precificação ao vivo dos colegas", key="av_assistir",
+                              help="A mesa passa a mostrar os preços do colega, chegando ao vivo (só leitura). Desligue para voltar à sua precificação.")
+        else:
+            if vig:
+                for uf, s in sorted(vig.items()):
+                    if uf in ufs:
+                        st.caption(f"{uf}: {'AO VIVO com' if s.get('ativo') else 'encerrada por'} {s.get('analista_nome') or s.get('analista')}"
+                                   + ("" if s.get("ativo") else " (preços congelados até a próxima base)"))
+            else:
+                st.caption("Nenhuma precificação online nos seus estados hoje. Assim que um analista iniciar, os preços dele aparecem aqui ao vivo.")
+    transmitir = {"id": minha["id"], "estados": av.estados_de(minha)} if minha else None
+    assistir = modo == "comercial" or (modo == "pricing" and not minha and bool(ss.get("av_assistir")) and bool(outros))
+    return {"base": base, "transmitir": transmitir, "assistir": assistir,
+            "chave": ("T" + transmitir["id"][:8]) if transmitir else ("A" if assistir else "N")}
+
+
+_RELE_HTML = r"""<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0">
+<script>
+/* relé da precificação online: leva o retrato da mesa do analista para o Python e entrega as sessões ao vivo para a mesa de quem assiste */
+const enviar = (type, extra) => window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type }, extra || {}), '*');
+enviar('streamlit:componentReady', { apiVersion: 1 }); enviar('streamlit:setFrameHeight', { height: 0 });
+let ultimo = 0;
+setInterval(() => { try { const o = window.parent.__psLiveOut;
+  if (o && o.versao > ultimo) { ultimo = o.versao; enviar('streamlit:setComponentValue', { value: { id: o.id, versao: o.versao, b64: o.b64 }, dataType: 'json' }); } } catch (e) {} }, 1000);
+window.addEventListener('message', e => { const d = e.data; if (!d || d.type !== 'streamlit:render') return;
+  const ss = (d.args || {}).sessoes || []; if (!ss.length) return;
+  try { const P = window.parent; P.__psLive = P.__psLive || {}; ss.forEach(s => { P.__psLive[s.id] = s; }); P.dispatchEvent(new P.CustomEvent('ps-live')); } catch (e) {} });
+</script></body></html>"""
+
+
+def _rele():
+    import tempfile
+    from pathlib import Path as _P
+    pasta = _P(tempfile.gettempdir()) / "pricesense_rele"
+    pasta.mkdir(parents=True, exist_ok=True)
+    arq = pasta / "index.html"
+    if not arq.exists() or arq.read_text(encoding="utf-8") != _RELE_HTML:
+        arq.write_text(_RELE_HTML, encoding="utf-8")
+    return components.declare_component("ao_vivo_rele", path=str(pasta))
+
+
+try:
+    _RELE = _rele()
+except Exception:
+    _RELE = None
+
+
+@st.fragment(run_every="3s")
+def _rele_ao_vivo(base: str, transmitir: dict | None, assistir: bool, usuario: str) -> None:
+    """A cada 3 s: grava o que o analista transmite e entrega aos espectadores as versões novas (só o que mudou)."""
+    if _RELE is None or not (transmitir or assistir):
+        return
+    from core import ao_vivo as av
+    ss = st.session_state
+    novas = []
+    if assistir:
+        enviados = ss.setdefault("av_enviados", {})
+        permitidos = auth.estados_permitidos()
+        for uf, s in av.vigentes(base).items():
+            if permitidos is not None and uf not in permitidos:
+                continue
+            if s.get("analista") == usuario and s.get("ativo"):
+                continue
+            chave = f"{s['id']}:{s.get('versao')}:{s.get('ativo')}"
+            if enviados.get(s["id"]) != chave and int(s.get("versao") or 0) > 0:
+                enviados[s["id"]] = chave
+                novas.append({"id": s["id"], "analista": s.get("analista_nome") or s.get("analista"), "estados": av.estados_de(s),
+                              "ativo": bool(s.get("ativo")), "versao": int(s.get("versao") or 0), "atualizado_em": s.get("atualizado_em"),
+                              "b64": av.dados(s["id"])})
+    valor = _RELE(sessoes=novas, key="av_rele", default=None)
+    if transmitir and isinstance(valor, dict) and valor.get("id") == transmitir["id"] and valor.get("versao") != ss.get("_av_versao"):
+        ss._av_versao = valor.get("versao")
+        try:
+            av.publicar(transmitir["id"], usuario, int(valor["versao"]), valor.get("b64") or "")
+        except Exception:
+            pass
+
+
 def _modo_visao() -> str:
     """Setor PRICE: visão de Pricing. Demais setores (ou vazio): visão do Comercial. Administrador escolhe entre as duas."""
     if auth.eh_admin():
@@ -525,6 +638,7 @@ def render() -> None:
             _uploads(rel, meta)
         else:
             formato = "mercado"
+        ao_vivo = _controle_ao_vivo(modo, df_all, rel)
     regras, _ = pf.carregar()
     dtfim = meta.get("com_data_fim", 0)
     info = (f"{rel.get('titulo')}: base de {meta.get('atualizado')}, pesquisa de {' a '.join(meta.get('periodo') or [])}. "
@@ -579,7 +693,8 @@ def render() -> None:
         except Exception:
             pass
     lista_sug = [x for x in sg.do_dia() if x.get("status") in ("pendente", "aceita", "rejeitada")]
-    retorno = _MESA(app="price", dados=dados, chave=f"{chave}-{formato}-{modo}", formato=formato, modo_visao=modo, admin=auth.eh_admin(),
+    retorno = _MESA(app="price", dados=dados, chave=f"{chave}-{formato}-{modo}-{ao_vivo['chave']}", formato=formato, modo_visao=modo, admin=auth.eh_admin(),
+                    transmitir=ao_vivo["transmitir"], assistir=ao_vivo["assistir"],
                     blocks=[{k: b.get(k) for k in ("id", "filial", "produto", "motivo", "observacao", "usuario", "preco_vencedor", "concorrente",
                                                     "data_pesquisa", "criado_em")} for b in lista_blocks], motivos_block=bk.MOTIVOS,
                     sugestoes=[{k: x.get(k) for k in ("id", "filial", "produto", "varejo", "atacado", "motivo", "observacao", "usuario", "criado_em",
@@ -587,6 +702,7 @@ def render() -> None:
                     motivos_sugestao=sg.MOTIVOS, tokens=_tokens_css(), fonte=theme.FONTE_URL, visao=st.session_state.reg_visao,
                     altura=900, info=info, usuario=usuario, base=base_id, atualizado=_data_base(rel, meta), backups=backups, historico=historico, estado=estado,
                     key="mesa_regular", default=None)
+    _rele_ao_vivo(ao_vivo["base"], ao_vivo["transmitir"], ao_vivo["assistir"], usuario)
     if isinstance(retorno, dict) and retorno.get("ts") != st.session_state.get("_reg_ts") and retorno.get("acao") in ("sugerir", "sugerir_lote", "aceitar_sug", "rejeitar_sug", "aplicados"):
         st.session_state._reg_ts = retorno.get("ts")
         try:
