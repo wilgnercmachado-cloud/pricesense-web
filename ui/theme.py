@@ -89,11 +89,17 @@ def extra_componente() -> str:
                 ".row:hover{background:rgba(47,123,255,.06)}"
                 "::selection{background:rgba(255,45,85,.35)}"
                 ":root{")
+    if modo() == "Light":
+        return ("}"
+                ".glass,.kc,.card,.pop,.mcard{border-color:rgba(45,75,255,.20) !important;box-shadow:0 0 0 1px rgba(45,75,255,.04) inset,0 -1px 0 rgba(14,159,110,.22) inset,0 0 26px -16px rgba(45,75,255,.55) !important}"
+                ".chip.on,.seg .on,button.pri{box-shadow:0 0 16px -6px rgba(45,75,255,.75)}"
+                ".row.sel{box-shadow:inset 3px 0 0 #2D4BFF}"
+                ":root{")
     if modo() != "Dark":
         return ""
     return ("}"
             "body{background:radial-gradient(900px 500px at 85% -10%,rgba(0,229,255,.10),transparent 60%),radial-gradient(800px 500px at -10% 30%,rgba(155,92,255,.12),transparent 60%) !important}"
-            ".glass,.kc,.card,.pop,.mcard{border-color:rgba(0,229,255,.16) !important;box-shadow:0 0 0 1px rgba(0,229,255,.05) inset,0 0 28px -14px rgba(0,229,255,.45) !important}"
+            ".glass,.kc,.card,.pop,.mcard{border-color:rgba(0,229,255,.18) !important;box-shadow:0 0 0 1px rgba(0,229,255,.05) inset,0 -1px 0 rgba(155,92,255,.35) inset,0 0 28px -14px rgba(0,229,255,.5) !important}"
             ".kc b,.big,.num b{text-shadow:0 0 12px rgba(0,229,255,.35)}"
             ".chip.on,.seg .on,button.pri{background:linear-gradient(135deg,#00E5FF,#9B5CFF) !important;color:#02040D !important;border-color:transparent !important}"
             ".row.sel{background:linear-gradient(90deg,rgba(0,229,255,.12),rgba(155,92,255,.06)) !important;box-shadow:inset 3px 0 0 #00E5FF}"
@@ -130,6 +136,33 @@ def aplicar() -> None:
     t = tokens()
     _tema_nativo(t)
     st.html(f"<style>{_css(t)}</style>")
+
+
+def _css_neon(c1: str, c2: str, claro: bool) -> str:
+    """Toque de neon do Optimus nos modos claro e escuro, cada um com as suas cores (c1 e c2 em "r,g,b"):
+    fios de luz nas laterais, barra de luz correndo no topo, brilho no menu, nos botões do canto, nos cartões e nos botões principais."""
+    forte, leve = (".55", ".22") if claro else (".75", ".32")
+    return f"""
+/* ---------- toque neon ({'claro' if claro else 'escuro'}) ---------- */
+[data-testid="stAppViewContainer"]::before, [data-testid="stAppViewContainer"]::after {{ content: ""; position: fixed; top: 0; bottom: 0; width: 2px; pointer-events: none; z-index: 2; }}
+[data-testid="stAppViewContainer"]::before {{ left: 0; background: linear-gradient(180deg, transparent, rgb({c1}) 30%, rgb({c1}) 70%, transparent);
+  box-shadow: 0 0 16px 3px rgba({c1},{forte}), 0 0 50px 8px rgba({c1},{leve}); animation: psn-pulso 3.6s ease-in-out infinite; }}
+[data-testid="stAppViewContainer"]::after {{ right: 0; background: linear-gradient(180deg, transparent, rgb({c2}) 30%, rgb({c2}) 70%, transparent);
+  box-shadow: 0 0 16px 3px rgba({c2},{forte}), 0 0 50px 8px rgba({c2},{leve}); animation: psn-pulso 3.6s ease-in-out infinite 1.8s; }}
+@keyframes psn-pulso {{ 0%, 100% {{ opacity: {'.35' if claro else '.45'}; }} 50% {{ opacity: 1; }} }}
+header[data-testid="stHeader"]::after {{ content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  background: linear-gradient(90deg, rgb({c1}), rgb({c2}), rgb({c1})); background-size: 300% 100%;
+  box-shadow: 0 0 12px rgba({c1},{forte}), 0 0 20px rgba({c2},{leve}); animation: psn-barra 7s linear infinite; }}
+@keyframes psn-barra {{ to {{ background-position: 300% 0; }} }}
+header [data-testid="stTopNav"], .st-key-ps_tema button, #ps-fs, .st-key-ps_sino [data-testid="stPopoverButton"] {{
+  border-color: rgba({c1},.38) !important; box-shadow: 0 0 0 1px rgba({c1},.06) inset, 0 0 18px -6px rgba({c1},{forte}) !important; }}
+[data-testid="stTopNavLink"][aria-current="page"] {{ box-shadow: 0 0 14px -4px rgba({c1},{forte}); }}
+[data-testid="stBaseButton-primary"], [data-testid="stBaseButton-primaryFormSubmit"] {{
+  box-shadow: 0 0 20px -6px rgba({c1},{forte}), 0 10px 24px -14px rgba({c2},{forte}) !important; }}
+[data-testid="stPopoverBody"], [data-testid="stTopNavPopoverBody"], [class*="st-key-psc_"] {{
+  box-shadow: 0 -2px 0 rgba({c2},{'.35' if claro else '.5'}) inset, 0 0 36px -18px rgba({c1},{forte}) !important; }}
+.st-key-ps_chat [data-testid="stPopoverButton"] {{ box-shadow: 0 0 22px -4px rgba({c1},{forte}), 0 0 28px -10px rgba({c2},{forte}) !important; }}
+"""
 
 
 def _css_optimus() -> str:
@@ -254,7 +287,12 @@ h1, h2, .ps-hero h1 b, .ps-cab h1 { background: linear-gradient(90deg, #E4F6FF 0
 
 def _css(t: dict) -> str:
     v = "\n".join(f"  --ps-{k.replace('_', '-')}: {val};" for k, val in t.items() if k != "shadow")
-    extra = _css_quantum() if modo() == "Dark" else _css_optimus() if modo() == "Optimus" else ""
+    if modo() == "Dark":
+        extra = _css_quantum() + _css_neon("0,229,255", "155,92,255", claro=False)
+    elif modo() == "Optimus":
+        extra = _css_optimus()
+    else:
+        extra = _css_neon("45,75,255", "14,159,110", claro=True)
     return _css_base(t, v) + extra
 
 
