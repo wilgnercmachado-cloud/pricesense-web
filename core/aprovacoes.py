@@ -8,7 +8,8 @@ import uuid
 
 from core import db
 
-TIPOS = {"profimetrics": "Regras de margem (Profimetrics)", "proporcoes": "Base PROP% (proporcionais)", "trava": "Trava mínima (acordo)", "parametros": "Formação de preço (curvas e delta)"}
+TIPOS = {"profimetrics": "Regras de margem (Profimetrics)", "proporcoes": "Base PROP% (proporcionais)", "trava": "Trava mínima (acordo)", "parametros": "Formação de preço (curvas e delta)",
+         "margens": "Nova margem objetiva, mínima e máxima"}
 
 
 def enviar(tipo: str, usuario: str, nome_arquivo: str, conteudo: bytes, resumo: dict) -> str:
@@ -40,13 +41,37 @@ def _decidir(ident: str, status: str, admin: str, obs: str = "") -> None:
                                                "decidido_em": dt.datetime.now(dt.timezone.utc).isoformat()}).eq("id", ident).execute()
 
 
-def aprovar(pedido: dict, admin: str, progresso=None) -> str:
+def conteudo(pedido: dict) -> bytes:
+    return gzip.decompress(db.sb().storage.from_("relatorios").download(pedido["caminho"]))
+
+
+def aprovar(pedido: dict, admin: str, progresso=None, itens_editados: list[dict] | None = None) -> str:
     """Grava no Supabase o arquivo aprovado, exatamente como o envio direto faria."""
     from core import profimetrics as pf, proporcoes as pp
     bruto = io.BytesIO(gzip.decompress(db.sb().storage.from_("relatorios").download(pedido["caminho"])))
     if pedido["tipo"] == "profimetrics":
         r = pf.salvar(pf.ler_planilha(bruto), pedido["usuario"])
         msg = f"{r['novas']} novas, {r['substituidas']} substituídas, {r['mantidas']} mantidas"
+    elif pedido["tipo"] == "margens":
+        import json
+        from core import notificacoes as nt, revisao as rv
+        p = json.loads(bruto.getvalue())
+        itens = itens_editados if itens_editados is not None else p["itens"]
+        msg = rv.aplicar(p, itens, admin)
+        orig = {i["produto"]: i for i in p["itens"]}
+        mud = []
+        for it in itens:
+            o = orig.get(it["produto"], {})
+            dif = [f"{rot} {o.get(k)}% → {it[k]}%" for k, rot in (("obj", "objetiva"), ("min", "mínima"), ("max", "máxima"))
+                   if o.get(k) is not None and abs(float(o.get(k)) - float(it[k])) > 1e-6]
+            if dif:
+                mud.append(f"{it['produto']}: " + ", ".join(dif))
+        texto = (f"{admin} aprovou o seu pedido de nova margem ({p.get('escopo')})"
+                 + (" com as seguintes modificações: " + "; ".join(mud[:8]) + (f" e mais {len(mud) - 8}" if len(mud) > 8 else "") + "." if mud else ", sem alterações."))
+        try:
+            nt.enviar([pedido["usuario"]], "margem_aprovada", "Nova margem aprovada" + (" com modificações" if mud else ""), texto)
+        except Exception:
+            pass
     elif pedido["tipo"] == "parametros":
         from core import parametros as pm
         msg = pm.aplicar_pedido(bruto.getvalue(), admin)
@@ -68,6 +93,12 @@ def aprovar(pedido: dict, admin: str, progresso=None) -> str:
 
 def recusar(pedido: dict, admin: str) -> None:
     _decidir(pedido["id"], "recusado", admin)
+    if pedido.get("tipo") == "margens":
+        try:
+            from core import notificacoes as nt
+            nt.enviar([pedido["usuario"]], "margem_recusada", "Pedido de nova margem recusado", f"{admin} recusou o seu pedido: {pedido.get('nome_arquivo')}.")
+        except Exception:
+            pass
     try:
         db.sb().storage.from_("relatorios").remove([pedido["caminho"]])
     except Exception:

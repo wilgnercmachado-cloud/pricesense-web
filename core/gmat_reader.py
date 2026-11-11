@@ -24,7 +24,7 @@ _DICIONARIOS = {"F": "Filial", "C": "Classificação", "B": "Comprador", "D": "D
 _BLOQUEIO = re.compile(r"VENCIMENTO|ENCARTE|MIDIA")
 
 
-VERSAO = "2026-11-04"   # muda quando o formato lido muda: invalida a base guardada em cache no servidor
+VERSAO = "2026-11-11"   # muda quando o formato lido muda: invalida a base guardada em cache no servidor
 
 
 class ErroLeitura(ValueError):
@@ -279,6 +279,16 @@ def ler_relatorio(html: bytes) -> tuple[pd.DataFrame, dict]:
     df["_p"] = col["P"].astype(np.int32)       # códigos originais, para cruzar com o histórico
     df["_f"] = col["F"].astype(np.int16)
     df["venda"] = col["ve"].astype(np.float32) if "ve" in col else np.float32(0)
+    # ritmo do mês (bloco data6, mesmas linhas da base): meta de venda e lucro do mês e venda e lucro do mês anterior (mesmos dias)
+    try:
+        c6h, c6b = _bloco(html, "data6")
+        if int(c6h.get("n", 0)) == n:
+            c6 = _colunas(c6h, c6b, n)
+            for k, nome in (("eMV", "meta_venda"), ("eML", "meta_lucro"), ("eVP", "venda_ant"), ("eLP", "lucro_ant")):
+                if k in c6:
+                    df[nome] = c6[k].astype(np.float32)
+    except Exception:
+        pass
     df["qtd"] = (col["qt"].astype(np.float32) / 100) if "qt" in col else np.float32(0)
     df["erro_pesquisa"] = col["E"].astype(bool) if "E" in col else False
     df["pesquisado"] = col["Q"].astype(bool) if "Q" in col else True
