@@ -349,6 +349,14 @@ body.foco .kpis,body.foco .linha2{display:grid}
 .llist{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:4px}
 .lfil{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:pointer;font-size:12.5px}.lfil:hover{background:var(--raised)}
 .lfil span{font-weight:600;min-width:180px}.lfil small{color:var(--muted);font-size:11px}.lfil.todos span{min-width:0}
+#liveBar{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;margin:0 0 8px;padding:7px 12px;border-radius:12px;font-size:12px;color:var(--muted);
+  background:var(--surface);border:1px solid var(--line)}
+#liveBar.on{border-color:color-mix(in srgb,#E0234E 40%,var(--line));background:color-mix(in srgb,#E0234E 6%,var(--surface))}
+#liveBar b{color:var(--ink);margin-right:4px}#liveBar.on b{color:#E0234E}#liveBar span{display:inline-flex;align-items:center;gap:6px}
+.lvdot{width:8px;height:8px;border-radius:50%;background:#E0234E;display:inline-block;box-shadow:0 0 0 0 rgba(224,35,78,.6);animation:lvpulse 1.6s infinite}
+.lvdot.off{background:var(--faint);animation:none}
+@keyframes lvpulse{0%{box-shadow:0 0 0 0 rgba(224,35,78,.55)}70%{box-shadow:0 0 0 8px rgba(224,35,78,0)}100%{box-shadow:0 0 0 0 rgba(224,35,78,0)}}
+.row.live-ace{box-shadow:inset 3px 0 0 var(--up)}.row.live-ace .edc input{background:color-mix(in srgb,var(--up) 12%,var(--field));border-color:color-mix(in srgb,var(--up) 45%,var(--line))}
 #chOpt em{font-style:normal;font-family:'Geist Mono',monospace;font-size:11px;opacity:.7;margin-left:2px}
 #root{display:block} #app{height:100%}
 </style>
@@ -1767,6 +1775,9 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   const FONTE_MODA = ['sem moda consistente (nenhum preço repetido em 3 dias ou mais)', 'moda do concorrente vencedor', 'maior moda da filial: o vencedor não tem pesquisa consistente', 'moda de maior frequência do relatório'];
   const modaDe_ = i => D.mcs && D.mcs.length ? `${curto(D.mcs[D.mci[i]] || '')}${D.mfd && D.mfd[i] ? ', ' + D.mfd[i] + ' dias' : ''}` : '';
   const PCTL = new Float64Array(N).fill(NaN), REFL = new Float64Array(N);
+  /* ---------- precificação online: quem transmite e quem assiste ---------- */
+  const TRANSMITIR = A.transmitir || null, ASSISTIR = !!A.assistir && !TRANSMITIR;
+  const LNV = new Float64Array(N), LNA = new Float64Array(N), LACE = new Uint8Array(N); let LIVE_META = [];
   function calc(i){
     const c = D.cu[i], vmk = D.vmk[i], amk = D.amk[i] || 0, merch = D.merch[i] || 0;
     const mobj = D.pobj[i] ?? MOBJ, mmax = (D.pmax[i] > 0 ? D.pmax[i] : MMAX), ps = PISO[D.ui[i]] || { cesta: -15, sem: 0 };
@@ -1791,6 +1802,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     if (OVA.has(i)) { na = OVA.get(i); rg = OPT.has(i) ? 6 : 5; }
     else na = piso15(na, nv);                                   // padrão da companhia: atacado com no máximo 15% de desconto
     if (na > nv) na = nv;
+    if (ASSISTIR && LNV[i] > 0) { nv = LNV[i]; na = LNA[i] > 0 ? LNA[i] : nv; }      // assistindo: o preço é o do analista ao vivo
     NV[i] = nv; NA[i] = na; RG[i] = rg; PCTL[i] = pct != null ? pct : NaN; REFL[i] = ref; MN[i] = mn; MX[i] = mx; OB[i] = obj; UMIN[i] = umin; UMAX[i] = mmax; UOBJ[i] = mobj;
     const fimHoje = D.dfim[i] > 0 && D.dfim[i] === HOJE, tp = (D.tipos[D.ti[i]] || '').toUpperCase(), ip = vmk > 0 ? D.vm[i] / vmk : NaN;
     let ct = 0;
@@ -1829,7 +1841,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
   const sugPend = i => SUGI[i] && SUGI[i].status === 'pendente';
   const blkLiberado = i => { const b = BKI[i]; if (!b) return true; const pv = +b.preco_vencedor || 0;
     return OV.has(i) && pv > 0 && Math.abs(OV.get(i) / pv - 1) >= 0.02 - 1e-9; };          // bloqueado: só preço manual 2% ou mais longe do vencedor do block
-  const podeAceitar = i => !COMERCIAL && (MUD[i] || REAP[i]) && blkLiberado(i);
+  const podeAceitar = i => !COMERCIAL && !ASSISTIR && (MUD[i] || REAP[i]) && blkLiberado(i);
   const aceito = i => (MUD[i] || REAP[i]) && ACE.get(i) === true;   // nada vem aceito sozinho: o aceite é dado pelo usuário ou pelo Aceitar todos
   const calcTudo = () => { for (let i = 0; i < N; i++) calc(i); };
 
@@ -1973,9 +1985,9 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     const t = TPC[D.tcol[i]]; return t ? `<span class="tpi" style="color:${t[2]}" data-tip="Coleta: ${t[0]}">${ic(t[1])}</span>` : '–'; }, i => D.orig[i] ? 9 : D.tcol[i]);
   col('dt', 'Data pesquisa', 'Mercado', 84, i => D.orig[i] ? '<span style="color:var(--faint)">moda</span>' : esc(D.datas[D.dti[i]] || '–'), i => D.datas[D.dti[i]] || '');
   col('ip', 'IP atual', 'Mercado', 70, i => ipFmt(D.vm[i] / D.vmk[i]), i => D.vmk[i] > 0 ? D.vm[i] / D.vmk[i] : 0, 'r num');
-  col('nv', 'Novo varejo', 'Novo preço', 98, i => `<input type="text" data-e="v" data-i="${i}" ${COMERCIAL ? 'readonly tabindex="-1"' : ''} class="${OV.has(i) ? 'man' : ''}" value="${nf2.format(NV[i])}">`, i => NV[i], 'r edc');
-  col('na', 'Novo atacado', 'Novo preço', 98, i => `<input type="text" data-e="a" data-i="${i}" ${COMERCIAL ? 'readonly tabindex="-1"' : ''} class="${OVA.has(i) ? 'man' : ''}" value="${NA[i] > 0 ? nf2.format(NA[i]) : ''}">`, i => NA[i], 'r edc');
-  col('nm', 'Margem nova', 'Novo preço', 86, i => { const v = (NV[i] - D.cu[i]) / NV[i]; return `<input type="text" data-e="m" data-i="${i}" ${COMERCIAL ? 'readonly tabindex="-1"' : ''} class="${v < 0 ? 'neg' : ''}" value="${nf1.format(v * 100)}">`; }, i => (NV[i] - D.cu[i]) / NV[i], 'r ed');
+  col('nv', 'Novo varejo', 'Novo preço', 98, i => `<input type="text" data-e="v" data-i="${i}" ${COMERCIAL || ASSISTIR ? 'readonly tabindex="-1"' : ''} class="${OV.has(i) ? 'man' : ''}" value="${nf2.format(NV[i])}">`, i => NV[i], 'r edc');
+  col('na', 'Novo atacado', 'Novo preço', 98, i => `<input type="text" data-e="a" data-i="${i}" ${COMERCIAL || ASSISTIR ? 'readonly tabindex="-1"' : ''} class="${OVA.has(i) ? 'man' : ''}" value="${NA[i] > 0 ? nf2.format(NA[i]) : ''}">`, i => NA[i], 'r edc');
+  col('nm', 'Margem nova', 'Novo preço', 86, i => { const v = (NV[i] - D.cu[i]) / NV[i]; return `<input type="text" data-e="m" data-i="${i}" ${COMERCIAL || ASSISTIR ? 'readonly tabindex="-1"' : ''} class="${v < 0 ? 'neg' : ''}" value="${nf1.format(v * 100)}">`; }, i => (NV[i] - D.cu[i]) / NV[i], 'r ed');
   col('nma', 'Margem atacado nova', 'Novo preço', 92, i => NA[i] > 0 ? (v => vneg(v, pct(v)))((NA[i] - D.cu[i]) / NA[i]) : '–', i => NA[i] > 0 ? (NA[i] - D.cu[i]) / NA[i] : -9, 'r num');
   col('ipn', 'IP novo', 'Novo preço', 70, i => ipFmt(NV[i] / D.vmk[i]), i => D.vmk[i] > 0 ? NV[i] / D.vmk[i] : 0, 'r num');
   col('var', 'Delta preço', 'Novo preço', 84, i => { const v = NV[i] / D.vm[i] - 1; return `<span class="${v > 1e-4 ? 'pos' : v < -1e-4 ? 'neg' : ''}">${v > 0 ? '+' : ''}${pct(v)}</span>`; }, i => NV[i] / D.vm[i] - 1, 'r num');
@@ -2074,7 +2086,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     for (let k = ini; k < fim; k++) { const i = lista[k];
       if (i < 0) { const g = GRUPOS[-i - 1];
         h += `<div class="row grp${ABERTOS.has(g.pi) ? ' aberto' : ''}" data-g="${g.pi}" style="top:${k * H}px">` + COLS.map((c, j) => `<div class="${cls(c, j)}"${sty(j)}>${celGrupo(c, g)}</div>`).join('') + '</div>'; continue; }
-      h += `<div class="row${i === SEL ? ' sel' : ''}${CASC ? ' filho' : ''}" data-i="${i}" style="top:${k * H}px">` + COLS.map((c, j) => `<div class="${cls(c, j)}"${sty(j)}>${c.rend(i)}</div>`).join('') + '</div>'; }
+      h += `<div class="row${i === SEL ? ' sel' : ''}${CASC ? ' filho' : ''}${ASSISTIR && LACE[i] ? ' live-ace' : ''}" data-i="${i}" style="top:${k * H}px">` + COLS.map((c, j) => `<div class="${cls(c, j)}"${sty(j)}>${c.rend(i)}</div>`).join('') + '</div>'; }
     body.innerHTML = h;
   }
   let raf = 0; on(sc, 'scroll', () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; render(); }); });
@@ -2260,7 +2272,7 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
       const pos = VIS.indexOf(+t.dataset.i) + (e.key === 'ArrowUp' ? -1 : 1), campo = t.dataset.e;
       t.blur(); setTimeout(() => focarCelula(campo, pos), 80); }
     if (e.key === 'Escape') { t.value = t.defaultValue; t.blur(); } });
-  on(body, 'mousedown', e => { if (COMERCIAL || e.target.tagName === 'INPUT') return; const c = e.target.closest('.edc'); if (!c) return;
+  on(body, 'mousedown', e => { if (COMERCIAL || ASSISTIR || e.target.tagName === 'INPUT') return; const c = e.target.closest('.edc'); if (!c) return;
     const inp = c.querySelector('input[type=text]'); if (inp) { e.preventDefault(); inp.focus(); inp.select(); } });
   on(body, 'focusin', e => { if (e.target.tagName === 'INPUT' && e.target.type === 'text' && e.target.dataset.e) setTimeout(() => e.target.select(), 0); });
   document.querySelectorAll('.ctx').forEach(x => x.remove());
@@ -2808,7 +2820,44 @@ function roundAtacado(pa, vf){ if (!(pa > 0)) return 0; const vc = Math.round(vf
     $('app').prepend(ban); ban.querySelector('#kSair').onclick = () => ST.valor({ acao: 'sair_backup', ts: Date.now() }); }
 
   /* ---------- ações ---------- */
-  function atualizar(refiltrar = true){ kpis(); chipOptimus(); if (refiltrar) filtrar(); if (CASC) montarCascata(); render(); }
+  function atualizar(refiltrar = true){ kpis(); chipOptimus(); if (refiltrar) filtrar(); if (CASC) montarCascata(); render(); if (TRANSMITIR) agendarTransmissao(); }
+  /* compactação (gzip) para viajar leve entre o analista, o Supabase e quem assiste */
+  async function gz64(txt){ const st = new Blob([txt]).stream().pipeThrough(new CompressionStream('gzip'));
+    const buf = new Uint8Array(await new Response(st).arrayBuffer()); let bin = ''; for (let k = 0; k < buf.length; k += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(k, k + 0x8000)); return btoa(bin); }
+  async function ungz64(b64){ const bin = atob(b64), u = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) u[k] = bin.charCodeAt(k);
+    return await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text(); }
+  const ufSig = i => String(D.ufs[D.ui[i]] || '').split(' - ')[0].trim().toUpperCase();
+  let tTrans = 0;
+  function agendarTransmissao(){ clearTimeout(tTrans); tTrans = setTimeout(transmitir, 2000); }
+  async function transmitir(){ if (!TRANSMITIR) return; const ufs = new Set(TRANSMITIR.estados || []);
+    const f = [], p_ = [], nv = [], na = [], ac = [];
+    for (let i = 0; i < N; i++) { if (!ufs.has(ufSig(i))) continue;
+      f.push(+codTxt(D.filiais[D.fi[i]])); p_.push(+codTxt(D.produtos[D.pi[i]])); nv.push(Math.round(NV[i] * 100)); na.push(Math.round(NA[i] * 100)); ac.push(aceito(i) ? 1 : 0); }
+    try { window.parent.__psLiveOut = { id: TRANSMITIR.id, versao: Date.now(), b64: await gz64(JSON.stringify({ f, p: p_, nv, na, ac })) }; } catch (e) {} }
+  const MAPA_FP = new Map(); if (ASSISTIR) for (let i = 0; i < N; i++) MAPA_FP.set(codTxt(D.filiais[D.fi[i]]) + '|' + codTxt(D.produtos[D.pi[i]]), i);
+  async function receberAoVivo(){ let P; try { P = window.parent; } catch (e) { return; }
+    const ss = Object.values(P.__psLive || {}); if (!ss.length) return;
+    const meta = []; let mudou = false;
+    for (const s of ss) { if (!s.b64) continue;
+      if (s._aplicada === s.versao) { meta.push(s); continue; }
+      let d; try { d = JSON.parse(await ungz64(s.b64)); } catch (e) { continue; }
+      for (let k = 0; k < d.f.length; k++) { const i = MAPA_FP.get(d.f[k] + '|' + d.p[k]); if (i == null) continue;
+        LNV[i] = d.nv[k] / 100; LNA[i] = d.na[k] / 100; LACE[i] = d.ac[k] ? 1 : 0; calc(i); }
+      s._aplicada = s.versao; meta.push(s); mudou = true; }
+    LIVE_META = meta; barraAoVivo();
+    if (mudou) { atualizar(false); if (SEL >= 0) resumo(SEL); } }            // sem refiltrar: quem assiste continua onde estava na grade
+  function barraAoVivo(){ let el = $('liveBar');
+    if (!LIVE_META.length && !TRANSMITIR) { if (el) el.remove(); return; }
+    if (!el) { el = document.createElement('div'); el.id = 'liveBar'; const t = document.querySelector('.topo'); t.parentNode.insertBefore(el, t.nextSibling); }
+    const hora = x => { try { return new Date(x).toLocaleTimeString('pt-BR'); } catch (e) { return ''; } };
+    if (TRANSMITIR) { el.className = 'live on'; el.innerHTML = `<i class="lvdot"></i><b>AO VIVO</b> você está transmitindo ${esc((TRANSMITIR.estados || []).join(', '))} para o Comercial e para quem estiver assistindo.`; return; }
+    el.className = 'live' + (LIVE_META.some(s => s.ativo) ? ' on' : '');
+    el.innerHTML = LIVE_META.map(s => s.ativo
+      ? `<span><i class="lvdot"></i><b>AO VIVO</b> ${esc(s.analista)} precificando ${esc((s.estados || []).join(', '))} · atualizado ${hora(s.atualizado_em)}</span>`
+      : `<span><i class="lvdot off"></i><b>ENCERRADA</b> precificação de ${esc((s.estados || []).join(', '))} por ${esc(s.analista)}: preços congelados até a próxima base</span>`).join('');
+  }
+  if (ASSISTIR) { try { window.parent.addEventListener('ps-live', () => receberAoVivo()); } catch (e) {} setTimeout(receberAoVivo, 300); }
+  if (TRANSMITIR) setTimeout(() => { barraAoVivo(); transmitir(); }, 500);
   function chipOptimus(){ const cs = $('chSug'); if (cs) { let n = 0; for (let i = 0; i < N; i++) if (sugPend(i)) n++; cs.querySelector('em').textContent = nf0.format(n); }
     const cb = $('chBlk'); if (cb) { let n = 0; for (let i = 0; i < N; i++) if (BKI[i]) n++; cb.querySelector('em').textContent = nf0.format(n); }
     const ca = $('chAce'); if (ca) { let n = 0; for (let i = 0; i < N; i++) if (aceito(i)) n++; ca.querySelector('em').textContent = nf0.format(n); }
