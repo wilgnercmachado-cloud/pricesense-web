@@ -21,7 +21,7 @@ st.set_page_config(page_title="PriceSense", page_icon=":material/sell:", layout=
 from core import auth, db, presenca, state  # noqa: E402
 from ui import components as ui  # noqa: E402
 from ui import theme  # noqa: E402
-from views import admin, biblioteca, home, login, perfil, pesquisa, preco_bot, promo, publicar, regular  # noqa: E402
+from views import admin, biblioteca, home, login, margem, perfil, pesquisa, preco_bot, promo, publicar, regular  # noqa: E402
 
 ASSETS = Path(__file__).resolve().parent / "assets"
 
@@ -67,6 +67,8 @@ for chave, permissao, titulo, render, icone, url in [
     ("promo", "Pricing Promo", "Metrics Promo", promo.render, ":material/campaign:", "pricing-promo"),
     ("pesquisa", "Pesquisa de Mercado", "Pesquisa de Mercado", pesquisa.render, ":material/query_stats:", "pesquisa-de-mercado"),
     ("regular", "Pricing Regular", "PriceMetrics", regular.render, ":material/price_change:", "pricing-regular"),
+    # Revisão de margem: para o Comercial e o Pricing (mesma permissão da PriceMetrics)
+    ("margem", "Pricing Regular", "Revisão de margem", margem.render, ":material/percent:", "revisao-de-margem"),
 ]:
     if auth.pode(permissao):
         p[chave] = st.Page(render, title=titulo, icon=icone, url_path=url)
