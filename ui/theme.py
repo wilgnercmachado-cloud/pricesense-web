@@ -249,7 +249,7 @@ def _css_quantum() -> str:
 .stApp::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
   background: linear-gradient(180deg, transparent 0%, rgba(0,229,255,.045) 50%, transparent 100%); background-size: 100% 260px;
   background-repeat: no-repeat; animation: psq-scan 9s linear infinite; }
-@keyframes psq-scan { from { background-position: 0 -260px; } to { background-position: 0 calc(100vh / var(--ps-zoom, .8)); } }
+@keyframes psq-scan { from { background-position: 0 -260px; } to { background-position: 0 calc(100vh / var(--ps-zoom, .9)); } }
 /* estrelas piscando */
 .stApp::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .7;
   background-image: radial-gradient(1.6px 1.6px at 30% 22%, #7AF3FF, transparent 60%), radial-gradient(1.4px 1.4px at 64% 78%, #C4A0FF, transparent 60%),
@@ -309,7 +309,16 @@ def _css_base(t: dict, v: str) -> str:
 
 /* ---------- base e fundo ---------- */
 html, body, .stApp, button, input, textarea, select, [data-testid="stMarkdownContainer"] {{ font-family: var(--ps-font); }}
-html {{ zoom: var(--ps-zoom, .8); }}
+/* 90% em qualquer máquina: o zoom fica só no corpo do site (.stApp). Menus, listas e janelas suspensas do Streamlit
+   ficam fora dele (direto no body), então abrem exatamente embaixo de quem os chamou, sem precisar de correção. */
+:root {{ --ps-zoom: .9; }}
+/* topo apertado: botões das telas viram só ícones (o texto continua na dica do mouse) */
+body.ps-topo-compacto [class*="st-key-reg_topo"] [data-testid="stPopoverButton"] [data-testid="stMarkdownContainer"],
+body.ps-topo-compacto [class*="st-key-promo_topo"] [data-testid="stPopoverButton"] [data-testid="stMarkdownContainer"],
+body.ps-topo-compacto [class*="st-key-mk_topo"] [data-testid="stPopoverButton"] [data-testid="stMarkdownContainer"] {{ display: none !important; }}
+body.ps-topo-compacto [class*="st-key-reg_topo"] [data-testid="stButtonGroup"] button {{ padding: 0 8px !important; font-size: 12px !important; }}
+body.ps-topo-compacto [class*="st-key-reg_topo"] {{ gap: 4px !important; }}
+.stApp {{ zoom: var(--ps-zoom, .9); }}
 iframe[data-testid="stCustomComponentV1"] {{ width: 100% !important; }}
 .ps-zfix {{ transform: translate(var(--ps-zx), var(--ps-zy)) !important; }}
 [data-testid="stElementContainer"]:has(#ps-conta-dados) {{ display: none !important; }}
@@ -325,7 +334,7 @@ iframe[data-testid="stCustomComponentV1"] {{ width: 100% !important; }}
 @keyframes ps-aura {{ 0%, 100% {{ box-shadow: 0 0 0 1.5px var(--ps-surface-solid), 0 0 0 3px var(--ps-primary), 0 0 8px 0 color-mix(in srgb, var(--ps-primary) 45%, transparent); }}
   50% {{ box-shadow: 0 0 0 1.5px var(--ps-surface-solid), 0 0 0 3px var(--ps-primary), 0 0 15px 3px color-mix(in srgb, var(--ps-primary) 70%, transparent); }} }}
 .ps-zoff {{ translate: var(--ps-dx, 0px) var(--ps-dy, 0px) !important; }}   /* deslocamento que alinha o menu embaixo de quem o abriu */   /* menus abrem embaixo de onde foram chamados, mesmo com o zoom de 80% */
-[data-testid="stMain"] {{ height: calc(100vh / var(--ps-zoom, .8)) !important; max-height: calc(100vh / var(--ps-zoom, .8)) !important; }}   /* área rolável ocupa a tela inteira mesmo com o zoom */   /* com o zoom do site, o Streamlit mede a largura das telas HTML a menos */   /* o site abre em 80% em qualquer máquina; o zoom do navegador continua funcionando por cima */
+[data-testid="stMain"] {{ height: calc(100vh / var(--ps-zoom, .9)) !important; max-height: calc(100vh / var(--ps-zoom, .9)) !important; }}   /* área rolável ocupa a tela inteira mesmo com o zoom */   /* com o zoom do site, o Streamlit mede a largura das telas HTML a menos */   /* o site abre em 80% em qualquer máquina; o zoom do navegador continua funcionando por cima */
 [data-testid="stIconMaterial"], .ms {{ font-family: 'Material Symbols Rounded' !important; font-weight: 400; }}
 .stApp {{
   color: var(--ps-ink);
@@ -390,7 +399,7 @@ iframe[data-testid="stCustomComponentV1"] {{ width: 100% !important; }}
 .st-key-ps_chat [data-testid="stPopoverButton"], .st-key-ps_chat [data-testid="stPopoverButton"] * {{ color: #fff !important; font-weight: 700; }}
 /* ---------- chat: painel de vidro, mensagens com avatar, prints com zoom ---------- */
 [data-testid="stPopoverBody"]:has(.ps-chat-hd) {{ width: 440px !important; max-width: 94vw; padding: 0 !important; overflow-x: hidden; overflow-y: auto;
-  max-height: calc(100vh / var(--ps-zoom, .8) - 130px) !important;
+  max-height: calc(100vh - 110px) !important;
   background: radial-gradient(120% 60% at 0% 0%, color-mix(in srgb, var(--ps-primary) 14%, transparent), transparent 60%),
               radial-gradient(90% 50% at 100% 100%, color-mix(in srgb, #7A3FD1 12%, transparent), transparent 60%), var(--ps-surface-solid) !important;
   border: 1px solid color-mix(in srgb, var(--ps-primary) 25%, var(--ps-line)) !important; border-radius: 22px !important;
@@ -407,7 +416,7 @@ iframe[data-testid="stCustomComponentV1"] {{ width: 100% !important; }}
 .ps-chat-av {{ display: flex; }} .ps-chat-av i {{ width: 26px; height: 26px; margin-left: -7px; border-radius: 50%; display: grid; place-items: center;
   font: 700 10px var(--ps-font); font-style: normal; color: #fff; border: 2px solid var(--ps-surface-solid); }}
 [data-testid="stLayoutWrapper"]:has(> .st-key-ps_chat_msgs) {{ height: auto !important; flex: 0 0 auto !important; }}   /* a altura fica só na área de mensagens, que acompanha a tela */
-.st-key-ps_chat_msgs {{ height: clamp(120px, calc(100vh / var(--ps-zoom, .8) - 560px), 340px) !important; max-height: clamp(120px, calc(100vh / var(--ps-zoom, .8) - 560px), 340px) !important;
+.st-key-ps_chat_msgs {{ height: clamp(120px, calc(100vh - 470px), 340px) !important; max-height: clamp(120px, calc(100vh - 470px), 340px) !important;
   border: 1px solid var(--ps-line) !important; border-radius: 16px !important;
   background: linear-gradient(var(--ps-line) 1px, transparent 1px) 0 0 / 22px 22px, linear-gradient(90deg, var(--ps-line) 1px, transparent 1px) 0 0 / 22px 22px,
               color-mix(in srgb, var(--ps-canvas) 70%, transparent) !important; background-blend-mode: soft-light; }}
@@ -486,7 +495,7 @@ iframe[data-testid="stCustomComponentV1"] {{ width: 100% !important; }}
 .st-key-ps_sino [data-testid="stPopoverButton"] [data-testid="stIconMaterial"] {{ color: var(--ps-ink); font-size: 20px; }}
 [data-testid="stPopoverBody"]:has(.ps-sino-top) {{ width: 380px !important; max-width: 92vw; }}
 .ps-sino-top b {{ display: block; font-size: 15px; }} .ps-sino-top span {{ font-size: 11.5px; color: var(--ps-muted); }}
-.ps-sino-lista {{ display: flex; flex-direction: column; gap: 6px; max-height: calc(100vh / var(--ps-zoom, .8) - 260px); overflow: auto; margin-top: 6px; }}
+.ps-sino-lista {{ display: flex; flex-direction: column; gap: 6px; max-height: calc(100vh - 230px); overflow: auto; margin-top: 6px; }}
 .ps-sino-it {{ padding: 8px 10px; border-radius: 10px; border: 1px solid var(--ps-line); }}
 .ps-sino-it.nova {{ background: var(--ps-primary-soft); border-color: color-mix(in srgb, var(--ps-primary) 30%, var(--ps-line)); }}
 .ps-sino-it b {{ display: block; font-size: 12.5px; }} .ps-sino-it span {{ display: block; font-size: 12px; color: var(--ps-muted); line-height: 1.4; }}
@@ -554,7 +563,7 @@ iframe[data-testid="stCustomComponentV1"] {{ width: 100% !important; }}
 /* ---------- gaveta lateral (filtros e uploads) com fundo desfocado ---------- */
 [data-testid="stPopoverBody"]:has(.ps-gaveta) {{
   position: fixed !important; inset: 10px 10px 10px auto !important; transform: none !important; translate: none !important;
-  width: min(420px, 94vw) !important; max-width: none !important; height: calc(100vh / var(--ps-zoom, .8) - 20px) !important; max-height: none !important;
+  width: min(420px, 94vw) !important; max-width: none !important; height: calc(100vh - 20px) !important; max-height: none !important;
   z-index: 1000010 !important; overflow-y: auto !important; padding: 18px 20px 22px !important; border-radius: 22px !important;
   background: color-mix(in srgb, var(--ps-surface-solid) 90%, transparent) !important; border: 1px solid var(--ps-line) !important;
   box-shadow: -24px 0 60px -30px rgba(15,23,42,.45), 0 0 0 100vmax color-mix(in srgb, var(--ps-canvas) 30%, transparent) !important;
@@ -887,7 +896,7 @@ header[data-testid="stHeader"] {{
 /* ---------- login ---------- */
 /* ---------- entrada: fundo vivo, palavra girando, cartão com borda neon e a foto de quem já entrou ---------- */
 .st-key-ps_login_bg {{ position: fixed !important; inset: 0; z-index: 0; pointer-events: none; opacity: .9; }}
-.st-key-ps_login_bg iframe {{ position: fixed !important; inset: 0; width: 100vw !important; height: calc(100vh / var(--ps-zoom, .8)) !important; }}
+.st-key-ps_login_bg iframe {{ position: fixed !important; inset: 0; width: 100vw !important; height: calc(100vh / var(--ps-zoom, .9)) !important; }}
 [data-testid="stMainBlockContainer"]:has(.st-key-psc_login) > div {{ position: relative; z-index: 1; }}
 .ps-login-live {{ width: 8px; height: 8px; border-radius: 50%; background: var(--ps-up); margin-left: 6px; box-shadow: 0 0 0 0 color-mix(in srgb, var(--ps-up) 60%, transparent);
   animation: ps-vivo 1.8s infinite; }}

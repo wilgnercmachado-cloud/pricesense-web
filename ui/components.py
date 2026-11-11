@@ -393,7 +393,7 @@ const d = window.parent.document, w = window.parent;
   const b = d.createElement('button'); b.id = 'ps-fs'; b.type = 'button';
   const marca = () => { const on = !!d.fullscreenElement; b.innerHTML = on ? fe : ab; b.title = on ? 'Sair da tela cheia' : 'Tela cheia'; b.setAttribute('aria-label', b.title); };
   b.addEventListener('click', () => { d.fullscreenElement ? d.exitFullscreen() : d.documentElement.requestFullscreen().catch(() => {}); });
-  marca(); d.addEventListener('fullscreenchange', marca); d.body.appendChild(b);
+  marca(); d.addEventListener('fullscreenchange', marca); (d.querySelector('.stApp') || d.body).appendChild(b);   /* dentro do .stApp: mesmo zoom dos outros botões do topo */
 }
 /* ilha dinâmica: a largura acompanha os itens do menu (medidos uma vez por mudança) */
 {
@@ -402,6 +402,7 @@ const d = window.parent.document, w = window.parent;
     const els = [...nav.querySelectorAll('[data-testid="stTopNavLink"], [data-testid="stTopNavSection"]')].filter(e => e.getClientRects().length);
     if (!els.length) return;
     let alvo = els.reduce((a, e) => a + Math.ceil(e.getBoundingClientRect().width), 0) + 6 * (els.length - 1) + 26;
+    const natural = alvo;
     /* nunca encosta na logo nem nos botões da direita (filtros, upload, tela cheia, tema) */
     const W = w.innerWidth, meio = W / 2;
     const logo = d.querySelector('[data-testid="stLogo"], [data-testid="stHeaderLogo"], header img');
@@ -409,9 +410,13 @@ const d = window.parent.document, w = window.parent;
     let dir = W;
     d.querySelectorAll('.st-key-ps_tema, #ps-fs, .st-key-ps_sino, [class*="st-key-reg_topo"], [class*="st-key-promo_topo"], [class*="st-key-mk_topo"]').forEach(el => {
       const r = el.getBoundingClientRect(); if (r.width > 0 && r.top < 70) dir = Math.min(dir, r.left); });
-    const maximo = Math.max(240, 2 * Math.min(meio - esq, dir - meio) - 40);
+    const maximo = Math.max(120, 2 * Math.min(meio - esq, dir - meio) - 28);
+    /* sem espaço: os botões da direita viram só ícones (compacto) antes de a ilha encolher; nada se sobrepõe */
+    const b_ = d.body;
+    if (natural > maximo && !b_.classList.contains('ps-topo-compacto')) { b_.classList.add('ps-topo-compacto'); return setTimeout(ajustaIlha, 60); }
+    if (b_.classList.contains('ps-topo-compacto') && natural + 260 < maximo) b_.classList.remove('ps-topo-compacto');
     alvo = Math.min(alvo, maximo);
-    const z = parseFloat(w.getComputedStyle(d.documentElement).zoom) || 1;     /* medidas na tela; a largura é aplicada antes do zoom do site */
+    const z = (nav.offsetWidth ? nav.getBoundingClientRect().width / nav.offsetWidth : 1) || 1;   /* zoom efetivo da ilha (do site ou do navegador) */     /* medidas na tela; a largura é aplicada antes do zoom do site */
     alvo = Math.round(alvo / z); const maxCss = Math.round(maximo / z);
     if (Math.abs((parseFloat(nav.style.width) || 0) - alvo) > 1) { nav.style.setProperty('width', alvo + 'px', 'important'); nav.style.setProperty('max-width', maxCss + 'px', 'important'); }
     nav.dataset.ilha = '1'; };
@@ -423,6 +428,9 @@ const d = window.parent.document, w = window.parent;
   if (!w.__psSelo) { w.__psSelo = true; w.addEventListener('resize', () => setTimeout(ajustaSelo, 120)); }
   let tentSelo = 0; const ts = setInterval(() => { ajustaSelo(); if (++tentSelo > 20) clearInterval(ts); }, 300);
   setTimeout(ajustaIlha, 60); setTimeout(ajustaIlha, 400);
+  /* os botões de cada tela (filtros, upload...) chegam depois: confere sempre, para a ilha nunca ficar por baixo deles */
+  if (w.__psIlhaTimer) w.clearInterval(w.__psIlhaTimer);
+  w.__psIlhaTimer = w.setInterval(ajustaIlha, 700);
   if (!w.__psIlha) { w.__psIlha = true; w.addEventListener('resize', () => setTimeout(ajustaIlha, 60)); w.setInterval(ajustaIlha, 1000); }   /* confere sempre: troca de página, botões novos no topo, fonte carregada */
 }
 if (!d.__psGaveta) { d.__psGaveta = true;            /* botão ✕ das gavetas: fecha como o Esc */
