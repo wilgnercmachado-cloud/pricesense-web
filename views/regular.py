@@ -238,7 +238,8 @@ def _meus_pedidos(tipo: str) -> None:
     from core import aprovacoes as ap
     for p in [x for x in ap.meus(st.session_state.get("usuario_login", "")) if x.get("tipo") == tipo][:2]:
         rot = {"pendente": "aguardando aprovação", "aprovado": "aprovado", "recusado": "recusado"}.get(p.get("status"), p.get("status"))
-        st.caption(f"Seu envio {p.get('nome_arquivo')} de {str(p.get('criado_em'))[:16].replace('T', ' ')}: {rot}.")
+        quando = f" de {str(p.get('criado_em'))[:16].replace('T', ' ')}" if p.get("criado_em") else ""
+        st.caption(f"Seu envio {p.get('nome_arquivo')}{quando}: {rot}.")
 
 
 def _data_base(rel: dict, meta: dict) -> str:
@@ -250,13 +251,19 @@ def _data_base(rel: dict, meta: dict) -> str:
     return txt
 
 
-def _uploads(rel: dict, meta_base: dict) -> None:
-    """Um único botão de upload: pesquisa 1067, regras de margem (Profimetrics) e base PROP%."""
-    with st.popover("", icon=":material/cloud_upload:", help="Uploads: pesquisa 1067, regras de margem e proporções"):
-        ui.gaveta_topo("Uploads", "Pesquisa do dia, regras de margem e proporcionais")
-        aba = st.segmented_control("Upload", ["Pesquisa 1067", "Regras de margem", "Proporções", "Trava mínima (acordo)"], default="Pesquisa 1067", required=True,
-                                   key="reg_up_aba", label_visibility="collapsed", width="stretch")
-        if aba == "Pesquisa 1067":
+def _uploads(rel: dict, meta_base: dict, df_base: pd.DataFrame | None = None, so_target: bool = False) -> None:
+    """Um único botão de upload: pesquisa 1067, regras de margem (Profimetrics), base PROP%, trava mínima e preço target.
+    Na visão do Comercial, só o preço target."""
+    with st.popover("", icon=":material/cloud_upload:", help="Uploads" + (": preço target" if so_target else ": pesquisa 1067, regras de margem, proporções, trava e preço target")):
+        ui.gaveta_topo("Uploads", "Preço target do fornecedor" if so_target else "Pesquisa do dia, regras de margem, proporcionais e preço target")
+        if so_target:
+            _target(df_base)
+            return
+        aba = st.segmented_control("Upload", ["Pesquisa 1067", "Regras de margem", "Proporções", "Trava mínima (acordo)", "Preço target"], default="Pesquisa 1067",
+                                   required=True, key="reg_up_aba", label_visibility="collapsed", width="stretch")
+        if aba == "Preço target":
+            _target(df_base)
+        elif aba == "Pesquisa 1067":
             _pesquisa_1067(rel, meta_base)
         elif aba == "Trava mínima (acordo)":
             _trava()
@@ -461,6 +468,72 @@ def _formacao(df: pd.DataFrame) -> str:
     return "curva" if ss.reg_formato == "Curva de venda" else "mercado"
 
 
+def _target_versao() -> str:
+    from core import target as tg
+    return tg.versao()
+
+
+@st.fragment(run_every="15s")
+def _vigia_target(versao_tela: str) -> None:
+    """Preço target aprovado vale na hora: se a versão mudar (aprovação, nova flag), a PriceMetrics é refeita — inclusive ao vivo
+    (os ajustes do analista ficam salvos no navegador e voltam sozinhos)."""
+    from core import target as tg
+    tg.vigentes.clear(); tg.flags.clear()
+    if tg.versao() != versao_tela:
+        st.rerun(scope="app")
+
+
+def _target(df: pd.DataFrame | None) -> None:
+    """Preço target: envio para aprovação do administrador e a mini aba comprador → categoria → fornecedor com a flag."""
+    from core import aprovacoes as ap, target as tg
+    ss = st.session_state
+    st.caption("Preço flat do fornecedor. Colunas: ID filial | ID Produto | Varejo. Depois da aprovação do administrador, vale 35 dias. "
+               "Sem a flag, o motor indica programar o target com o tipo de oferta 11 (comercial) e, já programado, não recomenda nada até "
+               "acabar a vigência. Com a flag marcada, o target vira o preço máximo de varejo e o motor e o Optimus podem seguir o mercado se for menor.")
+    arq = st.file_uploader("Preço target", type=["xlsx", "xls", "csv", "txt"], key="reg_tgt_arq", label_visibility="collapsed")
+    if st.button("Enviar para aprovação do administrador", type="primary", width="stretch", icon=":material/send:", disabled=arq is None, key="reg_tgt_ok"):
+        try:
+            lido = tg.ler_planilha(arq)
+            arq.seek(0)
+            ap.enviar("target", ss.get("usuario_login", ""), getattr(arq, "name", "target.xlsx"), arq.getvalue(),
+                      {"preços": int(len(lido)), "filiais": int(lido["filial"].nunique()), "produtos": int(lido["produto"].nunique())})
+            try:
+                from core import db, notificacoes as nt
+                nt.enviar([u["usuario"] for u in db.listar_usuarios() if u.get("is_admin")], "target", "Preço target para aprovar",
+                          f"{ss.get('usuario_logado') or ss.get('usuario_login')} enviou {len(lido)} preços target. Revise em Administração › Uploads.")
+            except Exception:
+                pass
+            st.toast("Preço target enviado. Só vale depois da aprovação do administrador.", icon=":material/pending:")
+        except tg.ErroTarget as exc:
+            st.error(str(exc), icon=":material/error:")
+        except Exception as exc:
+            st.error(f"Não foi possível enviar: {exc}", icon=":material/error:")
+    _meus_pedidos("target")
+    arv = tg.arvore(df) if df is not None else pd.DataFrame()
+    if arv.empty:
+        st.caption("Nenhum preço target vigente nas lojas da sua visão.")
+        return
+    st.markdown(f"**Preços target vigentes:** {ui.numero(len(arv))} itens (filial + produto). Marque onde o mercado pode prevalecer quando for menor:")
+    fl = tg.flags()
+    usuario = ss.get("usuario_login", "")
+
+    def caixa(nivel, valor, rotulo, herdado):
+        marcado = herdado or fl.get((nivel, valor), False)
+        novo = st.checkbox(rotulo, value=marcado, disabled=herdado, key=f"tgf_{nivel}_{abs(hash(valor))}",
+                           help="Marcado pelo nível de cima" if herdado else "Pode seguir o mercado se for menor (o target vira o preço máximo)")
+        if not herdado and novo != fl.get((nivel, valor), False):
+            tg.marcar(nivel, valor, novo, usuario); st.rerun()
+        return marcado
+
+    for comp, g1 in arv.groupby("comprador", sort=True):
+        with st.expander(f"{comp} · {ui.numero(len(g1))} itens", expanded=False):
+            m1 = caixa("comprador", comp, f"Comprador inteiro: seguir o mercado se for menor ({ui.numero(len(g1))} itens)", False)
+            for cat, g2 in g1.groupby("categoria", sort=True):
+                m2 = caixa("categoria", f"{comp}|{cat}", f"↳ {cat} ({ui.numero(len(g2))})", m1)
+                for forn, g3 in g2.groupby("fornecedor", sort=True):
+                    caixa("fornecedor", f"{comp}|{cat}|{forn}", f"      ↳ {forn} ({ui.numero(len(g3))})", m1 or m2)
+
+
 def _trava() -> None:
     """Trava mínima (acordo): margem mínima por filial e produto, acima da cesta e do Profimetrics."""
     from core import trava as tv
@@ -594,7 +667,8 @@ def _dados_mesa(filtros: str, versao: str, _df_all, _meta, _regras, _props, _tra
     if len(b) > LIMITE:
         return None, len(b), ""
     from core import parametros as pm
-    dados = pr.payload(b, _meta.get("hist"), _props, extra=pm.por_linha(b, _params))
+    from core import target as tg
+    dados = pr.payload(b, _meta.get("hist"), _props, extra={**pm.por_linha(b, _params), **tg.por_linha(b)})
     return dados, len(b), hashlib.md5((dados[:4000] + dados[-4000:] + str(len(dados))).encode()).hexdigest()[:12]
 
 
@@ -635,9 +709,10 @@ def render() -> None:
         f = _filtros(df_all)
         if modo == "pricing":
             formato = _formacao(df_all)
-            _uploads(rel, meta)
+            _uploads(rel, meta, df_all)
         else:
             formato = "mercado"
+            _uploads(rel, meta, df_all, so_target=True)
         ao_vivo = _controle_ao_vivo(modo, df_all, rel)
     regras, _ = pf.carregar()
     dtfim = meta.get("com_data_fim", 0)
@@ -655,7 +730,8 @@ def render() -> None:
     versao = "|".join([str(rel.get("id")), str(rel.get("atualizado_em")), gr.VERSAO, str((meta.get("p1067") or {}).get("em")), str(pf_meta.get("atualizado_em")), str(pf_meta.get("linhas")),
                        str(len(props)), str(float(props["proporcao"].sum()) if len(props) else 0),
                        str(len(travas)), str(float(travas["margem_min"].sum()) if len(travas) else 0), str(travas["atualizado_em"].max() if len(travas) else ""),
-                       st.session_state.get("usuario_login", ""), str(params.drop(columns=["atualizado_em", "atualizado_por"]).to_dict("records")) if len(params) else ""])
+                       st.session_state.get("usuario_login", ""), str(params.drop(columns=["atualizado_em", "atualizado_por"]).to_dict("records")) if len(params) else "",
+                       _target_versao()])
     filtros = json.dumps({**{k: (sorted(v) if isinstance(v, list) else v) for k, v in f.items()}, "_ufs": permitidos or []},
                          sort_keys=True, ensure_ascii=False)          # os estados do usuário entram na chave do pacote guardado
     dados, n, chave = _dados_mesa(filtros, versao, df_all, meta, regras, props, travas, params)
@@ -703,6 +779,7 @@ def render() -> None:
                     altura=900, info=info, usuario=usuario, base=base_id, atualizado=_data_base(rel, meta), backups=backups, historico=historico, estado=estado,
                     key="mesa_regular", default=None)
     _rele_ao_vivo(ao_vivo["base"], ao_vivo["transmitir"], ao_vivo["assistir"], usuario)
+    _vigia_target(_target_versao())
     if isinstance(retorno, dict) and retorno.get("ts") != st.session_state.get("_reg_ts") and retorno.get("acao") == "sugerir_margem":
         st.session_state._reg_ts = retorno.get("ts")
         from core import revisao as rv
@@ -713,7 +790,7 @@ def render() -> None:
             txt_ = f"estado {uf_} inteiro"
         else:
             fil_, txt_ = [int(retorno.get("filial"))], f"zona da filial {retorno.get('filial')}"
-        item_ = {k: retorno.get(k) for k in ("produto", "obj", "min", "max", "obj_atual", "min_atual", "max_atual")}
+        item_ = {k: retorno.get(k) for k in ("produto", "codigo", "obj", "min", "max", "obj_atual", "min_atual", "max_atual")}
         try:
             rv.pedir(usuario, st.session_state.get("usuario_logado") or usuario, [item_], fil_, txt_, "PriceMetrics", retorno.get("obs") or "")
             st.toast(f"Pedido de nova margem enviado ({txt_}). Só entra depois da aprovação do administrador.", icon=":material/send:")

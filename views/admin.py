@@ -133,8 +133,9 @@ def render() -> None:
                         ed = st.data_editor(tab, key=f"up_ed_{u['id']}", hide_index=True, width="stretch",
                                             disabled=["Produto", "Objetiva atual", "Mínima atual", "Máxima atual"],
                                             column_config={c: st.column_config.NumberColumn(c, format="%.1f%%") for c in tab.columns if c != "Produto"})
-                        editados = [{"produto": r["Produto"], "obj": float(r["Nova objetiva"]), "min": float(r["Nova mínima"]), "max": float(r["Nova máxima"])}
-                                    for _, r in ed.iterrows()]
+                        editados = [{"produto": r["Produto"], "codigo": (ped["itens"][k].get("codigo") if k < len(ped["itens"]) else None),
+                                     "obj": float(r["Nova objetiva"]), "min": float(r["Nova mínima"]), "max": float(r["Nova máxima"])}
+                                    for k, (_, r) in enumerate(ed.iterrows())]
                     except Exception as exc:
                         st.error(f"Não foi possível abrir o pedido: {exc}", icon=":material/error:")
                 if c2.button("Aprovar", type="primary", key=f"up_ok_{u['id']}", width="stretch"):
