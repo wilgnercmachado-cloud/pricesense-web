@@ -404,22 +404,43 @@ const d = window.parent.document, w = window.parent;
 if (!d.__psGaveta) { d.__psGaveta = true;            /* botão ✕ das gavetas: fecha como o Esc */
   d.addEventListener('click', e => { if (e.target.closest('.ps-gaveta-x')) { e.preventDefault();
     d.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true })); setTimeout(() => d.body.click(), 30); } }, true); }
-/* zoom do site (80%): menus suspensos e janelas são posicionados pelo Streamlit em pixels da tela, mas aplicados antes do zoom;
-   aqui a posição é convertida (divide pelo zoom) para o menu abrir exatamente embaixo de onde foi chamado */
-if (!d.__psZoomFix) { d.__psZoomFix = true;
+/* zoom do site (80%): menus suspensos, listas de opções e janelas abrem colados em quem os chamou.
+   Em vez de supor como cada navegador calcula a posição com zoom, mede onde o menu ficou e onde está o botão/campo
+   que o abriu, e corrige só a diferença (funciona em qualquer versão do Chrome, Edge ou Firefox). */
+if (!d.__psZoomFix2) { d.__psZoomFix2 = true;
   const SEL = '[data-testid="stTopNavPopoverBody"], [data-testid="stPopoverBody"], [data-testid$="Dropdown"]';
-  const corrige = el => { const z = parseFloat(w.getComputedStyle(d.documentElement).zoom) || 1; if (z === 1) return;
-    const tr = el.style.transform || ''; const m = tr.match(/translate(?:3d)?\(\s*(-?[\d.]+)px\s*,\s*(-?[\d.]+)px/); if (!m) return;
-    const x = (parseFloat(m[1]) / z).toFixed(1) + 'px', y = (parseFloat(m[2]) / z).toFixed(1) + 'px';
-    if (el.style.getPropertyValue('--ps-zx') !== x) el.style.setProperty('--ps-zx', x);
-    if (el.style.getPropertyValue('--ps-zy') !== y) el.style.setProperty('--ps-zy', y);
-    el.classList.add('ps-zfix'); };
-  const varre = () => d.querySelectorAll(SEL).forEach(corrige);
-  new w.MutationObserver(ms => { for (const mu of ms) { const t = mu.target;
-      if (mu.type === 'attributes' && t.matches && t.matches(SEL)) corrige(t);
-      else if (mu.type === 'childList' && mu.addedNodes.length) { varre(); break; } } })
-    .observe(d.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['style'] });
-  varre();
+  let ultimoMenu = null;   /* último item do menu do topo em que o mouse passou (vale para qualquer versão do Streamlit) */
+  const marca = e => { const x = e.target.closest && e.target.closest('header [data-testid="stTopNavSection"], header [aria-haspopup]'); if (x) ultimoMenu = x; };
+  d.addEventListener('mouseover', marca, true); d.addEventListener('click', marca, true);
+  const ehMenuTopo = el => el.getAttribute('data-testid') === 'stTopNavPopoverBody' || (!el.closest('header') && !!el.querySelector('[data-testid="stTopNavLink"]'));
+  const ancora = el => {
+    const tid = el.getAttribute('data-testid') || '';
+    if (ehMenuTopo(el)) return [...d.querySelectorAll('[data-testid="stTopNavSection"]')].find(x => x.getAttribute('aria-expanded') === 'true') || ultimoMenu;
+    if (tid === 'stPopoverBody') { if (el.querySelector('.ps-gaveta')) return null; return [...d.querySelectorAll('[data-testid="stPopoverButton"]')].find(x => x.getAttribute('aria-expanded') === 'true'); }
+    const ae = d.activeElement;
+    const sel = ae && ae.closest ? (ae.closest('[data-baseweb="select"]') || ae.closest('[data-testid="stMultiSelect"], [data-testid="stSelectbox"]')) : null;   /* campo que abriu a lista */
+    return sel || [...d.querySelectorAll('[data-baseweb="select"]')].find(x => x.querySelector('[aria-expanded="true"]'));
+  };
+  const lerTr = el => { const vx = parseFloat(el.style.getPropertyValue('--ps-zx')), vy = parseFloat(el.style.getPropertyValue('--ps-zy'));
+    if (el.classList.contains('ps-zfix') && isFinite(vx) && isFinite(vy)) return [vx, vy];
+    const m = (el.style.transform || '').match(/translate(?:3d)?\\(\\s*(-?[\\d.]+)px\\s*,\\s*(-?[\\d.]+)px/); return m ? [parseFloat(m[1]), parseFloat(m[2])] : null; };
+  const corrige = el => {
+    const a = ancora(el); if (!a) return;
+    const tr = lerTr(el); if (!tr) return;
+    const r = el.getBoundingClientRect(), b = a.getBoundingClientRect(), cw = parseFloat(w.getComputedStyle(el).width) || el.offsetWidth;
+    if (!r.width || !cw) return;
+    const s = r.width / cw;                                        // pixels de tela por pixel da página (o zoom real, seja qual for o navegador)
+    const alvoX = Math.max(8, Math.min(b.left, w.innerWidth - r.width - 8));
+    const abaixo = (r.top + r.bottom) / 2 >= (b.top + b.bottom) / 2;
+    const alvoY = abaixo ? b.bottom + 6 : b.top - 6 - r.height;
+    const dx = (alvoX - r.left) / s, dy = (alvoY - r.top) / s;
+    if (Math.abs(dx) < 1.5 && Math.abs(dy) < 1.5 && el.classList.contains('ps-zfix')) return;
+    el.style.setProperty('--ps-zx', (tr[0] + dx).toFixed(1) + 'px'); el.style.setProperty('--ps-zy', (tr[1] + dy).toFixed(1) + 'px');
+    el.classList.add('ps-zfix');
+  };
+  let pend = 0; const varre = () => { if (pend) return; pend = w.requestAnimationFrame(() => { pend = 0; d.querySelectorAll(SEL).forEach(corrige); }); };
+  new w.MutationObserver(varre).observe(d.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['style', 'aria-expanded'] });
+  w.addEventListener('resize', varre); varre();
 }
 /* Ctrl+V com o chat aberto: o print colado entra no campo de anexo do chat */
 if (!d.__psColar) { d.__psColar = true;
