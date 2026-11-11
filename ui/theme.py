@@ -312,6 +312,18 @@ html, body, .stApp, button, input, textarea, select, [data-testid="stMarkdownCon
 html {{ zoom: var(--ps-zoom, .8); }}
 iframe[data-testid="stCustomComponentV1"] {{ width: 100% !important; }}
 .ps-zfix {{ transform: translate(var(--ps-zx), var(--ps-zy)) !important; }}
+[data-testid="stElementContainer"]:has(#ps-conta-dados) {{ display: none !important; }}
+/* conta no menu do topo: só a foto num círculo minimalista com luz neon */
+[data-testid="stTopNavSection"]:has(> .ps-avatar) {{ padding: 0 4px !important; gap: 0 !important; }}
+[data-testid="stTopNavSection"]:has(> .ps-avatar) > span:not(.ps-avatar), [data-testid="stTopNavSection"]:has(> .ps-avatar) > div[aria-hidden] {{ display: none !important; }}
+.ps-avatar {{ position: relative; width: 26px; height: 26px; border-radius: 50%; flex: none; display: grid; place-items: center; overflow: visible;
+  background: linear-gradient(135deg, var(--ps-primary), #7A3FD1); color: #fff; font: 700 11px var(--ps-font); letter-spacing: .02em;
+  box-shadow: 0 0 0 2px var(--ps-surface-solid), 0 0 0 3.5px var(--ps-primary), 0 0 14px 2px color-mix(in srgb, var(--ps-primary) 60%, transparent);
+  animation: ps-aura 3.2s ease-in-out infinite; transition: transform .2s; }}
+.ps-avatar img {{ width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }}
+[data-testid="stTopNavSection"]:hover > .ps-avatar, [data-testid="stTopNavSection"][aria-expanded="true"] > .ps-avatar {{ transform: scale(1.08); }}
+@keyframes ps-aura {{ 0%, 100% {{ box-shadow: 0 0 0 2px var(--ps-surface-solid), 0 0 0 3.5px var(--ps-primary), 0 0 10px 1px color-mix(in srgb, var(--ps-primary) 45%, transparent); }}
+  50% {{ box-shadow: 0 0 0 2px var(--ps-surface-solid), 0 0 0 3.5px var(--ps-primary), 0 0 20px 4px color-mix(in srgb, var(--ps-primary) 70%, transparent); }} }}
 .ps-zoff {{ translate: var(--ps-dx, 0px) var(--ps-dy, 0px) !important; }}   /* deslocamento que alinha o menu embaixo de quem o abriu */   /* menus abrem embaixo de onde foram chamados, mesmo com o zoom de 80% */
 [data-testid="stMain"] {{ height: calc(100vh / var(--ps-zoom, .8)) !important; max-height: calc(100vh / var(--ps-zoom, .8)) !important; }}   /* área rolável ocupa a tela inteira mesmo com o zoom */   /* com o zoom do site, o Streamlit mede a largura das telas HTML a menos */   /* o site abre em 80% em qualquer máquina; o zoom do navegador continua funcionando por cima */
 [data-testid="stIconMaterial"], .ms {{ font-family: 'Material Symbols Rounded' !important; font-weight: 400; }}

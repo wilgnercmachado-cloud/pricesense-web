@@ -95,6 +95,30 @@ def avatar_html(tamanho: int = 52) -> str:
     return f"<div class='ps-avatar' style='{estilo}'>{inicial}</div>"
 
 
+@st.cache_data(show_spinner=False, max_entries=64)
+def _miniatura_avatar(b64: str) -> str:
+    """Foto do perfil reduzida para o círculo do menu (96 px, leve)."""
+    import base64
+    import io
+    from PIL import Image
+    try:
+        img = Image.open(io.BytesIO(base64.b64decode(b64))).convert("RGB")
+        lado = min(img.size); x0, y0 = (img.width - lado) // 2, (img.height - lado) // 2
+        img = img.crop((x0, y0, x0 + lado, y0 + lado)).resize((96, 96))
+        buf = io.BytesIO(); img.save(buf, "JPEG", quality=82)
+        return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
+    except Exception:
+        return ""
+
+
+def avatar_no_menu(nome_curto: str, nome: str, foto_b64: str) -> None:
+    """No lugar do nome, no menu do topo: a foto do usuário num círculo com luz neon (sem foto, as iniciais).
+    O script do menu lê esta marca e monta o círculo; o menu Meu perfil continua abrindo ao passar o mouse."""
+    ini = "".join(p[0] for p in (nome or nome_curto or "?").split()[:2]).upper()
+    foto = _miniatura_avatar(foto_b64) if foto_b64 else ""
+    st.html(f"<div id='ps-conta-dados' hidden data-nome='{esc(nome_curto)}' data-completo='{esc(nome)}' data-ini='{esc(ini)}' data-foto='{foto}'></div>")
+
+
 def vazio(titulo: str, texto: str) -> None:
     st.html(f"<div class='ps-empty'><h3>{esc(titulo)}</h3><p>{esc(texto)}</p></div>")
 
@@ -407,6 +431,25 @@ if (!d.__psGaveta) { d.__psGaveta = true;            /* botão ✕ das gavetas: 
 /* zoom do site (80%): menus suspensos, listas de opções e janelas abrem colados em quem os chamou.
    Em vez de supor como cada navegador calcula a posição com zoom, mede onde o menu ficou e onde está o botão/campo
    que o abriu, e corrige só a diferença (funciona em qualquer versão do Chrome, Edge ou Firefox). */
+/* menu da conta: a foto do usuário num círculo com luz neon no lugar do nome */
+{ /* reinstalado a cada carga do script (o anterior pode ter sido descartado junto com o quadro dele) */
+  const montar = () => { const dados = d.getElementById('ps-conta-dados'); if (!dados) return;
+    const nome = dados.dataset.nome || '', foto = dados.dataset.foto || '', ini = dados.dataset.ini || '?', completo = dados.dataset.completo || nome;
+    const rotulo = x => { const p_ = x.querySelector('[data-testid="stMarkdownContainer"]'); return ((p_ ? p_.textContent : x.textContent) || '').trim(); };
+    const sec = [...d.querySelectorAll('[data-testid="stTopNavSection"]')].find(x => x.querySelector('.ps-avatar') || rotulo(x) === nome);
+    if (!sec) return;
+    let av = sec.querySelector('.ps-avatar');
+    const chave = foto ? foto.slice(-40) : 'ini:' + ini;
+    if (!av) { av = d.createElement('span'); av.className = 'ps-avatar'; sec.insertBefore(av, sec.firstChild); sec.classList.add('ps-conta'); }
+    if (av.dataset.chave !== chave) { av.dataset.chave = chave;
+      av.innerHTML = foto ? `<img src="${foto}" alt="">` : `<b>${ini.replace(/[<>&"]/g, '')}</b>`; }
+    sec.title = completo + ' · Meu perfil'; };
+  if (w.__psAvatarObs) { try { w.__psAvatarObs.disconnect(); } catch (e) {} }
+  if (w.__psAvatarTimer) w.clearInterval(w.__psAvatarTimer);
+  w.__psAvatarObs = new w.MutationObserver(() => w.requestAnimationFrame(montar));
+  w.__psAvatarObs.observe(d.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-foto', 'data-nome'] });
+  w.__psAvatarTimer = w.setInterval(montar, 1000); montar();
+}
 if (!d.__psZoomFix2) { d.__psZoomFix2 = true;
   const SEL = '[data-testid="stTopNavPopoverBody"], [data-testid="stPopoverBody"], [data-testid$="Dropdown"]';
   let ultimoMenu = null;   /* último item do menu do topo em que o mouse passou (vale para qualquer versão do Streamlit) */
