@@ -114,15 +114,34 @@ def render() -> None:
         for u in uploads:
             with st.container(border=True, key=f"psc_up_{u['id']}"):
                 c1, c2, c3 = st.columns([3, 0.8, 0.8], vertical_alignment="center")
-                res = ", ".join(f"{ui.numero(v)} {k}" for k, v in (u.get("resumo") or {}).items())
+                res = ", ".join(f"{ui.numero(v)} {k}" if isinstance(v, (int, float)) else f"{k}: {v}" for k, v in (u.get("resumo") or {}).items())
                 c1.html(f"<b>{ui.esc(ap.TIPOS.get(u['tipo'], u['tipo']))}</b><br><span style='color:var(--ps-muted);font-size:.86rem'>"
                         f"{ui.esc(u.get('usuario'))} enviou {ui.esc(u.get('nome_arquivo') or '')}"
                         f"{' em ' + ui.esc(str(u.get('criado_em'))[:16].replace('T', ' ')) if u.get('criado_em') else ''}"
                         f"{': ' + ui.esc(res) if res else ''}</span>")
+                editados = None
+                if u.get("tipo") == "margens":                      # o administrador pode editar as margens antes de aprovar
+                    import json as _json
+                    import pandas as _pd
+                    try:
+                        ped = _json.loads(ap.conteudo(u))
+                        st.caption(f"Escopo: {ped.get('escopo')} · origem: {ped.get('origem')}" + (f" · observação: {ped.get('obs')}" if ped.get("obs") else "")
+                                   + ". Edite as margens antes de aprovar, se precisar; o solicitante recebe o aviso com as modificações.")
+                        tab = _pd.DataFrame([{"Produto": i["produto"], "Objetiva atual": i.get("obj_atual"), "Mínima atual": i.get("min_atual"),
+                                              "Máxima atual": i.get("max_atual"), "Nova objetiva": i["obj"], "Nova mínima": i["min"], "Nova máxima": i["max"]}
+                                             for i in ped["itens"]])
+                        ed = st.data_editor(tab, key=f"up_ed_{u['id']}", hide_index=True, width="stretch",
+                                            disabled=["Produto", "Objetiva atual", "Mínima atual", "Máxima atual"],
+                                            column_config={c: st.column_config.NumberColumn(c, format="%.1f%%") for c in tab.columns if c != "Produto"})
+                        editados = [{"produto": r["Produto"], "obj": float(r["Nova objetiva"]), "min": float(r["Nova mínima"]), "max": float(r["Nova máxima"])}
+                                    for _, r in ed.iterrows()]
+                    except Exception as exc:
+                        st.error(f"Não foi possível abrir o pedido: {exc}", icon=":material/error:")
                 if c2.button("Aprovar", type="primary", key=f"up_ok_{u['id']}", width="stretch"):
                     try:
                         barra = st.progress(0.0, text="Gravando no Supabase")
-                        msg = ap.aprovar(u, st.session_state.get("usuario_login", ""), progresso=lambda x: barra.progress(x, text="Gravando no Supabase"))
+                        msg = ap.aprovar(u, st.session_state.get("usuario_login", ""), progresso=lambda x: barra.progress(x, text="Gravando no Supabase"),
+                                         itens_editados=editados)
                         st.toast(f"Aprovado e gravado: {msg}.", icon=":material/check_circle:")
                         st.rerun()
                     except Exception as exc:

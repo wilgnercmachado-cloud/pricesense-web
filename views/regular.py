@@ -703,6 +703,22 @@ def render() -> None:
                     altura=900, info=info, usuario=usuario, base=base_id, atualizado=_data_base(rel, meta), backups=backups, historico=historico, estado=estado,
                     key="mesa_regular", default=None)
     _rele_ao_vivo(ao_vivo["base"], ao_vivo["transmitir"], ao_vivo["assistir"], usuario)
+    if isinstance(retorno, dict) and retorno.get("ts") != st.session_state.get("_reg_ts") and retorno.get("acao") == "sugerir_margem":
+        st.session_state._reg_ts = retorno.get("ts")
+        from core import revisao as rv
+        uf_ = str(retorno.get("estado") or "")
+        if retorno.get("escopo") == "estado":
+            fil_ = sorted({int(x.split(" - ")[0]) for x in df_base.loc[df_base["Estado"].astype(str).str.startswith(uf_ + " "), "Filial"].astype(str).unique()
+                           if x.split(" - ")[0].isdigit()})
+            txt_ = f"estado {uf_} inteiro"
+        else:
+            fil_, txt_ = [int(retorno.get("filial"))], f"zona da filial {retorno.get('filial')}"
+        item_ = {k: retorno.get(k) for k in ("produto", "obj", "min", "max", "obj_atual", "min_atual", "max_atual")}
+        try:
+            rv.pedir(usuario, st.session_state.get("usuario_logado") or usuario, [item_], fil_, txt_, "PriceMetrics", retorno.get("obs") or "")
+            st.toast(f"Pedido de nova margem enviado ({txt_}). Só entra depois da aprovação do administrador.", icon=":material/send:")
+        except Exception as exc:
+            st.toast(f"Não foi possível enviar: {exc}", icon=":material/error:")
     if isinstance(retorno, dict) and retorno.get("ts") != st.session_state.get("_reg_ts") and retorno.get("acao") in ("sugerir", "sugerir_lote", "aceitar_sug", "rejeitar_sug", "aplicados"):
         st.session_state._reg_ts = retorno.get("ts")
         try:
