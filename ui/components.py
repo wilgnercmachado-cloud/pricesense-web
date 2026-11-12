@@ -281,15 +281,20 @@ ligar(); setInterval(ligar, 800);
 
 
 def relatorio_html(gz: bytes | None = None, altura: int = 860, nome_arquivo: str | None = None, barra: bool = True,
-                   links: list[str] | None = None) -> None:
+                   links: list[str] | None = None, chave: str | None = None) -> None:
     """Exibe um relatório HTML (gzip ou texto puro).
 
     Com `links`, o navegador baixa as partes direto do Supabase (nada passa pelo servidor do Streamlit).
     Com `gz`, o conteúdo vai embutido (usado na pré-visualização). O navegador descompacta.
     O relatório roda num iframe com sandbox sem same-origin: scripts funcionam, mas não acessam o app.
     `nome_arquivo` habilita o botão de download (só administradores recebem esse parâmetro).
+
+    O código gerado aqui não depende do tema nem do horário: com os mesmos parâmetros ele é idêntico,
+    então o Streamlit mantém o quadro na tela entre as execuções e o relatório não recarrega sozinho.
+    As cores vêm das variáveis --ps-* da página (trocar o tema não redesenha o relatório).
+    `chave` (id + versão) guarda o último relatório aberto na memória da aba: se o quadro precisar
+    ser montado de novo, ele volta na hora, sem baixar outra vez.
     """
-    t = theme.tokens()
     b64 = base64.b64encode(gz).decode("ascii") if gz is not None else ""
     alt_barra = 48 if barra else 0
     download = "<button id='dl' type='button' disabled>Baixar HTML</button>" if nome_arquivo else ""
@@ -297,16 +302,16 @@ def relatorio_html(gz: bytes | None = None, altura: int = 860, nome_arquivo: str
                   f"<button id='fs' type='button' disabled title='Tela cheia (Esc para sair)'>Tela cheia</button></div></div>"
                   if barra else "")
     components.html(f"""<!doctype html><html><head><meta charset="utf-8"><style>
-html,body{{margin:0;height:100%;background:transparent;font:14px 'Archivo','Helvetica Neue',Arial,sans-serif;color:{t['ink']}}}
+html,body{{margin:0;height:100%;background:transparent;font:14px 'Archivo','Helvetica Neue',Arial,sans-serif;color:var(--ps-ink,#1B2230)}}
 .bar{{height:{alt_barra}px;display:flex;align-items:center;justify-content:space-between;gap:12px}}
-.bar span{{color:{t['muted']};font-size:13px}}
+.bar span{{color:var(--ps-muted,#5A6372);font-size:13px}}
 .acoes{{display:flex;gap:8px}}
-button{{height:38px;padding:0 16px;border-radius:8px;border:1px solid {t['line']};background:{t['surface_solid']};color:{t['ink']};
+button{{height:38px;padding:0 16px;border-radius:8px;border:1px solid var(--ps-line,#D8DEE8);background:var(--ps-surface-solid,#fff);color:var(--ps-ink,#1B2230);
 font:500 14px 'Archivo','Helvetica Neue',Arial,sans-serif;cursor:pointer}}
-button:hover:not(:disabled){{border-color:{t['primary']};color:{t['primary']}}}
+button:hover:not(:disabled){{border-color:var(--ps-primary,#2D4BFF);color:var(--ps-primary,#2D4BFF)}}
 button:disabled{{opacity:.5;cursor:default}}
-button:focus-visible{{outline:2px solid {t['primary']};outline-offset:2px}}
-.box{{height:calc(100% - {alt_barra}px);border:1px solid {t['line']};border-radius:10px;overflow:hidden;background:#fff;position:relative}}
+button:focus-visible{{outline:2px solid var(--ps-primary,#2D4BFF);outline-offset:2px}}
+.box{{height:calc(100% - {alt_barra}px);border:1px solid var(--ps-line,#D8DEE8);border-radius:10px;overflow:hidden;background:#fff;position:relative}}
 .box:fullscreen{{border:0;border-radius:0}}
 .msg{{position:absolute;inset:0;display:grid;place-items:center;color:#5A6372;font-size:15px}}
 iframe{{display:block;width:100%;height:100%;border:0}}
@@ -317,6 +322,29 @@ iframe{{display:block;width:100%;height:100%;border:0}}
 <script>
 const B64 = "{b64}";
 const LINKS = {json.dumps(links or [])};
+const CHAVE = {json.dumps(chave or "")};
+/* cores do tema atual da página (acompanha a troca de tema sem redesenhar o relatório) */
+(function cores() {{
+  let ultimo = '';
+  const copiar = () => {{
+    try {{
+      const pd = window.parent.document, fonte = pd.querySelector('.stApp') || pd.documentElement;
+      const cs = window.parent.getComputedStyle(fonte), raiz = document.documentElement.style;
+      const vals = ['ink', 'muted', 'line', 'primary', 'surface-solid'].map(n => cs.getPropertyValue('--ps-' + n).trim());
+      const assinatura = vals.join('|');
+      if (assinatura === ultimo) return;
+      ultimo = assinatura;
+      ['ink', 'muted', 'line', 'primary', 'surface-solid'].forEach((n, i) => {{ if (vals[i]) raiz.setProperty('--ps-' + n, vals[i]); }});
+    }} catch (_) {{}}
+  }};
+  copiar(); setInterval(copiar, 1000);
+}})();
+function guardado() {{
+  try {{ const g = window.parent.__psRelatorio; return CHAVE && g && g.chave === CHAVE ? g.html : null; }} catch (_) {{ return null; }}
+}}
+function guardar(html) {{
+  try {{ if (CHAVE) window.parent.__psRelatorio = {{chave: CHAVE, html: html}}; }} catch (_) {{}}   /* só o último relatório */
+}}
 async function obterBytes(msg) {{
   if (!LINKS.length) {{
     const bin = atob(B64), bytes = new Uint8Array(bin.length);
@@ -343,17 +371,23 @@ async function obterBytes(msg) {{
 (async () => {{
   const msg = document.getElementById('msg'), info = document.getElementById('info');
   try {{
-    const bruto = new Blob(await obterBytes(msg));
-    const inicio = new Uint8Array(await bruto.slice(0, 2).arrayBuffer());
-    let blob;
-    if (inicio[0] === 0x1f && inicio[1] === 0x8b) {{
-      msg.textContent = 'Descompactando';
-      const stream = bruto.stream().pipeThrough(new DecompressionStream('gzip'));
-      blob = new Blob([await new Response(stream).arrayBuffer()], {{type: 'text/html;charset=utf-8'}});
+    let texto = guardado(), blob;
+    if (texto === null) {{
+      const bruto = new Blob(await obterBytes(msg));
+      const inicio = new Uint8Array(await bruto.slice(0, 2).arrayBuffer());
+      if (inicio[0] === 0x1f && inicio[1] === 0x8b) {{
+        msg.textContent = 'Descompactando';
+        const stream = bruto.stream().pipeThrough(new DecompressionStream('gzip'));
+        blob = new Blob([await new Response(stream).arrayBuffer()], {{type: 'text/html;charset=utf-8'}});
+      }} else {{
+        blob = new Blob([bruto], {{type: 'text/html;charset=utf-8'}});
+      }}
+      texto = await blob.text();
+      guardar(texto);
     }} else {{
-      blob = new Blob([bruto], {{type: 'text/html;charset=utf-8'}});
+      blob = new Blob([texto], {{type: 'text/html;charset=utf-8'}});
     }}
-    document.getElementById('f').srcdoc = await blob.text();
+    document.getElementById('f').srcdoc = texto;
     msg.remove();
     const tam = blob.size >= 1048576 ? (blob.size / 1048576).toFixed(1).replace('.', ',') + ' MB'
                                       : Math.max(1, Math.round(blob.size / 1024)) + ' KB';
