@@ -156,6 +156,41 @@ def inserir_usuario(registro: dict) -> None:
 
 
 # ---------------------------------------------------------------- clusters
+@st.cache_data(ttl=600, show_spinner=False)
+def lojas_lista() -> list[dict]:
+    """Filiais da tabela lojas: [{"id": "500", "nome": "500 - Paralela BA", "estado": "BA"}], ordenadas pelo ID."""
+    try:
+        dados = sb().table("lojas").select("*").execute().data or []
+    except Exception:
+        return []
+    out, vistos = [], set()
+    for r in dados:
+        nome = str(r.get("filial") or "").strip()
+        fid = nome.split("-")[0].strip()
+        if not fid or fid in vistos:
+            continue
+        vistos.add(fid)
+        out.append({"id": fid, "nome": nome, "estado": str(r.get("estado") or "").strip().upper()})
+    return sorted(out, key=lambda x: (int(x["id"]) if x["id"].isdigit() else 10 ** 9, x["id"]))
+
+
+def cadastrar_cluster(cluster: str, filiais: list[str]) -> int:
+    """Soma o cluster novo à tabela filial-cluster (uma linha por filial). Não apaga nem repete o que já existe."""
+    from core import promo_engine as pe
+    nome = str(cluster).strip()
+    existentes = {(pe.chave_cluster(r.get("CLUSTER")), pe._texto_id(r.get("ID FILIAL")))
+                  for r in (sb().table("filial-cluster").select("*").execute().data or [])}
+    novos = []
+    for f in dict.fromkeys(str(x).strip() for x in filiais if str(x).strip()):
+        if (pe.chave_cluster(nome), f) in existentes:
+            continue
+        novos.append({"CLUSTER": nome, "ID FILIAL": int(f) if f.isdigit() else f})
+    if novos:
+        sb().table("filial-cluster").insert(novos).execute()
+    clusters.clear()
+    return len(novos)
+
+
 def solicitar_cluster(cluster: str, id_filial: str, solicitante: str) -> None:
     sb().table("solicitacoes_cluster").insert({
         "cluster": cluster, "id_filial": id_filial,

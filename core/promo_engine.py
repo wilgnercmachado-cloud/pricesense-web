@@ -23,9 +23,11 @@ def validar_status_conflitos(df_alvo: pd.DataFrame) -> pd.Series:
     df_temp['QTD_PRECOS'] = df_temp.groupby(['ID FILIAL', 'SEQPRODUTO', col_campanha, 'INICIO', 'FIM'])['PRECO_NUM'].transform('nunique')
 
     # Conflito de datas: períodos que se cruzam para o mesmo produto e filial.
-    df_temp['FIM_MAX_ANT'] = df_temp.groupby(['ID FILIAL', 'SEQPRODUTO'])['DT_F_MATH'].transform(lambda x: x.shift().cummax())
+    # to_datetime: com base vazia o pandas novo devolve a coluna como texto/objeto e a comparação de datas quebra
+    df_temp['FIM_MAX_ANT'] = pd.to_datetime(df_temp.groupby(['ID FILIAL', 'SEQPRODUTO'])['DT_F_MATH'].transform(lambda x: x.shift().cummax()), errors='coerce')
+    df_temp['DT_I_MATH'] = pd.to_datetime(df_temp['DT_I_MATH'], errors='coerce')
     df_temp['SOU_INVASOR'] = df_temp['DT_I_MATH'] <= df_temp['FIM_MAX_ANT']
-    df_temp['INI_PROXIMO'] = df_temp.groupby(['ID FILIAL', 'SEQPRODUTO'])['DT_I_MATH'].shift(-1)
+    df_temp['INI_PROXIMO'] = pd.to_datetime(df_temp.groupby(['ID FILIAL', 'SEQPRODUTO'])['DT_I_MATH'].shift(-1), errors='coerce')
     df_temp['FUI_INVADIDO'] = df_temp['DT_F_MATH'] >= df_temp['INI_PROXIMO']
     df_temp['TEM_CONFLITO_DATA'] = df_temp['SOU_INVASOR'] | df_temp['FUI_INVADIDO']
 
@@ -68,6 +70,54 @@ def _limpar_preco(p) -> float:
         return 0.0
 
 
+def _texto_id(v) -> str:
+    """Filial ou cluster como texto limpo: 544.0 -> '544'; vazio -> ''."""
+    if v is None:
+        return ''
+    if isinstance(v, float):
+        if np.isnan(v):
+            return ''
+        if v.is_integer():
+            return str(int(v))
+    t = str(v).strip()
+    if t.lower() in ('nan', 'none', '<na>'):
+        return ''
+    return t[:-2] if t.endswith('.0') and t[:-2].isdigit() else t
+
+
+def chave_cluster(v) -> str:
+    """Nome do cluster para comparação (sem diferença de maiúsculas e espaços nas pontas)."""
+    return _texto_id(v).upper()
+
+
+def _abrir_clusters(df_bruto: pd.DataFrame, df_clusters: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
+    """Troca cada CLUSTER/LOJA pelas filiais cadastradas no Supabase (tabela filial-cluster).
+
+    Tudo é comparado como texto, para não misturar números e textos na mesma coluna (o pandas novo
+    do Streamlit Cloud recusa essa mistura). Código numérico é a própria filial. Cluster sem cadastro
+    NÃO vira filial: as linhas ficam fora e o nome volta na lista de clusters sem cadastro.
+    """
+    base = df_bruto.drop(columns=[c for c in ('ID FILIAL', 'CLUSTER') if c in df_bruto.columns]).copy()
+    base['_CL'] = pd.Series([chave_cluster(v) for v in base['CLUSTER/LOJA']], index=base.index, dtype=object)
+    mapa = pd.DataFrame({'_CL': [], 'ID FILIAL': []}, dtype=object)
+    if df_clusters is not None and not df_clusters.empty and {'CLUSTER', 'ID FILIAL'} <= set(df_clusters.columns):
+        mapa = pd.DataFrame({'_CL': [chave_cluster(v) for v in df_clusters['CLUSTER']],
+                             'ID FILIAL': [_texto_id(v) for v in df_clusters['ID FILIAL']]}, dtype=object)
+        mapa = mapa[(mapa['_CL'] != '') & (mapa['ID FILIAL'] != '')].drop_duplicates()
+    eh_loja = pd.Series([c.isdigit() for c in base['_CL']], index=base.index, dtype=bool)
+    lojas = base[eh_loja].copy()
+    lojas['ID FILIAL'] = lojas['_CL']
+    clusters = base[~eh_loja & (base['_CL'] != '')].merge(mapa, on='_CL', how='left')
+    sem = clusters['ID FILIAL'].isna()
+    nomes = {}
+    for v in base.loc[~eh_loja, 'CLUSTER/LOJA']:
+        nomes.setdefault(chave_cluster(v), _texto_id(v))
+    fora = [nomes[c] for c in dict.fromkeys(clusters.loc[sem, '_CL'])]
+    df = pd.concat([lojas, clusters[~sem]], ignore_index=True)
+    df['ID FILIAL'] = pd.Series([str(v) for v in df['ID FILIAL']], index=df.index, dtype=object)
+    return df.drop(columns=['_CL']), fora
+
+
 def processar(dfs: list[pd.DataFrame], df_clusters: pd.DataFrame, mapa_lojas: dict) -> dict:
     df_bruto = pd.concat(dfs, ignore_index=True)
     df_bruto.rename(columns=lambda x: str(x).strip().upper(), inplace=True)
@@ -85,20 +135,18 @@ def processar(dfs: list[pd.DataFrame], df_clusters: pd.DataFrame, mapa_lojas: di
     else:
         df_bruto['PRECO_NUM'] = 0.0
 
-    if 'CLUSTER/LOJA' in df_bruto.columns and not df_clusters.empty:
-        df_explodido = df_bruto.merge(df_clusters, left_on='CLUSTER/LOJA', right_on='CLUSTER', how='left')
-        ids = pd.Series([_normalizar_id(v) for v in df_explodido['ID FILIAL']], index=df_explodido.index, dtype=object)
-        df_explodido['ID FILIAL'] = pd.Series(
-            [i if i is not None else c for i, c in zip(ids, df_explodido['CLUSTER/LOJA'])], index=df_explodido.index, dtype=object)
-        sem_mapa = df_explodido[df_explodido['ID FILIAL'] == df_explodido['CLUSTER/LOJA']]['CLUSTER/LOJA'].unique().tolist()
-        # código numérico é a própria filial (loja), não um cluster sem mapeamento
-        clusters_fora = [c for c in sem_mapa if not str(c).strip().split('.')[0].isdigit()]
+    if 'CLUSTER/LOJA' in df_bruto.columns:
+        df_explodido, clusters_fora = _abrir_clusters(df_bruto, df_clusters)
     else:
         df_explodido = df_bruto.copy()
-        df_explodido['ID FILIAL'] = df_explodido['CLUSTER/LOJA'] if 'CLUSTER/LOJA' in df_explodido.columns else 'DESCONHECIDO'
+        df_explodido['ID FILIAL'] = 'DESCONHECIDO'
         clusters_fora = []
 
     df_explodido['FILIAL ABREV'] = df_explodido['ID FILIAL'].astype(str).map(mapa_lojas).fillna(df_explodido['ID FILIAL'].astype(str))
+
+    if clusters_fora:
+        # há cluster sem cadastro: a tela pede o cadastro antes de abrir a análise, então não precisa validar agora
+        return {"df": df_explodido, "clusters_fora": clusters_fora, "vencidas": []}
 
     if 'SEQPRODUTO' in df_explodido.columns:
         df_limpo = df_explodido.drop_duplicates(subset=['ID FILIAL', 'SEQPRODUTO', 'PRECO_NUM', 'INICIO', 'FIM']).copy()
