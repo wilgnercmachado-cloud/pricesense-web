@@ -318,7 +318,9 @@ def _controle_ao_vivo(modo: str, df: pd.DataFrame, rel: dict) -> dict:
                 st.caption("Nenhuma precificação online nos seus estados hoje. Assim que um analista iniciar, os preços dele aparecem aqui ao vivo.")
     transmitir = {"id": minha["id"], "estados": av.estados_de(minha)} if minha else None
     assistir = modo == "comercial" or (modo == "pricing" and not minha and bool(ss.get("av_assistir")) and bool(outros))
-    return {"base": base, "transmitir": transmitir, "assistir": assistir,
+    # assistindo com alguém ao vivo: a mesa mostra só os estados que estão sendo transmitidos (o Comercial entra direto neles)
+    ufs_vivos = sorted(uf for uf, s_ in ao_vivo.items() if uf in ufs and s_.get("analista") != usuario) if assistir else []
+    return {"base": base, "transmitir": transmitir, "assistir": assistir, "ufs_vivos": ufs_vivos,
             "chave": ("T" + transmitir["id"][:8]) if transmitir else ("A" if assistir else "N")}
 
 
@@ -732,7 +734,10 @@ def render() -> None:
                        str(len(travas)), str(float(travas["margem_min"].sum()) if len(travas) else 0), str(travas["atualizado_em"].max() if len(travas) else ""),
                        st.session_state.get("usuario_login", ""), str(params.drop(columns=["atualizado_em", "atualizado_por"]).to_dict("records")) if len(params) else "",
                        _target_versao()])
-    filtros = json.dumps({**{k: (sorted(v) if isinstance(v, list) else v) for k, v in f.items()}, "_ufs": permitidos or []},
+    ufs_mesa = permitidos or []
+    if ao_vivo.get("ufs_vivos"):                                        # assistindo: só os estados ao vivo
+        ufs_mesa = sorted(set(ao_vivo["ufs_vivos"]) & set(permitidos)) if permitidos else list(ao_vivo["ufs_vivos"])
+    filtros = json.dumps({**{k: (sorted(v) if isinstance(v, list) else v) for k, v in f.items()}, "_ufs": ufs_mesa},
                          sort_keys=True, ensure_ascii=False)          # os estados do usuário entram na chave do pacote guardado
     dados, n, chave = _dados_mesa(filtros, versao, df_all, meta, regras, props, travas, params)
     if n == 0:
