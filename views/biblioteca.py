@@ -134,8 +134,7 @@ def _visualizador(rel: dict, prefs: dict) -> None:
     favorito = bool(prefs.get(str(rel["id"]), {}).get("favorito"))
 
     try:
-        links = reports.links_assinados(rel["arquivo_path"], int(rel.get("partes") or 1),
-                                        str(rel.get("atualizado_em") or rel.get("versao")))
+        links = reports.links_sessao(rel)          # fixos na sessão: o relatório não recarrega sozinho
     except Exception as exc:
         st.error(f"Não foi possível localizar o arquivo do relatório: {exc}", icon=":material/error:")
         return
@@ -166,7 +165,8 @@ def _visualizador(rel: dict, prefs: dict) -> None:
 
     st.html("<div style='height:8px'></div>")
     with st.container(key="rel_quadro"):
-        ui.relatorio_html(links=links, altura=ALTURA, barra=False)
+        ui.relatorio_html(links=links, altura=ALTURA, barra=False,
+                          chave=f"{rel['id']}|{rel.get('atualizado_em') or rel.get('versao')}")
 
 
 def render() -> None:
