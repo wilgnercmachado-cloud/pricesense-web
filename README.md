@@ -152,7 +152,7 @@ Categoria → produto, filtros de **vários estados ou todos**, filiais, departa
 
 **Pesquisa de Mercado:** termômetro, ranking, grade de produtos e extrações em Excel, a partir dos 30 dias da base.
 
-**Metrics Promo:** encartes, calendário de campanhas, conflitos e clusters.
+**Metrics Promo:** encartes, calendário de campanhas, conflitos e clusters. Cada CLUSTER/LOJA vira as filiais da tabela `filial-cluster` (comparação só em texto, sem diferença de maiúsculas; código numérico é a própria filial). O nome do cluster **nunca** entra no lugar do ID da filial: se a planilha tiver cluster sem cadastro, abre uma janela (que só fecha cadastrando ou cancelando o envio) para escolher as filiais de cada cluster; o cadastro é somado à `filial-cluster` no Supabase e a análise abre em seguida. Importação (igual à planilha FORMATO_PADRÃO_IMPORTS, com números e datas de verdade no Excel e uma aba com o nome do modelo): **novo, aplicar e cancelar** = ID FILIAL | ID TIPO | ID OFERTA | ID PRODUTO | PREÇO | DATA INICIO | DATA FIM | SIMILAR | OPERACAO (1 aplicar, 2 cancelar; SIMILAR escolhido no painel, NAO marcado por padrão); **antigo, aplicar** = ID FILIAL | ID TIPO | ID OFERTA | ID MOTIVO (7) | ID PRODUTO | PREÇO | DATA INICIO | DATA FIM; **antigo, cancelar** = ID FILIAL | ID TIPO | ID OFERTA | ID PRODUTO. ID TIPO 1 = varejo, 2 = atacado; ID OFERTA = 2 com 4 dias ou mais, 1 com 3 dias ou menos.
 
 **PriceBot:** cola preços, aplica a régua e gera a importação (só lojas dos estados do usuário).
 
