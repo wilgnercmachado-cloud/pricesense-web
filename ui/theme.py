@@ -138,6 +138,69 @@ def aplicar() -> None:
     st.html(f"<style>{_css(t)}</style>")
 
 
+def _css_widgets() -> str:
+    """Cores dos componentes nativos do Streamlit sempre pelas variáveis da SESSÃO (--ps-*).
+    O tema nativo do Streamlit é do servidor inteiro (o último usuário que trocou de tema muda para todos); aqui cada pessoa
+    vê abas, campos, listas, botões e textos nas cores do próprio tema, em qualquer um dos três modos."""
+    return """
+/* ---------- componentes nativos nas cores do tema da sessão ---------- */
+.stApp, .stApp [data-testid="stMarkdownContainer"], .stApp [data-testid="stText"] { color: var(--ps-ink); }
+[data-testid="stWidgetLabel"], [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label { color: var(--ps-ink) !important; }
+[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p { color: var(--ps-muted) !important; }
+h1, h2, h3, h4, h5 { color: var(--ps-ink); }
+/* abas */
+[data-baseweb="tab-list"] { border-bottom-color: var(--ps-line) !important; }
+button[role="tab"], button[role="tab"] p { color: var(--ps-muted) !important; background: transparent !important; }
+button[role="tab"]:hover, button[role="tab"]:hover p { color: var(--ps-ink) !important; }
+button[role="tab"][aria-selected="true"], button[role="tab"][aria-selected="true"] p { color: var(--ps-primary) !important; }
+[data-baseweb="tab-highlight"] { background: var(--ps-primary) !important; }
+[data-baseweb="tab-border"] { background: var(--ps-line) !important; }
+/* campos de texto, número, data, área de texto e listas */
+[data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"], [data-testid="stTextInputRootElement"],
+[data-testid="stNumberInputContainer"], [data-baseweb="select"] > div, [data-testid="stDateInputField"] {
+  background-color: var(--ps-field) !important; border-color: var(--ps-line) !important; color: var(--ps-ink) !important; }
+[data-baseweb="input"] input, [data-baseweb="base-input"] input, [data-baseweb="textarea"] textarea, [data-baseweb="select"] input,
+[data-testid="stNumberInputContainer"] input, .stApp input[type="text"], .stApp input[type="password"], .stApp input[type="number"], .stApp textarea {
+  color: var(--ps-ink) !important; -webkit-text-fill-color: var(--ps-ink) !important; background-color: transparent !important; caret-color: var(--ps-primary); }
+.stApp input::placeholder, .stApp textarea::placeholder, [data-baseweb="select"] [aria-hidden="true"] { color: var(--ps-faint) !important; -webkit-text-fill-color: var(--ps-faint) !important; }
+[data-baseweb="select"] div, [data-baseweb="select"] span { color: var(--ps-ink); }
+[data-baseweb="select"] svg, [data-baseweb="input"] svg, [data-testid="stNumberInputContainer"] button { color: var(--ps-muted) !important; fill: currentColor; }
+[data-testid="stNumberInputContainer"] button { background: var(--ps-raised) !important; }
+/* listas suspensas e menus (ficam fora do corpo do site) */
+[data-baseweb="popover"] [role="listbox"], [data-baseweb="popover"] ul, [data-baseweb="menu"], [data-testid$="Dropdown"] {
+  background: var(--ps-surface-solid) !important; color: var(--ps-ink) !important; border-color: var(--ps-line) !important; }
+[role="option"], [role="option"] *, [data-baseweb="menu"] li, [data-baseweb="menu"] li * { color: var(--ps-ink) !important; }
+[role="option"]:hover, [role="option"][aria-selected="true"], [data-baseweb="menu"] li:hover { background: var(--ps-raised) !important; }
+/* botões */
+[data-testid="stBaseButton-secondary"], [data-testid="stBaseButton-secondaryFormSubmit"], [data-testid="stPopoverButton"],
+[data-testid="stDownloadButton"] button, [data-testid="stBaseButton-minimal"] {
+  background-color: var(--ps-surface-solid) !important; color: var(--ps-ink) !important; border-color: var(--ps-line) !important; }
+[data-testid="stBaseButton-secondary"] *, [data-testid="stBaseButton-secondaryFormSubmit"] *, [data-testid="stPopoverButton"] *, [data-testid="stDownloadButton"] button * { color: inherit; }
+[data-testid="stBaseButton-secondary"]:hover, [data-testid="stPopoverButton"]:hover { border-color: var(--ps-primary) !important; color: var(--ps-primary) !important; }
+[data-testid="stBaseButton-tertiary"], [data-testid="stBaseButton-tertiary"] * { color: var(--ps-ink) !important; background: transparent !important; }
+[data-testid="stBaseButton-tertiary"]:hover, [data-testid="stBaseButton-tertiary"]:hover * { color: var(--ps-primary) !important; }
+[data-testid="stBaseButton-primary"], [data-testid="stBaseButton-primaryFormSubmit"] { color: #fff !important; }
+[data-testid="stBaseButton-primary"] *, [data-testid="stBaseButton-primaryFormSubmit"] * { color: inherit; }
+button:disabled, [data-testid^="stBaseButton"]:disabled { opacity: .55; }
+/* controles segmentados (ex.: Pricing | Comercial) */
+[data-testid="stButtonGroup"] button { background: var(--ps-surface-solid) !important; color: var(--ps-ink) !important; border-color: var(--ps-line) !important; }
+[data-testid="stButtonGroup"] button[aria-checked="true"], [data-testid="stButtonGroup"] button[kind$="Active"] {
+  background: var(--ps-primary-soft) !important; color: var(--ps-primary) !important; border-color: var(--ps-primary) !important; }
+[data-testid="stButtonGroup"] button * { color: inherit !important; }
+/* caixas de seleção, rádios, chaves */
+[data-testid="stCheckbox"] label, [data-testid="stCheckbox"] p, [data-testid="stRadio"] label, [data-testid="stRadio"] p,
+[data-testid="stToggle"] label, [data-testid="stToggle"] p, .stCheckbox p { color: var(--ps-ink) !important; }
+/* sanfonas, janelas, avisos e tabelas simples */
+[data-testid="stExpander"] details, [data-testid="stExpander"] summary { background: var(--ps-surface-solid) !important; border-color: var(--ps-line) !important; color: var(--ps-ink) !important; }
+[data-testid="stExpander"] summary * { color: var(--ps-ink) !important; }
+[data-testid="stPopoverBody"], [role="dialog"] { color: var(--ps-ink); }
+[data-testid="stTable"] table, [data-testid="stTable"] th, [data-testid="stTable"] td { color: var(--ps-ink) !important; border-color: var(--ps-line) !important; }
+[data-testid="stFileUploaderDropzone"] { background: var(--ps-field) !important; border-color: var(--ps-line) !important; }
+[data-testid="stFileUploaderDropzone"] *, [data-testid="stFileUploaderFile"] * { color: var(--ps-ink); }
+[data-testid="stTooltipContent"] { background: var(--ps-surface-solid) !important; color: var(--ps-ink) !important; }
+"""
+
+
 def _css_neon(c1: str, c2: str, claro: bool) -> str:
     """Toque de neon do Optimus nos modos claro e escuro, cada um com as suas cores (c1 e c2 em "r,g,b"):
     fios de luz nas laterais, barra de luz correndo no topo, brilho no menu, nos botões do canto, nos cartões e nos botões principais."""
@@ -287,13 +350,14 @@ h1, h2, .ps-hero h1 b, .ps-cab h1 { background: linear-gradient(90deg, #E4F6FF 0
 
 def _css(t: dict) -> str:
     v = "\n".join(f"  --ps-{k.replace('_', '-')}: {val};" for k, val in t.items() if k != "shadow")
+    extra_widgets = _css_widgets()
     if modo() == "Dark":
         extra = _css_quantum() + _css_neon("0,229,255", "155,92,255", claro=False)
     elif modo() == "Optimus":
         extra = _css_optimus()
     else:
         extra = _css_neon("45,75,255", "14,159,110", claro=True)
-    return _css_base(t, v) + extra
+    return _css_base(t, v) + extra_widgets + extra
 
 
 def _css_base(t: dict, v: str) -> str:
