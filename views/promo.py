@@ -22,26 +22,95 @@ RAIZ = Path(__file__).resolve().parent.parent
 _PROMO = components.declare_component("promo_metrics", path=_pasta_telas())
 
 
-def _carregar(arquivos) -> None:
+def _aplicar(res: dict, nomes: list[str]) -> None:
+    st.session_state.df_promo_processado = res["df"]
+    st.session_state.clusters_desconhecidos = []
+    st.session_state.campanhas_vencidas = res["vencidas"]
+    st.session_state.promo_arquivos = nomes
+
+
+def _carregar(arquivos) -> bool:
+    """Lê as planilhas. Se houver cluster sem filial cadastrada, guarda o envio e abre a janela de cadastro.
+
+    Devolve True quando algo mudou (a página precisa ser redesenhada).
+    """
     nomes = sorted(f.name for f in arquivos)
-    if st.session_state.get("promo_arquivos") == nomes:
-        return
+    pend = st.session_state.get("promo_pendente")
+    if st.session_state.get("promo_arquivos") == nomes or (pend and pend["nomes"] == nomes):
+        return False
     with st.spinner("Lendo planilhas e abrindo clusters em filiais"):
         dfs, falhas = pe.ler_planilhas(arquivos)
         if falhas:
             st.warning(f"Não foi possível ler: {', '.join(falhas)}.", icon=":material/warning:")
         if not dfs:
-            return
+            return False
         try:
             res = pe.processar(dfs, db.clusters(), db.mapa_lojas())
         except pe.ArquivoSemDatas:
             st.error("As planilhas não têm as colunas INICIO e FIM. Se for um arquivo da pesquisa de mercado, "
                      "envie-o na página Pesquisa de Mercado.", icon=":material/error:")
             st.stop()
-    st.session_state.df_promo_processado = res["df"]
-    st.session_state.clusters_desconhecidos = res["clusters_fora"]
-    st.session_state.campanhas_vencidas = res["vencidas"]
-    st.session_state.promo_arquivos = nomes
+    if res["clusters_fora"]:
+        # nada entra na análise com o nome do cluster no lugar da filial: primeiro o cadastro
+        st.session_state.promo_pendente = {"dfs": dfs, "nomes": nomes, "fora": res["clusters_fora"]}
+        return True
+    st.session_state.pop("promo_pendente", None)
+    _aplicar(res, nomes)
+    return True
+
+
+def _cancelar_envio() -> None:
+    st.session_state.pop("promo_pendente", None)
+    st.session_state.promo_up_ver = st.session_state.get("promo_up_ver", 0) + 1
+
+
+@st.dialog("Clusters sem filial cadastrada", width="large", dismissible=False)
+def _dialogo_clusters() -> None:
+    """Pede as filiais de cada cluster novo, soma o cadastro na tabela filial-cluster e só então abre a análise."""
+    pend = st.session_state.get("promo_pendente")
+    if not pend:
+        st.rerun()
+    lojas = db.lojas_lista()
+    rotulo = {l["id"]: l["nome"] for l in lojas}
+    st.caption("A planilha tem cluster(s) que ainda não estão ligados a nenhuma filial no Supabase. "
+               "Informe as filiais de cada um: o cadastro é somado aos que já existem e a análise abre em seguida.")
+    escolhas = {}
+    for k, cluster in enumerate(pend["fora"]):
+        uf = str(cluster).split("/")[0].strip().upper()[:2]
+        ordem = sorted(lojas, key=lambda l: (l["estado"] != uf,))           # filiais do estado do cluster aparecem primeiro
+        if lojas:
+            escolhas[cluster] = st.multiselect(f"**{cluster}**", [l["id"] for l in ordem], format_func=lambda i: rotulo.get(i, i),
+                                               placeholder="Escolha uma ou mais filiais", key=f"promo_cl_{k}")
+        else:
+            texto = st.text_input(f"**{cluster}**", placeholder="IDs das filiais separados por vírgula. Ex.: 544, 601", key=f"promo_cl_{k}")
+            escolhas[cluster] = [x.strip() for x in texto.replace(";", ",").split(",") if x.strip()]
+    faltam = [c for c, f in escolhas.items() if not f]
+    invalidos = [x for f in escolhas.values() for x in f if not x.isdigit()]
+    c1, c2 = st.columns(2)
+    if c1.button("Cancelar envio", width="stretch", icon=":material/close:", key="promo_cl_cancelar"):
+        _cancelar_envio()
+        st.rerun()
+    if c2.button("Cadastrar e abrir a análise", type="primary", width="stretch", icon=":material/link:", key="promo_cl_salvar",
+                 disabled=bool(faltam)):
+        if invalidos:
+            st.error(f"ID de filial inválido: {', '.join(invalidos[:5])}. Use só números.", icon=":material/error:")
+            return
+        try:
+            for cluster, filiais in escolhas.items():
+                db.cadastrar_cluster(cluster, filiais)
+        except Exception as exc:
+            st.error(f"Não foi possível gravar na tabela filial-cluster do Supabase: {str(exc)[:200]}", icon=":material/error:")
+            return
+        res = pe.processar(pend["dfs"], db.clusters(), db.mapa_lojas())
+        if res["clusters_fora"]:
+            pend["fora"] = res["clusters_fora"]
+            st.rerun()
+        st.session_state.pop("promo_pendente", None)
+        _aplicar(res, pend["nomes"])
+        st.toast("Clusters cadastrados no Supabase.", icon=":material/link:")
+        st.rerun()
+    if faltam:
+        st.caption(f"Falta escolher as filiais de {len(faltam)} cluster(s).")
 
 
 def _clusters_fora() -> None:
@@ -160,8 +229,7 @@ def _vazio():
                                   "e cruza cada item com custo, preço atual e mercado.")
     arquivos = st.file_uploader("Planilhas de encarte (XLSX, XLS ou CSV com ponto e vírgula)", accept_multiple_files=True,
                                 type=["xlsx", "xls", "csv"], key=f"promo_up_inicial_{st.session_state.get('promo_up_ver', 0)}")
-    if arquivos:
-        _carregar(arquivos)
+    if arquivos and _carregar(arquivos):
         st.rerun()
     hist = db.campanhas_historico()
     if hist:
@@ -176,6 +244,8 @@ def render() -> None:
             ".st-key-promo_topo [data-testid='stPopover'] button{height:38px;min-height:38px;border-radius:19px;padding:0 12px;"
             "background:var(--ps-surface);border:1px solid var(--ps-line)}"
             "[data-testid='stMainBlockContainer'] [data-testid='stVerticalBlock']{gap:.4rem}</style>")
+    if st.session_state.get("promo_pendente"):
+        _dialogo_clusters()
     df = st.session_state.get("df_promo_processado")
     if df is None:
         df = _vazio()
@@ -188,13 +258,14 @@ def render() -> None:
             arquivos = st.file_uploader("Trocar ou somar planilhas", accept_multiple_files=True, type=["xlsx", "xls", "csv"], key=f"promo_up_{st.session_state.get('promo_up_ver', 0)}")
             if arquivos and st.button("Carregar estas planilhas", type="primary", width="stretch", icon=":material/upload:"):
                 st.session_state.pop("promo_arquivos", None)
+                st.session_state.pop("promo_pendente", None)
                 _carregar(arquivos)
                 st.rerun()
         _clusters_fora()
         with st.popover("", icon=":material/delete_sweep:", help="Limpar todas as bases carregadas"):
             st.caption("Tira da tela todas as planilhas carregadas e as edições desta sessão. O histórico de campanhas programadas continua salvo.")
             if st.button("Limpar todas as bases", type="primary", width="stretch", icon=":material/delete_sweep:", key="promo_limpar"):
-                for k in ("df_promo_processado", "promo_arquivos", "clusters_desconhecidos", "campanhas_vencidas", "promo_up", "promo_up_inicial"):
+                for k in ("df_promo_processado", "promo_arquivos", "clusters_desconhecidos", "campanhas_vencidas", "promo_up", "promo_up_inicial", "promo_pendente"):
                     st.session_state.pop(k, None)
                 st.session_state.promo_up_ver = st.session_state.get("promo_up_ver", 0) + 1
                 st.rerun()
