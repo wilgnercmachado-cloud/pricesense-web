@@ -92,16 +92,44 @@ def _dividir(gz: bytes) -> list[bytes]:
     return [gz[i:i + passo] for i in range(0, len(gz), passo)] or [b""]
 
 
-@st.cache_data(ttl=1800, show_spinner=False, max_entries=64)
-def links_assinados(base: str, partes: int, versao: str) -> list[str]:
-    """Links temporários (1 h) para o navegador baixar o arquivo direto do Supabase."""
+def _assinar(base: str, partes: int, segundos: int) -> list[str]:
     links = []
     for caminho in _caminhos(base, partes):
-        resp = db.sb().storage.from_(BUCKET).create_signed_url(caminho, 3600)
+        resp = db.sb().storage.from_(BUCKET).create_signed_url(caminho, segundos)
         url = resp.get("signedURL") or resp.get("signedUrl") or resp.get("signed_url")
         if url.startswith("/"):
             url = st.secrets["SUPABASE_URL"].rstrip("/") + "/storage/v1" + url
         links.append(url)
+    return links
+
+
+@st.cache_data(ttl=1800, show_spinner=False, max_entries=64)
+def links_assinados(base: str, partes: int, versao: str) -> list[str]:
+    """Links temporários (1 h) para o navegador baixar o arquivo direto do Supabase."""
+    return _assinar(base, partes, 3600)
+
+
+LINK_VALIDADE_S = 24 * 3600      # o link assinado vale 24 h
+LINK_RENOVAR_S = 20 * 3600       # e só é trocado depois de 20 h na mesma sessão
+
+
+def links_sessao(rel: dict) -> list[str]:
+    """Links do relatório que NÃO mudam enquanto a pessoa está com ele aberto.
+
+    Se o link mudasse a cada execução da página, o Streamlit redesenharia o quadro e o relatório
+    recarregaria sozinho, perdendo os níveis e colunas abertos. Guarda até 4 relatórios por sessão.
+    """
+    import time
+    versao = str(rel.get("atualizado_em") or rel.get("versao"))
+    chave = f"{rel['id']}|{versao}"
+    guarda = st.session_state.setdefault("_rel_links", {})
+    item = guarda.get(chave)
+    if item and time.time() - item[0] < LINK_RENOVAR_S:
+        return item[1]
+    links = _assinar(rel["arquivo_path"], int(rel.get("partes") or 1), LINK_VALIDADE_S)
+    for antiga in [k for k in guarda if k.split("|")[0] == str(rel["id"])] + list(guarda)[:max(0, len(guarda) - 3)]:
+        guarda.pop(antiga, None)
+    guarda[chave] = (time.time(), links)
     return links
 
 
