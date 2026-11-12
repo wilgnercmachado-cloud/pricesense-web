@@ -3907,41 +3907,45 @@ const ic = (n, cor) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="$
 
   /* ---------- importação: padrão (mídia calculada) e antigo (tipo de oferta) ---------- */
   function montaExp(){
-    const crit = VIS.filter(i => !EXC[i] && (S[i] === 1 || S[i] === 2)).length, tipos = (A.tipos || []).map(t => `<option>${esc(t)}</option>`).join('');
+    const crit = VIS.filter(i => !EXC[i] && (S[i] === 1 || S[i] === 2)).length;
     $('pExp').innerHTML = `<h4>${ic('up', 'var(--primary)')} Importação do encarte</h4><p>Usa as linhas do filtro atual que não foram tiradas da importação. Varejo (tipo 1) e atacado (tipo 2) com o mesmo preço.</p>
       <div class="opt" id="xFmt"><label class="on"><input type="radio" name="fmt" value="p" checked><b>Padrão</b><small>tipo de mídia calculado: 2 com 4 dias ou mais, 1 abaixo</small></label>
-        <label><input type="radio" name="fmt" value="a"><b>Antigo</b><small>tipo de oferta informado, motivo 7</small></label></div>
+        <label><input type="radio" name="fmt" value="a"><b>Antigo</b><small>sem preço: oferta 2 com 4 dias ou mais, 1 abaixo; motivo 7</small></label></div>
       <div class="opt" id="xOp"><label class="on"><input type="radio" name="op" value="1" checked><b>Aplicar preço</b></label><label><input type="radio" name="op" value="2"><b>Cancelar preço</b></label></div>
-      <div class="grid2"><div><span>Tipo de oferta (formato antigo)</span><input list="xTipos" id="xTipo" placeholder="${D.oferta.some(Boolean) ? 'usa a coluna da planilha' : 'ex.: 1'}"><datalist id="xTipos">${tipos}</datalist></div>
-        <div><span>Linhas críticas no filtro</span><label class="chk"><input type="checkbox" id="xCrit"> incluir ${nf0.format(crit)} críticas</label></div></div>
+      <div class="grid2"><div><span>Linhas críticas no filtro</span><label class="chk"><input type="checkbox" id="xCrit"> incluir ${nf0.format(crit)} críticas</label></div></div>
       <div id="xPrev" class="prev"></div>
       <div style="display:flex;gap:8px"><button class="tx pri" id="xXls">${ic('up')}Baixar Excel</button><button class="tx" id="xCopy">${ic('copy')}Copiar importação</button></div>`;
     preview(); }
   const opt = n => $('pExp').querySelector(`input[name=${n}]:checked`).value;
-  function linhasImp(){ const fmt = opt('fmt'), op = opt('op'), crit = $('xCrit').checked, tipoIn = $('xTipo').value.trim(), l = [], vistos = new Set();
+  /* formato antigo: aplicar = Id Filial | Id Tipo | Id Oferta | Id Motivo (7) | Id Produto | Data Inicio | Data Fim (sem preço);
+     cancelar = ID Filial | ID Tipo | ID Oferta | ID Produto. Id Oferta: 2 com 4 dias ou mais, 1 com 3 dias ou menos. */
+  function linhasImp(){ const fmt = opt('fmt'), op = opt('op'), crit = $('xCrit').checked, l = [], vistos = new Set();
     const f2 = v => nf2.format(v).replace(/\./g, '');
     for (const i of VIS) { if (EXC[i] || (!crit && (S[i] === 1 || S[i] === 2))) continue;
-      const k = [D.fil[i], D.prod[i], PR[i], INI[i], FIM[i]].join('|'); if (vistos.has(k)) continue; vistos.add(k);
-      const t3 = fmt === 'p' ? String(midia(i)) : (D.oferta[i] || tipoIn || '');
-      for (const tp of ['1', '2']) l.push(op === '1' ? [D.fil[i], tp, t3, '7', D.prod[i], f2(PR[i]), br(ds(INI[i])), br(ds(FIM[i]))] : [D.fil[i], tp, t3, D.prod[i]]); }
-    const pi = op === '1' ? 4 : 3, dt = r => op === '1' ? r[6].split('/').reverse().join('') : '';
+      const k = fmt === 'p' ? [D.fil[i], D.prod[i], PR[i], INI[i], FIM[i]].join('|') : [D.fil[i], D.prod[i], INI[i], FIM[i]].join('|');
+      if (vistos.has(k)) continue; vistos.add(k);
+      const t3 = String(midia(i));
+      for (const tp of ['1', '2']) l.push(op !== '1' ? [D.fil[i], tp, t3, D.prod[i]]
+        : fmt === 'p' ? [D.fil[i], tp, t3, '7', D.prod[i], f2(PR[i]), br(ds(INI[i])), br(ds(FIM[i]))]
+        : [D.fil[i], tp, t3, '7', D.prod[i], br(ds(INI[i])), br(ds(FIM[i]))]); }
+    const pi = op === '1' ? 4 : 3, di = fmt === 'p' ? 6 : 5, dt = r => op === '1' ? r[di].split('/').reverse().join('') : '';
     return l.sort((a, b) => (+a[0] - +b[0]) || (+a[pi] - +b[pi]) || dt(a).localeCompare(dt(b)) || (+a[1] - +b[1])); }
   function preview(){ const l = linhasImp(); const fmt = opt('fmt'), op = opt('op');
-    const cab = op === '1' ? ['Filial', 'Tipo de Preço', fmt === 'p' ? 'Tipo de Mídia' : 'Tipo de Oferta', 'Motivo', 'Produto', 'Preço', 'Início', 'Fim'] : ['Filial', 'Tipo de Preço', fmt === 'p' ? 'Tipo de Mídia' : 'Tipo de Oferta', 'Produto'];
-    const semTipo = fmt === 'a' && l.some(r => !r[2]);
+    const cab = cabImp(fmt, op);
     $('xPrev').innerHTML = `<table><tr>${cab.map(c => `<th>${c}</th>`).join('')}</tr>${l.slice(0, 4).map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table>
-      <small>${nf0.format(l.length)} linhas de importação${semTipo ? ', <b class="neg">informe o tipo de oferta</b>' : ''}</small>`; }
+      <small>${nf0.format(l.length)} linhas de importação</small>`; }
+  function cabImp(fmt, op){
+    if (fmt === 'a') return op === '1' ? ['Id Filial', 'Id Tipo', 'Id Oferta', 'Id Motivo', 'Id Produto', 'Data Inicio', 'Data Fim'] : ['ID Filial', 'ID Tipo', 'ID Oferta', 'ID Produto'];
+    return op === '1' ? ['Filial', 'Tipo de Preço', 'Tipo de Mídia', 'Motivo', 'Produto', 'Preço', 'Início', 'Fim'] : ['Filial', 'Tipo de Preço', 'Tipo de Mídia', 'Produto']; }
   on($('pExp'), 'change', e => { $('pExp').querySelectorAll('.opt label').forEach(x => x.classList.toggle('on', x.querySelector('input').checked)); preview(); });
-  on($('pExp'), 'input', e => { if (e.target.id === 'xTipo') preview(); });
   on($('pExp'), 'click', async e => { const b = e.target.closest('button'); if (!b) return; const l = linhasImp(); if (!l.length) { toast('Nada para importar no filtro'); return; }
-    if (opt('fmt') === 'a' && l.some(r => !r[2])) { toast('Informe o tipo de oferta para o formato antigo'); return; }
     if (b.id === 'xCopy') { try { await navigator.clipboard.writeText(l.map(r => r.join('\t')).join('\n')); toast(nf0.format(l.length) + ' linhas copiadas'); } catch (err) { toast('Não foi possível copiar; use o Excel'); } }
     if (b.id === 'xXls') { const an = [['Status', 'Campanha', 'ID Filial', 'Filial', 'ID Produto', 'Produto', 'Comprador', 'Categoria', 'Preço oferta', 'Início', 'Fim', 'Dias', 'Mídia',
         'Varejo atual', 'Desconto', 'Custo', 'Margem oferta', 'Menor mercado', 'IP oferta', 'Investimento estimado', 'Alertas', 'Editado', 'Na importação']];
       for (const i of VIS) { const r = D.ref[i] || []; an.push([STN[S[i]], D.campanhas[D.ci[i]], +D.fil[i] || D.fil[i], D.filn[i], +D.prod[i] || D.prod[i], curto(D.desc[i]), r[4] || '', r[5] || '', PR[i], br(ds(INI[i])), br(ds(FIM[i])), dias(i), midia(i),
         r[1] || null, desc_(i) == null ? null : +desc_(i).toFixed(4), r[0] || null, marg(i) == null ? null : +marg(i).toFixed(4), r[3] || null, ipP(i) == null ? null : +ipP(i).toFixed(4), Math.round(invest(i)) || null,
         ALN.filter(([bb]) => AL[i] & bb).map(x => x[1]).join(', '), EDT[i] ? 'Sim' : 'Não', EXC[i] ? 'Não' : 'Sim']); }
-      const cab = opt('op') === '1' ? ['Filial', 'Tipo de Preço', opt('fmt') === 'p' ? 'Tipo de Mídia' : 'Tipo de Oferta', 'Motivo', 'Produto', 'Preço', 'Início', 'Fim'] : ['Filial', 'Tipo de Preço', opt('fmt') === 'p' ? 'Tipo de Mídia' : 'Tipo de Oferta', 'Produto'];
+      const cab = cabImp(opt('fmt'), opt('op'));
       const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(an), 'Analise'); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([cab, ...l]), 'Importacao');
       XLSX.writeFile(wb, `PromoMetrics_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`); toast('Excel com a análise e a importação'); } });
   $('bExp').onclick = e => { montaExp(); const p = $('pExp'); p.classList.toggle('on'); const r = e.currentTarget.getBoundingClientRect(); p.style.top = Math.max(8, Math.min(innerHeight - p.offsetHeight - 8, r.top - 10)) + 'px'; };
