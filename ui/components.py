@@ -345,6 +345,40 @@ function guardado() {{
 function guardar(html) {{
   try {{ if (CHAVE) window.parent.__psRelatorio = {{chave: CHAVE, html: html}}; }} catch (_) {{}}   /* só o último relatório */
 }}
+/* Cópia do relatório no navegador (IndexedDB): abrir de novo o mesmo relatório, mesmo outro dia, não baixa nada do
+   Supabase (o plano gratuito limita o tráfego de saída). Guarda o arquivo como veio (compactado); versão nova substitui
+   a antiga do mesmo relatório; passando de 1 GB, saem os menos usados. */
+const IDB_LIMITE = 1024 * 1024 * 1024;
+function idb() {{
+  return new Promise((ok, erro) => {{
+    const r = indexedDB.open('pricesense_relatorios', 1);
+    r.onupgradeneeded = () => {{ const d = r.result; d.createObjectStore('arquivos'); d.createObjectStore('indice'); }};
+    r.onsuccess = () => ok(r.result); r.onerror = () => erro(r.error);
+  }});
+}}
+function idbPedido(req) {{ return new Promise((ok, erro) => {{ req.onsuccess = () => ok(req.result); req.onerror = () => erro(req.error); }}); }}
+async function idbLer(chave) {{
+  try {{
+    const d = await idb(), tx = d.transaction(['arquivos', 'indice'], 'readwrite');
+    const blob = await idbPedido(tx.objectStore('arquivos').get(chave));
+    if (blob) {{ const ind = await idbPedido(tx.objectStore('indice').get(chave)); if (ind) {{ ind.uso = Date.now(); tx.objectStore('indice').put(ind, chave); }} }}
+    return blob || null;
+  }} catch (_) {{ return null; }}
+}}
+async function idbGravar(chave, blob) {{
+  try {{
+    if (blob.size > IDB_LIMITE) return;
+    const d = await idb(), id = chave.split('|')[0];
+    const tx = d.transaction(['arquivos', 'indice'], 'readwrite'), arq = tx.objectStore('arquivos'), ind = tx.objectStore('indice');
+    const chaves = await idbPedido(ind.getAllKeys()), infos = await idbPedido(ind.getAll());
+    let lista = chaves.map((k, i) => ({{k, ...infos[i]}}));
+    for (const x of lista.filter(x => x.k !== chave && String(x.k).split('|')[0] === id)) {{ arq.delete(x.k); ind.delete(x.k); }}
+    lista = lista.filter(x => String(x.k).split('|')[0] !== id).sort((a, b) => a.uso - b.uso);
+    let total = lista.reduce((t, x) => t + (x.tam || 0), 0) + blob.size;
+    while (total > IDB_LIMITE && lista.length) {{ const x = lista.shift(); arq.delete(x.k); ind.delete(x.k); total -= x.tam || 0; }}
+    arq.put(blob, chave); ind.put({{tam: blob.size, uso: Date.now()}}, chave);
+  }} catch (_) {{}}
+}}
 async function obterBytes(msg) {{
   if (!LINKS.length) {{
     const bin = atob(B64), bytes = new Uint8Array(bin.length);
@@ -373,7 +407,12 @@ async function obterBytes(msg) {{
   try {{
     let texto = guardado(), blob;
     if (texto === null) {{
-      const bruto = new Blob(await obterBytes(msg));
+      let bruto = CHAVE && LINKS.length ? await idbLer(CHAVE) : null;
+      if (bruto) {{ msg.textContent = 'Abrindo a cópia salva neste navegador'; }}
+      else {{
+        bruto = new Blob(await obterBytes(msg));
+        if (CHAVE && LINKS.length) idbGravar(CHAVE, bruto);
+      }}
       const inicio = new Uint8Array(await bruto.slice(0, 2).arrayBuffer());
       if (inicio[0] === 0x1f && inicio[1] === 0x8b) {{
         msg.textContent = 'Descompactando';
