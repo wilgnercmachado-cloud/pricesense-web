@@ -49,7 +49,7 @@ def render() -> None:
     painel, base = (pronto or (None, ""))
     ferramentas = [[k, DESCR[k][0], DESCR[k][1], DESCR[k][2]] for k in ("regular", "promo", "pesquisa", "preco_bot", "biblioteca") if k in paginas]
     try:
-        rels = reports.visiveis(st.session_state.usuario_login, auth.eh_admin())[:6]
+        rels = [] if "biblioteca" not in paginas else reports.visiveis(st.session_state.usuario_login, auth.eh_admin())[:6]
     except Exception:
         rels = []
     relatorios = [[r["id"], r.get("titulo") or "", str(r.get("categoria") or "")] for r in rels]
