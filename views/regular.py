@@ -39,7 +39,7 @@ def _base_publicada(caminho: str, partes: int, versao: str, leitor: str = "") ->
     import re as _re
     pronto = f"cache_base/{_re.sub(r'[^A-Za-z0-9_.-]', '_', caminho)}_{_re.sub(r'[^0-9]', '', versao)}_{_re.sub(r'[^0-9A-Za-z]', '', leitor)}.pkl.gz"
     try:
-        df, meta = pickle.loads(gzip.decompress(db.sb().storage.from_("relatorios").download(pronto)))
+        df, meta = pickle.loads(gzip.decompress(db.baixar_storage("relatorios", pronto, versao="fixo")))   # nome já tem a versão
         return df, meta
     except Exception:
         pass
@@ -144,8 +144,40 @@ def estados_atuacao() -> list[str]:
     return []
 
 
+TITULO_GMAT = "Competitividade Pricing GMAT"
+
+
+def _escolher_gmat(rel: dict | None, chave: str) -> None:
+    """Aplicativo para PC: escolher o HTML do Competitividade Pricing GMAT que está no computador.
+    O arquivo é guardado na pasta local do PriceSense e passa a ser a base da mesa (substitui o anterior)."""
+    if rel:
+        quando = str(rel.get("atualizado_em") or "")[:16].replace("T", " ")
+        st.caption(f"Em uso: **{ui.esc(rel.get('descricao') or rel.get('titulo') or '')}**, carregado em {quando} (UTC).")
+    arq = st.file_uploader("HTML do Competitividade Pricing GMAT", type=["html", "htm"], key=f"reg_gmat_{chave}",
+                           help="Escolha o arquivo Pricing_GMAT3 baixado no seu computador.")
+    if arq and st.button("Usar este HTML" if rel is None else "Trocar a base por este HTML", type="primary",
+                         icon=":material/upload_file:", width="stretch", key=f"reg_gmat_ok_{chave}"):
+        try:
+            with st.spinner("Guardando o HTML no computador"):
+                conteudo = arq.getvalue()
+                meta = {"titulo": TITULO_GMAT, "descricao": arq.name, "categoria": "PRICE"}
+                if rel is None:
+                    reports.publicar(meta, conteudo, st.session_state.get("usuario_login", ""), st.session_state.get("usuario_logado", ""))
+                else:
+                    reports.atualizar(rel, meta, conteudo)
+            reports.limpar_cache()
+            st.rerun()
+        except Exception as exc:
+            st.error(f"Não foi possível usar o arquivo: {exc}", icon=":material/error:")
+
+
 def _fonte() -> tuple[pd.DataFrame, dict, dict] | None:
     rel = _relatorio_padrao()
+    if rel is None and db.modo_local():
+        ui.cabecalho("PriceMetrics", "Escolha o HTML do Competitividade Pricing GMAT que está no seu computador.")
+        with st.container(border=True):
+            _escolher_gmat(None, "inicio")
+        return None
     if rel is None:
         ui.vazio("Base não encontrada", "Publique o relatório Competitividade Pricing GMAT na biblioteca de relatórios. "
                                         "A mesa usa sempre a versão mais recente dele.")
@@ -157,6 +189,9 @@ def _fonte() -> tuple[pd.DataFrame, dict, dict] | None:
         st.error(str(exc), icon=":material/error:")
     except Exception as exc:
         st.error(f"Não foi possível ler o relatório: {exc}", icon=":material/error:")
+    if db.modo_local():                    # no PC: dá para trocar o HTML na hora
+        with st.container(border=True):
+            _escolher_gmat(rel, "erro")
     return None
 
 
@@ -259,9 +294,14 @@ def _uploads(rel: dict, meta_base: dict, df_base: pd.DataFrame | None = None, so
         if so_target:
             _target(df_base)
             return
-        aba = st.segmented_control("Upload", ["Pesquisa 1067", "Regras de margem", "Proporções", "Trava mínima (acordo)", "Preço target"], default="Pesquisa 1067",
+        abas = ["Pesquisa 1067", "Regras de margem", "Proporções", "Trava mínima (acordo)", "Preço target"]
+        if db.modo_local():
+            abas = ["Base GMAT (HTML)"] + abas
+        aba = st.segmented_control("Upload", abas, default="Pesquisa 1067",
                                    required=True, key="reg_up_aba", label_visibility="collapsed", width="stretch")
-        if aba == "Preço target":
+        if aba == "Base GMAT (HTML)":
+            _escolher_gmat(rel, "troca")
+        elif aba == "Preço target":
             _target(df_base)
         elif aba == "Pesquisa 1067":
             _pesquisa_1067(rel, meta_base)
@@ -274,10 +314,12 @@ def _uploads(rel: dict, meta_base: dict, df_base: pd.DataFrame | None = None, so
 def _controle_ao_vivo(modo: str, df: pd.DataFrame, rel: dict) -> dict:
     """Botão "Ao vivo": o analista inicia/encerra a precificação online dos estados; quem assiste vê os preços chegando.
     Comercial assiste sempre aos seus estados; analistas escolhem assistir."""
+    base = f"{rel.get('id')}:{rel.get('atualizado_em')}"
+    if db.modo_local():                    # aplicativo para PC: cada computador é independente, não há ao vivo
+        return {"base": base, "transmitir": None, "assistir": False, "ufs_vivos": [], "chave": "N"}
     from core import ao_vivo as av
     ss = st.session_state
     usuario = ss.get("usuario_login", "")
-    base = f"{rel.get('id')}:{rel.get('atualizado_em')}"
     ufs = sorted({auth.sigla_estado(e) for e in df["Estado"].astype(str).unique() if str(e).strip()})
     vig = av.vigentes(base)
     ao_vivo = {uf: s for uf, s in vig.items() if s.get("ativo")}
@@ -355,10 +397,15 @@ except Exception:
     _RELE = None
 
 
-@st.fragment(run_every="3s")
+@st.fragment(run_every="20s")
 def _rele_ao_vivo(base: str, transmitir: dict | None, assistir: bool, usuario: str) -> None:
-    """A cada 3 s: grava o que o analista transmite e entrega aos espectadores as versões novas (só o que mudou)."""
+    """A cada 20 s (era 3 s; o intervalo curto gastava a cota de tráfego do Supabase): grava o que o analista transmite e entrega aos espectadores as versões novas (só o que mudou)."""
     if _RELE is None or not (transmitir or assistir):
+        return
+    from core import trafego
+    if trafego.economia():                 # passou do limite de tráfego do dia: ao vivo pausa até a meia-noite
+        st.caption(":material/pause_circle: Ao vivo pausado até amanhã para não estourar a cota do banco de dados. "
+                   "Os preços na tela podem estar desatualizados.")
         return
     from core import ao_vivo as av
     ss = st.session_state
@@ -475,13 +522,13 @@ def _target_versao() -> str:
     return tg.versao()
 
 
-@st.fragment(run_every="15s")
+@st.fragment(run_every="60s")
 def _vigia_target(versao_tela: str) -> None:
     """Preço target aprovado vale na hora: se a versão mudar (aprovação, nova flag), a PriceMetrics é refeita — inclusive ao vivo
     (os ajustes do analista ficam salvos no navegador e voltam sozinhos)."""
     from core import target as tg
-    tg.vigentes.clear(); tg.flags.clear()
-    if tg.versao() != versao_tela:
+    if tg.versao() != versao_tela:              # só a assinatura leve; a tabela é relida apenas quando mudou
+        tg.vigentes.clear(); tg.flags.clear()
         st.rerun(scope="app")
 
 

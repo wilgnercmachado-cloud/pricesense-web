@@ -75,12 +75,33 @@ def _linha_usuario(u: dict) -> None:
                 st.rerun()
 
 
+def _painel_trafego() -> None:
+    """Consumo do dia da cota de tráfego do Supabase (plano gratuito: 5 GB por mês, cerca de 160 MB por dia)."""
+    from core import db, trafego
+    if db.modo_local():
+        return
+    r = trafego.resumo()
+    pct = min(r["mb"] / r["limite"], 1.0) if r["limite"] else 0
+    with st.expander(f"Tráfego do banco hoje: {r['mb']:.1f} MB de {r['limite']} MB"
+                     + (" · modo econômico ligado" if trafego.economia() else ""),
+                     icon=":material/speed:", expanded=trafego.economia()):
+        st.progress(pct)
+        st.caption(f"Medido pelo servidor desde {r['desde']}. Passando de {r['limite']} MB no dia, o site entra em modo "
+                   "econômico até a meia-noite: o ao vivo pausa e o chat e o sininho atualizam com menos frequência. "
+                   "Relatórios baixados pelo navegador não entram nesta conta. Confira o total do mês no Supabase, "
+                   "em Organização > Uso (Saída e Saída em cache, 5 GB cada).")
+        if r["itens"]:
+            st.dataframe({"Origem": [k for k, _ in r["itens"]], "MB hoje": [round(v, 2) for _, v in r["itens"]]},
+                         hide_index=True, width="stretch")
+
+
 def render() -> None:
     if not auth.eh_admin():
         ui.cabecalho("Administração")
         ui.vazio("Área restrita", "Só administradores acessam esta página.")
         return
     ui.cabecalho("Administração", "Aprove acessos, ajuste permissões e revise pedidos de mapeamento de cluster.")
+    _painel_trafego()
     try:
         usuarios = db.listar_usuarios()
     except Exception as exc:
