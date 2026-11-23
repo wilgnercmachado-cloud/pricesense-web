@@ -31,7 +31,7 @@ def _agora() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-@st.cache_data(ttl=60, show_spinner=False)
+@st.cache_data(ttl=600, show_spinner=False)            # publicar/editar/remover limpam o cache na hora
 def listar() -> list[dict]:
     try:
         return db.sb().table("relatorios").select("*").order("criado_em", desc=True).execute().data or []
@@ -299,5 +299,6 @@ def definir_favorito(login: str, rid: str, favorito: bool) -> None:
 
 def baixar_conteudo(rel: dict) -> bytes:
     """Arquivo inteiro do relatório (partes juntadas), ainda compactado se foi publicado assim."""
-    partes = [db.sb().storage.from_(BUCKET).download(c) for c in _caminhos(rel["arquivo_path"], int(rel.get("partes") or 1))]
+    v = str(rel.get("atualizado_em") or rel.get("versao") or "") or None
+    partes = [db.baixar_storage(BUCKET, c, versao=v) for c in _caminhos(rel["arquivo_path"], int(rel.get("partes") or 1))]
     return b"".join(partes)

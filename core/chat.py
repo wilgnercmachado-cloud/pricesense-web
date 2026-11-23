@@ -23,7 +23,7 @@ def _sem_acento(t: str) -> str:
     return unicodedata.normalize("NFKD", str(t)).encode("ascii", "ignore").decode().lower()
 
 
-@st.cache_data(ttl=120, show_spinner=False)
+@st.cache_data(ttl=600, show_spinner=False)
 def usuarios() -> list[dict]:
     return [u for u in db.listar_usuarios() if str(u.get("status")) == "Aprovado"]
 
@@ -51,7 +51,20 @@ def dm(a: str, b: str) -> str:
     return "dm:" + "|".join(sorted([a, b]))
 
 
-def mensagens(canal: str, limite: int = 80) -> list[dict]:
+def mensagens(canal: str, limite: int = 80, marca: str | None = None) -> list[dict]:
+    """Mensagens do canal. Com `marca` (data da última mensagem do canal), a leitura fica guardada no servidor e só é
+    refeita quando chega mensagem nova: as miniaturas das imagens pesam, e reler a cada atualização gastava a cota."""
+    if marca is not None:
+        return _mensagens_guardadas(canal, limite, marca)
+    return _ler_mensagens(canal, limite)
+
+
+@st.cache_data(ttl=6 * 3600, show_spinner=False, max_entries=300)
+def _mensagens_guardadas(canal: str, limite: int, marca: str) -> list[dict]:
+    return _ler_mensagens(canal, limite)
+
+
+def _ler_mensagens(canal: str, limite: int) -> list[dict]:
     try:
         d = db.sb().table(MSG).select("*").eq("canal", canal).order("criado_em", desc=True).limit(limite).execute().data or []
     except Exception:
@@ -59,7 +72,7 @@ def mensagens(canal: str, limite: int = 80) -> list[dict]:
     return list(reversed(d))
 
 
-def recentes(canais_: list[str], limite: int = 400) -> list[dict]:
+def recentes(canais_: list[str], limite: int = 150) -> list[dict]:
     try:
         return db.sb().table(MSG).select("canal, autor, criado_em").in_("canal", canais_).order("criado_em", desc=True).limit(limite).execute().data or []
     except Exception:

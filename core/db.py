@@ -9,8 +9,35 @@ class ConfigError(RuntimeError):
     """Credenciais ausentes em st.secrets."""
 
 
+def _gravar_sem_resposta() -> None:
+    """Gravações (inserir, atualizar, upsert, apagar) passam a NÃO devolver a linha gravada.
+
+    Por padrão o Supabase devolve a linha inteira depois de cada gravação: o pulso de presença (1 por minuto por
+    pessoa) trazia de volta a linha do usuário com a foto, e o ao vivo trazia de volta o retrato inteiro da mesa a
+    cada publicação. Nenhum ponto do site usa essa resposta, então ela só gastava a cota de tráfego.
+    Quem precisar da linha pode pedir com returning=ReturnMethod.representation.
+    """
+    try:
+        from postgrest import ReturnMethod
+        from postgrest._sync.request_builder import SyncRequestBuilder as _RB
+    except Exception:
+        return
+    for nome in ("insert", "update", "upsert", "delete"):
+        original = getattr(_RB, nome, None)
+        if original is None or getattr(original, "_ps_sem_resposta", False):
+            continue
+
+        def sem_resposta(self, *a, _orig=original, **k):
+            k.setdefault("returning", ReturnMethod.minimal)
+            return _orig(self, *a, **k)
+
+        sem_resposta._ps_sem_resposta = True
+        setattr(_RB, nome, sem_resposta)
+
+
 @st.cache_resource(show_spinner=False)
 def _criar_cliente(url: str, key: str):
+    _gravar_sem_resposta()
     from supabase import create_client
     try:
         from supabase import ClientOptions
@@ -19,13 +46,65 @@ def _criar_cliente(url: str, key: str):
         return create_client(url, key)
 
 
+# ---------------------------------------------------------------- aplicativo para PC (banco em pasta)
+import json as _json
+import os as _os_cfg
+
+ARQ_CONFIG = _os_cfg.path.join(_os_cfg.environ.get("APPDATA") or _os_cfg.path.expanduser("~"), "PriceSense", "config.json")
+
+
+class PastaNaoConfigurada(RuntimeError):
+    """Aplicativo para PC sem a pasta compartilhada escolhida."""
+
+
+def modo_local() -> bool:
+    """True no aplicativo para PC (o atalho PriceSense.bat liga PRICESENSE_LOCAL=1)."""
+    return _os_cfg.environ.get("PRICESENSE_LOCAL", "") == "1"
+
+
+PASTA_PADRAO = _os_cfg.path.join(_os_cfg.path.expanduser("~"), "PriceSense")
+
+
+def pasta_local() -> str:
+    """Pasta dos dados no PC: a do config.json, se houver; senão C:\\Users\\<usuário>\\PriceSense (criada na hora)."""
+    try:
+        with open(ARQ_CONFIG, encoding="utf-8") as f:
+            escolhida = str(_json.load(f).get("pasta") or "")
+        if escolhida:
+            return escolhida
+    except (OSError, ValueError):
+        pass
+    for sub in ("banco", "arquivos"):
+        _os_cfg.makedirs(_os_cfg.path.join(PASTA_PADRAO, sub), exist_ok=True)
+    return PASTA_PADRAO
+
+
+def salvar_pasta_local(pasta: str) -> None:
+    _os_cfg.makedirs(_os_cfg.path.dirname(ARQ_CONFIG), exist_ok=True)
+    with open(ARQ_CONFIG, "w", encoding="utf-8") as f:
+        _json.dump({"pasta": pasta}, f, ensure_ascii=False, indent=2)
+    _cliente_local.clear()
+
+
+@st.cache_resource(show_spinner=False)
+def _cliente_local(pasta: str):
+    from core import local_store
+    return local_store.Cliente(pasta)
+
+
 def get_client():
+    if modo_local():
+        pasta = pasta_local()
+        if not pasta or not _os_cfg.path.isdir(pasta):
+            raise PastaNaoConfigurada("Escolha a pasta compartilhada do PriceSense.")
+        return _cliente_local(pasta)
     try:
         url = st.secrets["SUPABASE_URL"]
         key = st.secrets["SUPABASE_KEY"]
     except Exception as exc:  # arquivo de secrets ausente ou chave faltando
         raise ConfigError("SUPABASE_URL e SUPABASE_KEY não estão configurados em st.secrets.") from exc
-    return _criar_cliente(url, key)
+    from core import trafego
+    return trafego.Rastreado(_criar_cliente(url, key))          # mede o tráfego de cada resposta (core/trafego.py)
 
 
 def sb():
@@ -143,12 +222,31 @@ def pendentes() -> list[dict]:
     return sb().table("usuarios").select("usuario, nome").eq("status", "Pendente").execute().data or []
 
 
+COLUNAS_USUARIO_LISTA = ("usuario, nome, cargo, status, is_admin, permissoes, setor, estado, "
+                         "ultimo_acesso, ultima_atividade, acessos_dia, acessos_data")
+
+
 def listar_usuarios() -> list[dict]:
-    return sb().table("usuarios").select("*").execute().data or []
+    """Todos os usuários SEM foto de perfil e sem senha: a foto (imagem inteira) de cada pessoa ia junto a cada
+    atualização do chat e da Administração, e era um dos maiores gastos de tráfego. A foto só vem no login."""
+    try:
+        return sb().table("usuarios").select(COLUNAS_USUARIO_LISTA).execute().data or []
+    except Exception:
+        dados = sb().table("usuarios").select("*").execute().data or []
+        return [{k: v for k, v in u.items() if k not in ("foto_perfil", "senha")} for u in dados]
+
+
+_CAMPOS_PRESENCA = {"ultimo_acesso", "ultima_atividade", "acessos_dia", "acessos_data"}
 
 
 def atualizar_usuario(login: str, campos: dict) -> None:
     sb().table("usuarios").update(campos).eq("usuario", login).execute()
+    if set(campos) - _CAMPOS_PRESENCA:          # mudou cadastro/permissão: a lista guardada do chat é refeita
+        try:
+            from core import chat
+            chat.usuarios.clear()
+        except Exception:
+            pass
 
 
 def inserir_usuario(registro: dict) -> None:
@@ -301,3 +399,81 @@ def salvar_backup(usuario: str, dia: str, conteudo: bytes, resumo: dict, manter:
 
 def ler_backup(caminho: str) -> bytes:
     return sb().storage.from_("relatorios").download(caminho)
+
+
+# ---------------------------------------------------------------- downloads do Storage com cópia em disco
+# O plano gratuito do Supabase limita o tráfego de saída (egress). Arquivos baixados pelo servidor ficam numa
+# cópia em disco: só são baixados de novo quando o arquivo no Storage muda (data de atualização ou tamanho).
+import hashlib as _hashlib
+import os as _os
+import tempfile as _tempfile
+
+PASTA_CACHE = _os.path.join(_tempfile.gettempdir(), "pricesense_storage")
+LIMITE_CACHE_BYTES = 1500 * 1024 * 1024      # a pasta de cópias não passa de 1,5 GB (sai a menos usada)
+
+
+@st.cache_data(ttl=120, show_spinner=False, max_entries=256)
+def _info_storage(bucket: str, caminho: str) -> str:
+    """Versão do arquivo no Storage (data de atualização + tamanho). Consulta só a lista da pasta, sem baixar."""
+    pasta, _, nome = caminho.rpartition("/")
+    try:
+        itens = sb().storage.from_(bucket).list(pasta, {"search": nome, "limit": 100}) or []
+    except Exception:
+        return ""
+    for x in itens:
+        if x.get("name") == nome:
+            m = x.get("metadata") or {}
+            return f"{x.get('updated_at') or x.get('created_at') or ''}|{m.get('size') or ''}|{m.get('eTag') or ''}"
+    return ""
+
+
+def _limpar_cache_disco() -> None:
+    try:
+        arqs = [(_os.path.join(PASTA_CACHE, n)) for n in _os.listdir(PASTA_CACHE)]
+        arqs = sorted(((p, _os.stat(p)) for p in arqs if _os.path.isfile(p)), key=lambda x: x[1].st_atime)
+        total = sum(s.st_size for _, s in arqs)
+        for p, s in arqs:
+            if total <= LIMITE_CACHE_BYTES:
+                break
+            _os.remove(p)
+            total -= s.st_size
+    except Exception:
+        pass
+
+
+def baixar_storage(bucket: str, caminho: str, versao: str | None = None) -> bytes:
+    """Download do Storage que reaproveita a cópia em disco enquanto o arquivo não mudar.
+
+    `versao` (quando quem chama já sabe, ex.: data de atualização do relatório) evita até a consulta da lista.
+    Sem conseguir saber a versão, baixa direto (comportamento antigo).
+    """
+    if modo_local():                       # no PC o arquivo já está no disco (pasta sincronizada): lê direto
+        return sb().storage.from_(bucket).download(caminho)
+    v = versao if versao is not None else _info_storage(bucket, caminho)
+    if not v:
+        return sb().storage.from_(bucket).download(caminho)
+    chave = _hashlib.sha1(f"{bucket}|{caminho}|{v}".encode()).hexdigest()
+    alvo = _os.path.join(PASTA_CACHE, chave)
+    try:
+        with open(alvo, "rb") as f:
+            conteudo = f.read()
+        _os.utime(alvo)
+        return conteudo
+    except OSError:
+        pass
+    conteudo = sb().storage.from_(bucket).download(caminho)
+    try:
+        _os.makedirs(PASTA_CACHE, exist_ok=True)
+        tmp = alvo + ".tmp"
+        with open(tmp, "wb") as f:
+            f.write(conteudo)
+        _os.replace(tmp, alvo)
+        _limpar_cache_disco()
+    except OSError:
+        pass
+    return conteudo
+
+
+def storage_mudou(bucket: str, caminho: str) -> None:
+    """Chamar depois de enviar/substituir um arquivo: a próxima leitura confere a versão nova."""
+    _info_storage.clear()

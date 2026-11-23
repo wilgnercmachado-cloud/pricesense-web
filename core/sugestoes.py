@@ -26,7 +26,7 @@ def hoje() -> str:
     return dt.datetime.now(FUSO).date().isoformat()
 
 
-@st.cache_data(ttl=20, show_spinner=False)
+@st.cache_data(ttl=60, show_spinner=False)
 def do_dia() -> list[dict]:
     try:
         return db.sb().table(TABELA).select("*").eq("dia", hoje()).execute().data or []

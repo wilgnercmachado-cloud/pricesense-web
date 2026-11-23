@@ -92,7 +92,7 @@ def limpar() -> None:
     carregar.clear()
 
 
-@st.cache_data(ttl=600, show_spinner=False)
+@st.cache_data(ttl=12 * 3600, show_spinner=False)     # só muda pelo envio no site, que limpa o cache
 def carregar() -> pd.DataFrame:
     linhas, pagina = [], 0
     try:
