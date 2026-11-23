@@ -234,3 +234,46 @@ Usuários do banco falso (senha `123456`): `ana` (administradora, setor PRICE, t
 4. **Zonas de preço:** aprovar margens depende de achar a zona da filial (tabela `filiais` ou nome da zona no Profimetrics); filiais sem zona geram aviso.
 5. **Memória no Cloud:** se voltar o "Error running app", pedir as últimas linhas do log (Manage app) para confirmar a causa.
 6. **Antigas:** DTFIM vazia em parte da base; regras para itens "sem pesquisa"; elasticidade e estoque na PriceMetrics (futuro); ativar RLS nas tabelas depois de validar a chave secreta.
+
+## Economia de tráfego do Supabase (plano gratuito)
+O plano gratuito limita o tráfego de saída (egress); em 11/2026 o limite estourou e o Supabase bloqueou o projeto. Para gastar menos:
+- **Relatórios da Biblioteca:** o navegador guarda uma cópia (IndexedDB, até 1 GB, saem os menos usados). Abrir de novo o mesmo relatório, mesmo em outro dia, não baixa nada; só uma versão nova baixa.
+- **Arquivos lidos pelo servidor** (Profimetrics, PROP%, 1067, base pronta da PriceMetrics, relatórios): `db.baixar_storage` guarda cópia em disco e só baixa de novo quando o arquivo muda no Storage.
+- **Chat:** as mensagens do canal (com miniaturas de imagem) só são relidas quando chega mensagem nova; o chat confere a cada 30 s (era 15 s).
+- **Sininho e avisos ao administrador:** a cada 60 s (eram 20 s e 30 s).
+- **Preço target:** a conferência (a cada 60 s, era 15 s) usa só contagem + última importação; a tabela inteira só é relida quando muda.
+- **Ao vivo:** atualiza a cada 20 s (era 3 s).
+
+## Aplicativo para PC (tudo local)
+- `PriceSense.bat` liga `PRICESENSE_LOCAL=1` e abre o app em http://localhost:8765. Nesse modo, `db.get_client()` devolve o
+  `core/local_store.Cliente`, que imita o cliente do Supabase (`table`, `storage.from_`, `rpc`) gravando em
+  `C:\Users\<usuário>\PriceSense` (ou na pasta de `%APPDATA%/PriceSense/config.json`, se existir).
+- Tabelas: `<pasta>/banco/<tabela>/<usuario@computador>.jsonl`, uma linha por operação (o desenho também serve para uma
+  pasta compartilhada: cada PC grava só no próprio arquivo). Arquivos: `<pasta>/arquivos/<bucket>/<caminho>`.
+- Menu no PC: só PriceMetrics, Metrics Promo e PriceBot. Sem Biblioteca, chat, sininho, presença e ao vivo.
+- PriceMetrics no PC: o HTML do GMAT é escolhido na própria tela (`_escolher_gmat`) e guardado como o relatório
+  "Competitividade Pricing GMAT" local; trocar pelo botão de uploads > "Base GMAT (HTML)".
+- Primeiro uso: `views/configurar_pc.py` cria o administrador quando não há usuários.
+- `ferramentas/copiar_do_supabase.py` copia tabelas e arquivos do Supabase para a pasta (uma vez).
+- Passo a passo para a equipe: `LEIA-ME_PC.txt`.
+- Aplicativo com janela própria: `desktop.py` sobe o Streamlit escondido (porta 8765, `CREATE_NO_WINDOW`) e abre uma janela
+  pywebview (WebView2 do Windows) com tela de carregamento; fechar a janela encerra o servidor. Sem pywebview/WebView2, usa a
+  janela de aplicativo do Edge (`msedge --app`, perfil próprio, tela de carregamento servida por `_tela_carregando`). Logs em `%LOCALAPPDATA%/PriceSense`. Pacote: `python\` (Python embeddable 3.13 + `Lib\site-packages` com
+  `requirements.txt` + pywebview/pythonnet), `app\` e `Abrir PriceSense.bat` (`ferramentas/Abrir_PriceSense.bat`, cria os
+  atalhos com `ferramentas/criar_atalho.ps1` e o ícone `assets/pricesense.ico`).
+
+## Corte de erro no preço vencedor (PriceMetrics)
+`gmat_reader._pesquisa_valida`, aplicado em `aplicar_vencedor` (HTML + 1067): só entram coletas com margem de mercado
+[(varejo do concorrente − custo) / varejo do concorrente] entre −40% e +60% e com atacado do concorrente não maior que o
+varejo. Sem custo na base, a margem não é medida. O histórico (gráfico) e a moda mostram a pesquisa como veio.
+
+## Proteção da cota do Supabase (plano gratuito, desde 23/11/2026)
+- `core/db.py` faz toda gravação (insert/update/upsert/delete) pedir `return=minimal`: o Supabase não devolve mais a linha
+  gravada (o pulso de presença devolvia a linha do usuário com a foto a cada minuto; o ao vivo devolvia o retrato da mesa).
+- `db.listar_usuarios()` não traz `foto_perfil` nem `senha` (a foto só vem no login, por `buscar_usuario`).
+- Caches mais longos para o que só muda pelo próprio site (trava 12 h, relatórios 10 min, usuários do chat 10 min; quem
+  grava limpa o cache na hora).
+- `core/trafego.py` mede o tamanho de cada resposta do Supabase lida pelo servidor (o cliente é embrulhado em
+  `trafego.Rastreado`). Passando de 120 MB no dia, modo econômico até a meia-noite: ao vivo pausa, chat a cada 2 min,
+  sininho a cada 3 min. Painel "Tráfego do banco hoje" na Administração, com as origens que mais gastaram.
+

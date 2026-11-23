@@ -18,6 +18,7 @@ def _rerun_fragmento() -> None:
 
 st.set_page_config(page_title="PriceSense", page_icon=":material/sell:", layout="wide", initial_sidebar_state="collapsed")
 
+from core import trafego
 from core import auth, db, presenca, state  # noqa: E402
 from ui import components as ui  # noqa: E402
 from ui import theme  # noqa: E402
@@ -31,6 +32,15 @@ theme.aplicar()
 # Link direto para relatório aberto antes do login: guarda para depois.
 if not st.session_state.logado and st.query_params.get("r"):
     st.session_state.pending_report = st.query_params.get("r")
+
+if db.modo_local():                      # aplicativo para PC: dados numa pasta deste computador
+    from views import configurar_pc
+    if not configurar_pc.pasta_ok():
+        configurar_pc.escolher_pasta()
+        st.stop()
+    if not st.session_state.logado and configurar_pc.sem_usuarios():
+        configurar_pc.primeiro_admin()
+        st.stop()
 
 try:
     db.get_client()
@@ -70,13 +80,17 @@ for chave, permissao, titulo, render, icone, url in [
     # Revisão de margem: para o Comercial e o Pricing (mesma permissão da PriceMetrics)
     ("margem", "Pricing Regular", "Revisão de margem", margem.render, ":material/percent:", "revisao-de-margem"),
 ]:
+    if db.modo_local() and chave not in ("preco_bot", "promo", "regular"):
+        continue                         # aplicativo para PC: só PriceBot, Metrics Promo e PriceMetrics
     if auth.pode(permissao):
         p[chave] = st.Page(render, title=titulo, icon=icone, url_path=url)
         ferramentas.append(p[chave])
 
-p["biblioteca"] = st.Page(biblioteca.render, title="Biblioteca", icon=":material/library_books:", url_path="relatorios")
-secao_relatorios = [p["biblioteca"]]
-if auth.pode_publicar():
+secao_relatorios = []
+if not db.modo_local():                  # no PC não há Biblioteca: a base GMAT é escolhida na própria PriceMetrics
+    p["biblioteca"] = st.Page(biblioteca.render, title="Biblioteca", icon=":material/library_books:", url_path="relatorios")
+    secao_relatorios.append(p["biblioteca"])
+if auth.pode_publicar() and not db.modo_local():
     p["publicar"] = st.Page(publicar.render, title="Publicar", icon=":material/upload_file:", url_path="publicar")
     secao_relatorios.append(p["publicar"])
 
@@ -93,7 +107,8 @@ st.session_state._pages = p
 navegacao = {"": [p["inicio"]]}
 if ferramentas:
     navegacao["Ferramentas"] = ferramentas
-navegacao["Relatórios"] = secao_relatorios
+if secao_relatorios:
+    navegacao["Relatórios"] = secao_relatorios
 # O menu da conta leva o nome da pessoa: perfil, tema e saída ficam num lugar só.
 navegacao[state.primeiro_nome()] = conta
 # A página de login continua registrada (oculta) para que /entrar redirecione após o login.
@@ -116,10 +131,12 @@ with st.container(key="ps_tema"):
     ui.avatar_no_menu(state.primeiro_nome(), st.session_state.get("usuario_logado") or "", st.session_state.get("foto_perfil") or "")
     login.gravar_lembranca(st.session_state.get("usuario_login", ""))
 
-presenca.pulso()
+LOCAL = db.modo_local()                  # no PC não há colegas conectados: sem presença, avisos, sininho e chat
+if not LOCAL:
+    presenca.pulso()
 
-if admin_on and pagina.url_path != "admin":
-    @st.fragment(run_every="30s")
+if admin_on and pagina.url_path != "admin" and not LOCAL:
+    @st.fragment(run_every="300s" if trafego.economia() else "60s")
     def _aviso_solicitacoes() -> None:
         """Pop-up para administradores quando chegam pedidos de acesso (verifica a cada 30 s)."""
         try:
@@ -146,7 +163,7 @@ if admin_on and pagina.url_path != "admin":
     _aviso_solicitacoes()
 
 
-@st.fragment(run_every="20s")
+@st.fragment(run_every="180s" if trafego.economia() else "60s")
 def _notificacoes() -> None:
     """Notificações: pop-up que some sozinho em ~7 s e sininho no topo com o histórico (sugestões, respostas do Pricing, chat)."""
     import datetime as _dt
@@ -193,10 +210,11 @@ def _notificacoes() -> None:
                     nt.marcar_lidas([n["id"] for n in lista if not n.get("lida")])
                     _rerun_fragmento()
 
-_notificacoes()
+if not LOCAL:
+    _notificacoes()
 
 
-@st.fragment(run_every="15s")
+@st.fragment(run_every="120s" if trafego.economia() else "30s")
 def _chat() -> None:
     """Chat flutuante (canal público por estado e privados), em todas as telas, com print anexado."""
     import datetime as _dt
@@ -253,7 +271,8 @@ def _chat() -> None:
                                  on_change=lambda: chat.marcar_lido(login, st.session_state.chat_sel))     # abrir a conversa marca como lida
             st.session_state.chat_canal = canal
             # mensagens: agrupadas por dia, com avatar, menções destacadas, prints na conversa e arquivos para baixar
-            msgs, dia_ant = chat.mensagens(canal), None
+            marca = max((str(m["criado_em"]) for m in rec if m["canal"] == canal), default="")
+            msgs, dia_ant = chat.mensagens(canal, marca=marca), None
             tam = lambda b: f"{b / 1024:,.0f} KB".replace(",", ".") if b < 1024 * 1024 else f"{b / 1024 / 1024:,.1f} MB".replace(".", ",")
             with st.container(height=340, key="ps_chat_msgs"):
                 if not msgs:
@@ -312,6 +331,7 @@ def _chat() -> None:
             if nao.get(canal) and st.button(f"Marcar {nao[canal]} mensagem(ns) como lida(s)", key="chat_lido", width="stretch", icon=":material/done_all:"):
                 chat.marcar_lido(login, canal); _rerun_fragmento()
 
-_chat()
+if not LOCAL:
+    _chat()
 
 pagina.run()
