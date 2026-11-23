@@ -67,7 +67,7 @@ def ler_planilha(arquivo) -> pd.DataFrame:
 def carregar(_versao: str = "") -> tuple[pd.DataFrame, dict]:
     """Regras salvas (vazio se ainda não houver)."""
     try:
-        bruto = db.sb().storage.from_(BUCKET).download(CAMINHO)
+        bruto = db.baixar_storage(BUCKET, CAMINHO)            # cópia em disco enquanto o arquivo não mudar
     except Exception:
         return pd.DataFrame(columns=list(COLUNAS) + ["atualizado_em"]), {}
     df = pd.read_csv(io.BytesIO(bruto), compression="gzip", sep=";", dtype={"zona_nome": str})
@@ -88,7 +88,7 @@ def salvar(novo: pd.DataFrame, autor: str) -> dict:
     import gzip
     db.sb().storage.from_(BUCKET).upload(CAMINHO, gzip.compress(conteudo, 6),
                                          {"content-type": "application/gzip", "upsert": "true", "cache-control": "60"})
-    carregar.clear()
+    carregar.clear(); db.storage_mudou(BUCKET, CAMINHO)
     return {"total": len(junto), "novas": len(chaves_novo - chaves_atual), "substituidas": len(chaves_novo & chaves_atual),
             "mantidas": len(chaves_atual - chaves_novo)}
 

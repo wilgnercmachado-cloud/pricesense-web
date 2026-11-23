@@ -70,6 +70,7 @@ def salvar(df: pd.DataFrame, progresso=None) -> dict:
     completo = pd.concat([mantidos, novo], ignore_index=True).drop_duplicates("id_produto", keep="last")
     db.sb().storage.from_("relatorios").upload(ARQUIVO, _gz.compress(completo.to_csv(index=False).encode(), 6),
                                                {"content-type": "application/gzip", "upsert": "true"})
+    db.storage_mudou("relatorios", ARQUIVO)
     # no banco, só os produtos enviados mudam (a função só mexe em quem já existe na dim_produto)
     registros = [{"id_produto": int(a), "id_pai": int(b), "proporcao": float(c)}
                  for a, b, c in zip(novo["id_produto"], novo["id_pai"], novo["proporcao"])]
@@ -137,7 +138,7 @@ def carregar() -> pd.DataFrame:
     """Relações PAI x filho da base PROP%: do arquivo completo no Storage; sem ele, da dim_produto."""
     try:
         import gzip as _gz, io as _io
-        df = pd.read_csv(_io.BytesIO(_gz.decompress(db.sb().storage.from_("relatorios").download(ARQUIVO))))
+        df = pd.read_csv(_io.BytesIO(_gz.decompress(db.baixar_storage("relatorios", ARQUIVO))))
         if len(df):
             return df.astype({"id_produto": "int64", "id_pai": "int64", "proporcao": "float64"}).assign(nome="")
     except Exception:

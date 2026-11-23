@@ -97,7 +97,7 @@ def salvar(df: pd.DataFrame, enviado_por: str, aprovado_por: str) -> dict:
     return {"linhas": len(regs), "ate": ate}
 
 
-@st.cache_data(ttl=120, show_spinner=False)
+@st.cache_data(ttl=6 * 3600, show_spinner=False)          # relida quando a assinatura (versao) muda
 def vigentes() -> pd.DataFrame:
     """Targets dentro da vigência (até a data, inclusive)."""
     hoje = dt.datetime.now(FUSO).date().isoformat()
@@ -117,12 +117,25 @@ def vigentes() -> pd.DataFrame:
 
 
 def versao() -> str:
-    v = vigentes()
-    return f"{len(v)}:{v['importado_em'].max() if len(v) else ''}:{flags_versao()}"
+    """Assinatura leve dos targets vigentes e das flags: quantidade + última importação, sem baixar a tabela inteira
+    (a conferência roda a cada minuto para cada pessoa na PriceMetrics, e baixar tudo gastava a cota do Supabase)."""
+    hoje = dt.datetime.now(FUSO).date().isoformat()
+    try:
+        r = (db.sb().table(TABELA).select("importado_em", count="exact").gte("vigencia_ate", hoje)
+             .order("importado_em", desc=True).limit(1).execute())
+        alvo = f"{r.count or 0}:{(r.data or [{}])[0].get('importado_em', '') if r.data else ''}"
+    except Exception:
+        alvo = "?"
+    try:
+        f = db.sb().table(FLAGS).select("nivel, valor").eq("marcado", True).execute().data or []
+        marcadas = str(sorted((x["nivel"], x["valor"]) for x in f))
+    except Exception:
+        marcadas = "?"
+    return f"{alvo}:{marcadas}"
 
 
 # ---------------------------------------------------------------- flags (comprador → categoria → fornecedor)
-@st.cache_data(ttl=60, show_spinner=False)
+@st.cache_data(ttl=6 * 3600, show_spinner=False)          # relida quando a assinatura (versao) muda
 def flags() -> dict[tuple[str, str], bool]:
     try:
         d = db.sb().table(FLAGS).select("*").execute().data or []

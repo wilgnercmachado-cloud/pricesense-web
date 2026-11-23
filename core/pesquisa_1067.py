@@ -216,9 +216,9 @@ def _somar(base: str, lista: tuple) -> dict | None:
     """Soma as 1067 de todos os usuários enviadas para este HTML (guardado em memória sem cópia a cada execução).
     Na mesma filial + produto + concorrente + data, vale o envio mais recente; envios para outro HTML são ignorados."""
     pacotes = []
-    for nome, _ in lista:
+    for nome, quando in lista:
         try:
-            z = np.load(io.BytesIO(db.sb().storage.from_(BUCKET).download(f"{PASTA}/{nome}")))
+            z = np.load(io.BytesIO(db.baixar_storage(BUCKET, f"{PASTA}/{nome}", versao=quando or None)))
             meta = json.loads(z["meta"].tobytes())
             if meta.get("base") != base:
                 continue

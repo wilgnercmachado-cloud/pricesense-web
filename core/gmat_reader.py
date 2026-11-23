@@ -138,9 +138,35 @@ def _chave(p, f, k) -> np.ndarray:
     return (p.astype(np.int64) << 26) | (f.astype(np.int64) << 13) | k.astype(np.int64)
 
 
+MARGEM_MERCADO_MIN, MARGEM_MERCADO_MAX = -0.40, 0.60      # faixa aceita para o preço vencedor
+
+
+def _pesquisa_valida(df: pd.DataFrame, A: dict) -> np.ndarray:
+    """Corte de erro de pesquisa, só para o preço vencedor (o histórico mostra a pesquisa como veio).
+
+    Sai a coleta com margem de mercado fora de -40% a +60% [(varejo do concorrente - nosso custo) / varejo do
+    concorrente] e a coleta com atacado do concorrente maior que o varejo dele. Sem custo na base, a margem não é
+    medida e a coleta fica (o corte do atacado vale sempre).
+    """
+    v = A["v"].astype(np.float64) / 100
+    a = A["a"].astype(np.float64) / 100
+    chave = lambda p, f: (np.asarray(p).astype(np.int64) << 16) | np.asarray(f).astype(np.int64)
+    custos = pd.Series(df["cu"].to_numpy(dtype=np.float64), index=chave(df["_p"].to_numpy(), df["_f"].to_numpy()))
+    custos = custos[~custos.index.duplicated()]
+    cu = custos.reindex(chave(A["p"], A["f"])).to_numpy()
+    tem_custo = np.nan_to_num(cu, nan=0.0) > 0.09
+    with np.errstate(divide="ignore", invalid="ignore"):
+        margem = np.where(v > 0, (v - np.nan_to_num(cu)) / v, np.nan)
+    faixa = ~tem_custo | ((margem >= MARGEM_MERCADO_MIN - 1e-9) & (margem <= MARGEM_MERCADO_MAX + 1e-9))
+    atacado_ok = ~((a > 0) & (a > v + 1e-9))
+    return faixa & atacado_ok
+
+
 def aplicar_vencedor(df: pd.DataFrame, col: dict, extra: dict | None = None) -> list[str]:
     """Recalcula o preço vencedor de cada filial x produto (altera df). Feito em numpy, para gastar pouca memória.
 
+    0. Corte de erro (só aqui; o histórico mostra a pesquisa como veio): margem de mercado entre -40% e +60% e
+       atacado do concorrente não maior que o varejo dele.
     1. Recorte: os últimos 3 dias de pesquisa de cada filial (HTML somado à 1067, quando houver).
     2. Para cada concorrente associado à filial, o dia mais recente de coleta no recorte, de qualquer tipo.
     3. Se nesse dia houver coleta de tipo fora de REGULAR, PROMOÇÃO e PONTO EXTRA, o concorrente sai.
@@ -160,6 +186,7 @@ def aplicar_vencedor(df: pd.DataFrame, col: dict, extra: dict | None = None) -> 
         A = {c: np.concatenate([A[c][manter], np.asarray(extra[c]).astype(A[c].dtype)]) for c in cols}
     ok = (A["v"] > 0) & (A["dia"] > 0)
     A = {c: A[c][ok] for c in cols}
+    A = {c: A[c][_pesquisa_valida(df, A)] for c in cols}
     # recorte por filial
     fd = np.unique((A["f"].astype(np.int64) << 32) | A["dia"].astype(np.int64))
     ff, dd = (fd >> 32).astype(np.int64), (fd & 0xFFFFFFFF).astype(np.int64)
