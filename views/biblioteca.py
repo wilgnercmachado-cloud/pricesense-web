@@ -167,7 +167,7 @@ def _visualizador(rel: dict, prefs: dict) -> None:
         if reports.pode_editar(rel, login, admin) and auth.pode_publicar():
             if st.button("Editar", icon=":material/edit:", key="rel_editar"):
                 st.switch_page(state.paginas()["publicar"], query_params={"editar": rel["id"]})
-        ui.acoes_relatorio(rel["id"], links, arquivo)
+        ui.acoes_relatorio(rel["id"], reserva or links, arquivo)
 
     st.html("<div style='height:8px'></div>")
     with st.container(key="rel_quadro"):
