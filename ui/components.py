@@ -323,7 +323,7 @@ iframe{{display:block;width:100%;height:100%;border:0}}
 const B64 = "{b64}";
 const LINKS = {json.dumps(links or [])};
 const RESERVA = {json.dumps(reserva or [])};   /* links do Supabase, usados só se o site não entregar a parte */
-const CHAVE = {json.dumps(chave or "")};
+const CHAVE = {json.dumps(("v2|" + chave) if chave else "")};
 /* cores do tema atual da página (acompanha a troca de tema sem redesenhar o relatório) */
 (function cores() {{
   let ultimo = '';
@@ -380,6 +380,13 @@ async function idbGravar(chave, blob) {{
     arq.put(blob, chave); ind.put({{tam: blob.size, uso: Date.now()}}, chave);
   }} catch (_) {{}}
 }}
+async function parecRelatorio(blob) {{
+  /* compactado (gzip) ou HTML que não seja a página do próprio Streamlit */
+  const ini = new Uint8Array(await blob.slice(0, 2).arrayBuffer());
+  if (ini[0] === 0x1f && ini[1] === 0x8b) return true;
+  const txt = await blob.slice(0, 600).text();
+  return !txt.includes('Copyright (c) Streamlit');
+}}
 async function obterBytes(msg) {{
   if (!LINKS.length) {{
     const bin = atob(B64), bytes = new Uint8Array(bin.length);
@@ -390,7 +397,10 @@ async function obterBytes(msg) {{
   for (let i = 0; i < LINKS.length; i++) {{
     let r = null;
     try {{ r = await fetch(LINKS[i]); }} catch (_) {{ r = null; }}
-    if ((!r || !r.ok) && RESERVA[i]) r = await fetch(RESERVA[i]);
+    /* sem a pasta static ligada, o site responde com a própria página (HTML) em vez do arquivo: vale como falha */
+    const pagina = r && r.ok && LINKS[i].startsWith('/app/static/') && (r.headers.get('content-type') || '').includes('text/html');
+    if ((!r || !r.ok || pagina) && RESERVA[i]) r = await fetch(RESERVA[i]);
+    else if (pagina) throw new Error('o site não entregou o arquivo (pasta static desligada)');
     if (!r || !r.ok) throw new Error('falha ao baixar a parte ' + (i + 1) + (r ? ' (HTTP ' + r.status + ')' : ''));
     const total = +r.headers.get('content-length') || 0, leitor = r.body.getReader(), pedacos = [];
     let lido = 0;
@@ -411,10 +421,11 @@ async function obterBytes(msg) {{
     let texto = guardado(), blob;
     if (texto === null) {{
       let bruto = CHAVE && LINKS.length ? await idbLer(CHAVE) : null;
+      if (bruto && !(await parecRelatorio(bruto))) bruto = null;     /* cópia inválida: baixa de novo */
       if (bruto) {{ msg.textContent = 'Abrindo a cópia salva neste navegador'; }}
       else {{
         bruto = new Blob(await obterBytes(msg));
-        if (CHAVE && LINKS.length) idbGravar(CHAVE, bruto);
+        if (CHAVE && LINKS.length && await parecRelatorio(bruto)) idbGravar(CHAVE, bruto);
       }}
       const inicio = new Uint8Array(await bruto.slice(0, 2).arrayBuffer());
       if (inicio[0] === 0x1f && inicio[1] === 0x8b) {{
