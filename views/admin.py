@@ -88,7 +88,7 @@ def _painel_trafego() -> None:
         st.progress(pct)
         st.caption(f"Medido pelo servidor desde {r['desde']}. Passando de {r['limite']} MB no dia, o site entra em modo "
                    "econômico até a meia-noite: o ao vivo pausa e o chat e o sininho atualizam com menos frequência. "
-                   "Relatórios baixados pelo navegador não entram nesta conta. Confira o total do mês no Supabase, "
+                   "Os relatórios são entregues pelo próprio site: o Supabase manda cada versão no máximo uma vez. Confira o total do mês no Supabase, "
                    "em Organização > Uso (Saída e Saída em cache, 5 GB cada).")
         if r["itens"]:
             st.dataframe({"Origem": [k for k, _ in r["itens"]], "MB hoje": [round(v, 2) for _, v in r["itens"]]},

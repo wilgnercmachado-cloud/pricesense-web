@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from core import auth, reports, state
+from core import auth, db, reports, state
 from ui import components as ui
 from ui import theme
 
@@ -135,6 +135,12 @@ def _visualizador(rel: dict, prefs: dict) -> None:
 
     try:
         links = reports.links_sessao(rel)          # fixos na sessão: o relatório não recarrega sozinho
+        reserva = []
+        if not db.modo_local():
+            try:                                   # o site entrega o arquivo; o link do Supabase fica de reserva
+                links, reserva = reports.links_servidor(rel), links
+            except Exception as exc_site:
+                print("[PriceSense] relatório pelo site falhou; usando o link do Supabase:", repr(exc_site), flush=True)
     except Exception as exc:
         st.error(f"Não foi possível localizar o arquivo do relatório: {exc}", icon=":material/error:")
         return
@@ -165,7 +171,7 @@ def _visualizador(rel: dict, prefs: dict) -> None:
 
     st.html("<div style='height:8px'></div>")
     with st.container(key="rel_quadro"):
-        ui.relatorio_html(links=links, altura=ALTURA, barra=False,
+        ui.relatorio_html(links=links, altura=ALTURA, barra=False, reserva=reserva,
                           chave=f"{rel['id']}|{rel.get('atualizado_em') or rel.get('versao')}")
 
 

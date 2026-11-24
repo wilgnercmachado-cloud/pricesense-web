@@ -43,12 +43,14 @@ def _base_publicada(caminho: str, partes: int, versao: str, leitor: str = "") ->
         return df, meta
     except Exception:
         pass
-    df, meta = gr.ler_de_gzip_ou_html(reports.baixar_conteudo({"arquivo_path": caminho, "partes": partes}))
+    # com a versão, a leitura aproveita a cópia que o servidor guardou ao publicar/substituir (não baixa de volta)
+    df, meta = gr.ler_de_gzip_ou_html(reports.baixar_conteudo({"arquivo_path": caminho, "partes": partes, "atualizado_em": versao}))
     gc.collect()
     try:
         gz = gzip.compress(pickle.dumps((df, meta), protocol=5), 3)
         if len(gz) < 45 * 1024 * 1024:
             db.sb().storage.from_("relatorios").upload(pronto, gz, {"content-type": "application/gzip", "upsert": "true"})
+            db.guardar_storage_cache("relatorios", pronto, "fixo", gz)         # reinício do processo sem baixar de novo
             antigos = [f"cache_base/{x['name']}" for x in (db.sb().storage.from_("relatorios").list("cache_base") or [])
                        if f"cache_base/{x.get('name')}" != pronto]
             if antigos:
