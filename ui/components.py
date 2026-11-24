@@ -281,7 +281,7 @@ ligar(); setInterval(ligar, 800);
 
 
 def relatorio_html(gz: bytes | None = None, altura: int = 860, nome_arquivo: str | None = None, barra: bool = True,
-                   links: list[str] | None = None, chave: str | None = None) -> None:
+                   links: list[str] | None = None, chave: str | None = None, reserva: list[str] | None = None) -> None:
     """Exibe um relatório HTML (gzip ou texto puro).
 
     Com `links`, o navegador baixa as partes direto do Supabase (nada passa pelo servidor do Streamlit).
@@ -322,6 +322,7 @@ iframe{{display:block;width:100%;height:100%;border:0}}
 <script>
 const B64 = "{b64}";
 const LINKS = {json.dumps(links or [])};
+const RESERVA = {json.dumps(reserva or [])};   /* links do Supabase, usados só se o site não entregar a parte */
 const CHAVE = {json.dumps(chave or "")};
 /* cores do tema atual da página (acompanha a troca de tema sem redesenhar o relatório) */
 (function cores() {{
@@ -387,8 +388,10 @@ async function obterBytes(msg) {{
   }}
   const partes = [];
   for (let i = 0; i < LINKS.length; i++) {{
-    const r = await fetch(LINKS[i]);
-    if (!r.ok) throw new Error('falha ao baixar a parte ' + (i + 1) + ' (HTTP ' + r.status + ')');
+    let r = null;
+    try {{ r = await fetch(LINKS[i]); }} catch (_) {{ r = null; }}
+    if ((!r || !r.ok) && RESERVA[i]) r = await fetch(RESERVA[i]);
+    if (!r || !r.ok) throw new Error('falha ao baixar a parte ' + (i + 1) + (r ? ' (HTTP ' + r.status + ')' : ''));
     const total = +r.headers.get('content-length') || 0, leitor = r.body.getReader(), pedacos = [];
     let lido = 0;
     for (;;) {{
