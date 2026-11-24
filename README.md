@@ -277,3 +277,11 @@ varejo. Sem custo na base, a margem não é medida. O histórico (gráfico) e a 
   `trafego.Rastreado`). Passando de 120 MB no dia, modo econômico até a meia-noite: ao vivo pausa, chat a cada 2 min,
   sininho a cada 3 min. Painel "Tráfego do banco hoje" na Administração, com as origens que mais gastaram.
 
+## Relatórios entregues pelo próprio site (desde 24/11/2026)
+- O navegador baixa o relatório de `/app/static/relatorios/...` (pasta `static/`, servida pelo Streamlit com
+  `enableStaticServing = true` em `.streamlit/config.toml`), não do Supabase. `reports.links_servidor` gera os endereços
+  (nome com parte aleatória por processo) e guarda o arquivo na pasta; o link assinado do Supabase vai como reserva.
+- Publicar/substituir guarda as partes na cópia em disco do servidor (`db.guardar_storage_cache`), e a base pronta da
+  PriceMetrics (`cache_base/*.pkl.gz`) também: depois de substituir um relatório, nem a mesa nem o navegador baixam do
+  Supabase. Relatório antigo: o servidor baixa uma vez por versão.
+
