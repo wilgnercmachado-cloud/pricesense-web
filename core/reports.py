@@ -133,6 +133,58 @@ def links_sessao(rel: dict) -> list[str]:
     return links
 
 
+# ---------------------------------------------------------------- relatório entregue pelo próprio site
+# O navegador baixa o relatório do servidor do site (pasta static, servida pelo Streamlit), e não do Supabase:
+# o Supabase entrega cada versão no máximo uma vez ao servidor (nenhuma, se ela foi publicada por este servidor).
+# Nomes com parte aleatória por processo: só quem recebeu a página do relatório conhece o endereço.
+import hashlib as _hl
+import os as _os
+import secrets as _segredo
+
+PASTA_STATIC = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), "static", "relatorios")
+_SAL = _segredo.token_hex(16)
+LIMITE_STATIC = 1024 * 1024 * 1024          # a pasta não passa de 1 GB (saem os mais antigos)
+
+
+def _limpar_static() -> None:
+    try:
+        arqs = sorted((_os.path.join(PASTA_STATIC, n) for n in _os.listdir(PASTA_STATIC)), key=_os.path.getatime)
+        total = sum(_os.path.getsize(a) for a in arqs)
+        for a in arqs:
+            if total <= LIMITE_STATIC:
+                break
+            total -= _os.path.getsize(a)
+            _os.remove(a)
+    except OSError:
+        pass
+
+
+def links_servidor(rel: dict) -> list[str]:
+    """Endereços /app/static/... das partes do relatório, servidos pelo site. Erro aqui: o visualizador usa o link do Supabase."""
+    v = versao_chave(rel.get("atualizado_em") or rel.get("versao"))
+    _os.makedirs(PASTA_STATIC, exist_ok=True)
+    links = []
+    for caminho in _caminhos(rel["arquivo_path"], int(rel.get("partes") or 1)):
+        prefixo = _hl.sha1(caminho.encode()).hexdigest()[:16]
+        nome = f"{prefixo}_{_hl.sha256(f'{_SAL}|{caminho}|{v}'.encode()).hexdigest()[:32]}.bin"
+        alvo = _os.path.join(PASTA_STATIC, nome)
+        if not _os.path.exists(alvo):
+            conteudo = db.baixar_storage(BUCKET, caminho, versao=v or None)
+            for velho in _os.listdir(PASTA_STATIC):                 # versão anterior da mesma parte sai
+                if velho.startswith(prefixo + "_") and velho != nome:
+                    try:
+                        _os.remove(_os.path.join(PASTA_STATIC, velho))
+                    except OSError:
+                        pass
+            tmp = alvo + ".tmp"
+            with open(tmp, "wb") as f:
+                f.write(conteudo)
+            _os.replace(tmp, alvo)
+            _limpar_static()
+        links.append(f"/app/static/relatorios/{nome}")
+    return links
+
+
 # ---------------------------------------------------------------- permissões
 def estados_do_usuario(valor) -> list[str]:
     """Estados gravados no usuário: 'TODOS' ou siglas separadas por ponto e vírgula (ex.: 'BA;SE')."""
@@ -177,12 +229,20 @@ def _enviar(caminho: str, gz: bytes) -> None:
     )
 
 
-def _enviar_partes(base: str, gz: bytes, progresso=None) -> int:
+def versao_chave(versao) -> str:
+    """Versão do arquivo como só dígitos até os segundos (o banco devolve a data com outro formato de frações)."""
+    import re
+    return re.sub(r"[^0-9]", "", str(versao or ""))[:14]
+
+
+def _enviar_partes(base: str, gz: bytes, progresso=None, versao: str | None = None) -> int:
     pedacos = _dividir(gz)
     for i, (caminho, pedaco) in enumerate(zip(_caminhos(base, len(pedacos)), pedacos)):
         if progresso:
             progresso(i, len(pedacos))
         _enviar(caminho, pedaco)
+        if versao:                         # o servidor já tem o arquivo: guarda a cópia para não baixar de volta
+            db.guardar_storage_cache(BUCKET, caminho, versao_chave(versao), pedaco)
     return len(pedacos)
 
 
@@ -199,15 +259,16 @@ def publicar(meta: dict, conteudo: bytes, autor_login: str, autor_nome: str, pro
     gz = _validar_tamanho(conteudo)
     rid = str(uuid.uuid4())
     caminho = f"{datetime.now():%Y/%m}/{rid}.html.gz"
+    agora = _agora()
     try:
-        partes = _enviar_partes(caminho, gz, progresso)
+        partes = _enviar_partes(caminho, gz, progresso, versao=agora)
     except Exception as exc:
         _remover(_caminhos(caminho, len(_dividir(gz))))
         raise ErroRelatorio(f"Não foi possível enviar o arquivo para o Storage: {exc}") from exc
     registro = {
         "id": rid, **meta, "arquivo_path": caminho, "partes": partes, "tamanho_bytes": len(conteudo),
         "autor_usuario": autor_login, "autor_nome": autor_nome, "versao": 1,
-        "criado_em": _agora(), "atualizado_em": _agora(),
+        "criado_em": agora, "atualizado_em": agora,
     }
     try:
         db.sb().table("relatorios").insert(registro).execute()
@@ -226,7 +287,7 @@ def atualizar(rel: dict, meta: dict, conteudo: bytes | None = None, progresso=No
         antigo, partes_antigas = rel["arquivo_path"], int(rel.get("partes") or 1)
         caminho = antigo if antigo.endswith(".gz") else posixpath.join(posixpath.dirname(antigo), f"{rel['id']}.html.gz")
         try:
-            partes = _enviar_partes(caminho, gz, progresso)
+            partes = _enviar_partes(caminho, gz, progresso, versao=campos["atualizado_em"])
         except Exception as exc:
             raise ErroRelatorio(f"Não foi possível enviar o novo arquivo: {exc}") from exc
         novos = set(_caminhos(caminho, partes))
@@ -299,6 +360,6 @@ def definir_favorito(login: str, rid: str, favorito: bool) -> None:
 
 def baixar_conteudo(rel: dict) -> bytes:
     """Arquivo inteiro do relatório (partes juntadas), ainda compactado se foi publicado assim."""
-    v = str(rel.get("atualizado_em") or rel.get("versao") or "") or None
+    v = versao_chave(rel.get("atualizado_em") or rel.get("versao")) or None
     partes = [db.baixar_storage(BUCKET, c, versao=v) for c in _caminhos(rel["arquivo_path"], int(rel.get("partes") or 1))]
     return b"".join(partes)

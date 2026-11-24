@@ -5,8 +5,9 @@ servidor passa por aqui (core/db.py embrulha o cliente): o tamanho do que voltou
 Passando do limite do dia, o site entra em modo econômico até a meia-noite: o ao vivo pausa e o chat e o sininho
 conferem com menos frequência. A tela Administração mostra o consumo do dia.
 
-Não entra na conta: os relatórios que o navegador baixa direto do Storage (esses ficam guardados no navegador e só
-são baixados uma vez por versão). Por isso o limite diário fica abaixo dos ~160 MB.
+Os relatórios da Biblioteca são entregues pelo próprio site (pasta static): o Supabase manda cada versão no máximo
+uma vez ao servidor, e nenhuma quando ela foi publicada/substituída por este servidor. Se o site não conseguir entregar,
+o navegador usa o link do Supabase (esse download não entra nesta conta). O limite diário fica abaixo dos ~160 MB.
 """
 from __future__ import annotations
 

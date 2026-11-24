@@ -452,8 +452,7 @@ def baixar_storage(bucket: str, caminho: str, versao: str | None = None) -> byte
     v = versao if versao is not None else _info_storage(bucket, caminho)
     if not v:
         return sb().storage.from_(bucket).download(caminho)
-    chave = _hashlib.sha1(f"{bucket}|{caminho}|{v}".encode()).hexdigest()
-    alvo = _os.path.join(PASTA_CACHE, chave)
+    alvo = _arquivo_cache(bucket, caminho, v)
     try:
         with open(alvo, "rb") as f:
             conteudo = f.read()
@@ -462,6 +461,20 @@ def baixar_storage(bucket: str, caminho: str, versao: str | None = None) -> byte
     except OSError:
         pass
     conteudo = sb().storage.from_(bucket).download(caminho)
+    guardar_storage_cache(bucket, caminho, v, conteudo)
+    return conteudo
+
+
+def _arquivo_cache(bucket: str, caminho: str, versao: str) -> str:
+    return _os.path.join(PASTA_CACHE, _hashlib.sha1(f"{bucket}|{caminho}|{versao}".encode()).hexdigest())
+
+
+def guardar_storage_cache(bucket: str, caminho: str, versao: str, conteudo: bytes) -> None:
+    """Põe na cópia em disco um arquivo que o próprio servidor acabou de enviar ao Storage: a próxima leitura
+    (mesma versão) não precisa baixar de volta o que já estava aqui."""
+    if modo_local() or not versao:
+        return
+    alvo = _arquivo_cache(bucket, caminho, versao)
     try:
         _os.makedirs(PASTA_CACHE, exist_ok=True)
         tmp = alvo + ".tmp"
@@ -471,7 +484,6 @@ def baixar_storage(bucket: str, caminho: str, versao: str | None = None) -> byte
         _limpar_cache_disco()
     except OSError:
         pass
-    return conteudo
 
 
 def storage_mudou(bucket: str, caminho: str) -> None:
