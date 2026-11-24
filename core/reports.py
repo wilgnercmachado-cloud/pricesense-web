@@ -161,6 +161,8 @@ def _limpar_static() -> None:
 
 def links_servidor(rel: dict) -> list[str]:
     """Endereços /app/static/... das partes do relatório, servidos pelo site. Erro aqui: o visualizador usa o link do Supabase."""
+    if not st.get_option("server.enableStaticServing"):
+        raise RuntimeError("entrega pela pasta static desligada (.streamlit/config.toml)")
     v = versao_chave(rel.get("atualizado_em") or rel.get("versao"))
     _os.makedirs(PASTA_STATIC, exist_ok=True)
     links = []
