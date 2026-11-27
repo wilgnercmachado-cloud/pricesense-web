@@ -199,7 +199,7 @@ def _notificacoes() -> None:
     # sininho no topo, com contador de não lidas
     with st.container(key="ps_sino"):
         with st.popover(f"{nao_lidas}" if nao_lidas else "", icon=":material/notifications:", help="Notificações"):
-            st.html("<div class='ps-sino-top'><b>Notificações</b><span>Sugestões do comprador, respostas do Pricing e mensagens do chat.</span></div>")
+            st.html("<div class='ps-sino-top'><b>Notificações</b><span>Sugestões do comprador e respostas do Pricing.</span></div>")
             if not lista:
                 st.caption("Nenhuma notificação ainda.")
             else:
@@ -331,7 +331,8 @@ def _chat() -> None:
             if nao.get(canal) and st.button(f"Marcar {nao[canal]} mensagem(ns) como lida(s)", key="chat_lido", width="stretch", icon=":material/done_all:"):
                 chat.marcar_lido(login, canal); _rerun_fragmento()
 
-if not LOCAL:
+CHAT_LIGADO = False         # chat desligado em 25/11/2026 a pedido do time (consumo do banco); True volta o chat
+if CHAT_LIGADO and not LOCAL:
     _chat()
 
 pagina.run()

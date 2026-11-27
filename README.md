@@ -285,3 +285,9 @@ varejo. Sem custo na base, a margem não é medida. O histórico (gráfico) e a 
   PriceMetrics (`cache_base/*.pkl.gz`) também: depois de substituir um relatório, nem a mesa nem o navegador baixam do
   Supabase. Relatório antigo: o servidor baixa uma vez por versão.
 
+## Ao vivo e chat desligados; topo sem sobreposição (25/11/2026)
+- Ao vivo desligado (`views/regular.py`, `AO_VIVO_LIGADO = False`) e chat desligado (`portal.py`, `CHAT_LIGADO = False`),
+  a pedido do time, para não gastar a cota do Supabase. Mudar para True volta cada um.
+- Topo: `ui/components.py` (`arrumaDireita`) mede tema, tela cheia, sininho e os botões da tela aberta e coloca cada um
+  logo à esquerda do anterior; se faltar espaço no meio, o menu (ilha) anda para a esquerda, para o centro do espaço livre.
+
