@@ -206,25 +206,15 @@ def _css_neon(c1: str, c2: str, claro: bool) -> str:
     fios de luz nas laterais, barra de luz correndo no topo, brilho no menu, nos botões do canto, nos cartões e nos botões principais."""
     forte, leve = (".55", ".22") if claro else (".75", ".32")
     return f"""
-/* ---------- toque neon ({'claro' if claro else 'escuro'}) ---------- */
-[data-testid="stAppViewContainer"]::before, [data-testid="stAppViewContainer"]::after {{ content: ""; position: fixed; top: 0; bottom: 0; width: 2px; pointer-events: none; z-index: 2; }}
-[data-testid="stAppViewContainer"]::before {{ left: 0; background: linear-gradient(180deg, transparent, rgb({c1}) 30%, rgb({c1}) 70%, transparent);
-  box-shadow: 0 0 16px 3px rgba({c1},{forte}), 0 0 50px 8px rgba({c1},{leve}); animation: psn-pulso 3.6s ease-in-out infinite; }}
-[data-testid="stAppViewContainer"]::after {{ right: 0; background: linear-gradient(180deg, transparent, rgb({c2}) 30%, rgb({c2}) 70%, transparent);
-  box-shadow: 0 0 16px 3px rgba({c2},{forte}), 0 0 50px 8px rgba({c2},{leve}); animation: psn-pulso 3.6s ease-in-out infinite 1.8s; }}
-@keyframes psn-pulso {{ 0%, 100% {{ opacity: {'.35' if claro else '.45'}; }} 50% {{ opacity: 1; }} }}
-header[data-testid="stHeader"]::after {{ content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
-  background: linear-gradient(90deg, rgb({c1}), rgb({c2}), rgb({c1})); background-size: 300% 100%;
-  box-shadow: 0 0 12px rgba({c1},{forte}), 0 0 20px rgba({c2},{leve}); animation: psn-barra 7s linear infinite; }}
-@keyframes psn-barra {{ to {{ background-position: 300% 0; }} }}
+/* ---------- acabamento sóbrio ({'claro' if claro else 'escuro'}): sem luzes piscando nas laterais; um filete fino da marca no topo ---------- */
+header[data-testid="stHeader"]::after {{ content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba({c1},.55) 20%, rgba({c2},.55) 80%, transparent); }}
 header [data-testid="stTopNav"], .st-key-ps_tema button, #ps-fs, .st-key-ps_sino [data-testid="stPopoverButton"] {{
-  border-color: rgba({c1},.38) !important; box-shadow: 0 0 0 1px rgba({c1},.06) inset, 0 0 18px -6px rgba({c1},{forte}) !important; }}
-[data-testid="stTopNavLink"][aria-current="page"] {{ box-shadow: 0 0 14px -4px rgba({c1},{forte}); }}
+  border-color: rgba({c1},.22) !important; box-shadow: 0 1px 2px rgba(15,23,42,{'.06' if claro else '.4'}) !important; }}
 [data-testid="stBaseButton-primary"], [data-testid="stBaseButton-primaryFormSubmit"] {{
-  box-shadow: 0 0 20px -6px rgba({c1},{forte}), 0 10px 24px -14px rgba({c2},{forte}) !important; }}
-[data-testid="stPopoverBody"], [data-testid="stTopNavPopoverBody"], [class*="st-key-psc_"] {{
-  box-shadow: 0 -2px 0 rgba({c2},{'.35' if claro else '.5'}) inset, 0 0 36px -18px rgba({c1},{forte}) !important; }}
-.st-key-ps_chat [data-testid="stPopoverButton"] {{ box-shadow: 0 0 22px -4px rgba({c1},{forte}), 0 0 28px -10px rgba({c2},{forte}) !important; }}
+  box-shadow: 0 6px 16px -10px rgba({c1},{forte}) !important; }}
+[data-testid="stPopoverBody"], [data-testid="stTopNavPopoverBody"] {{
+  box-shadow: 0 12px 32px -12px rgba(15,23,42,{'.18' if claro else '.6'}) !important; }}
 """
 
 
@@ -815,6 +805,41 @@ header[data-testid="stHeader"] {{
   letter-spacing: -.04em; line-height: 1.04; margin: 0; padding: 0; color: var(--ps-ink);
 }}
 .ps-head p {{ color: var(--ps-muted); margin: .5rem 0 0; font-size: 1rem; max-width: 72ch; line-height: 1.5; }}
+/* faixa do topo de cada página: organizada como um painel (ícone, título, descrição, data) e sóbria */
+.ps-faixa {{ display: flex; align-items: center; gap: 16px; padding: 18px 22px; margin: .2rem 0 1.1rem;
+  border: 1px solid var(--ps-line); border-radius: 18px; position: relative; overflow: hidden;
+  background: var(--ps-surface-solid); box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 8px 24px -18px rgba(15,23,42,.18); }}
+.ps-faixa::before {{ content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 0 3px 3px 0;
+  background: var(--ps-primary); }}
+.ps-faixa-ic {{ width: 46px; height: 46px; min-width: 46px; border-radius: 13px; display: grid; place-items: center;
+  color: var(--ps-primary); background: var(--ps-primary-soft); }}
+.ps-faixa-ic svg, .ps-faixa-ic .ps-ic {{ width: 22px; height: 22px; }}
+.ps-faixa-tx {{ flex: 1; min-width: 0; }}
+.ps-head.ps-faixa h1 {{ font-size: clamp(1.35rem, 1.1rem + .8vw, 1.7rem); letter-spacing: -.03em; line-height: 1.15; }}
+.ps-head.ps-faixa p {{ margin: .25rem 0 0; font-size: .92rem; }}
+.ps-faixa-meta {{ display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }}
+.ps-faixa-chip {{ display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px; border-radius: 10px;
+  border: 1px solid var(--ps-line); background: var(--ps-surface-solid); color: var(--ps-muted); font: 500 .82rem var(--ps-mono); white-space: nowrap; }}
+.ps-faixa-chip svg, .ps-faixa-chip .ps-ic {{ width: 15px; height: 15px; }}
+.ps-faixa-hora {{ font-family: var(--ps-font); }}
+/* ícones das páginas (máscara: pega a cor do texto; o st.html novo não aceita svg embutido) */
+.ps-ic {{ display: inline-block; flex: none; width: 1.1em; height: 1.1em; background: currentColor; vertical-align: -.15em;
+  -webkit-mask: var(--i) center / contain no-repeat; mask: var(--i) center / contain no-repeat; }}
+@media (max-width: 760px) {{ .ps-faixa {{ flex-wrap: wrap; padding: 14px 16px; }} .ps-faixa-meta {{ width: 100%; justify-content: flex-start; }} }}
+/* indicadores: cartão com ícone, número grande e rótulo (como um painel administrativo) */
+.ps-inds {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 0 0 1rem; }}
+.ps-ind {{ border: 1px solid var(--ps-line); border-radius: 16px; padding: 14px 16px 16px; background: var(--ps-surface);
+  backdrop-filter: var(--ps-glass); -webkit-backdrop-filter: var(--ps-glass); transition: border-color .2s ease, transform .2s ease; }}
+.ps-ind:hover {{ border-color: color-mix(in srgb, var(--ps-ind, var(--ps-primary)) 55%, var(--ps-line)); transform: translateY(-1px); }}
+.ps-ind-top {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }}
+.ps-ind-ic {{ width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; color: var(--ps-ind, var(--ps-primary));
+  background: color-mix(in srgb, var(--ps-ind, var(--ps-primary)) 14%, transparent); }}
+.ps-ind-ic svg, .ps-ind-ic .ps-ic {{ width: 18px; height: 18px; }}
+.ps-ind-v {{ font: 650 1.85rem/1 var(--ps-font); letter-spacing: -.035em; color: var(--ps-ink); font-variant-numeric: tabular-nums; }}
+.ps-ind-l {{ margin-top: 6px; color: var(--ps-muted); font-size: .86rem; }}
+.ps-ind small {{ display: block; margin-top: 4px; color: var(--ps-muted); font-size: .76rem; }}
+.ps-ind.t-primary {{ --ps-ind: var(--ps-primary); }} .ps-ind.t-ok {{ --ps-ind: var(--ps-up); }}
+.ps-ind.t-alerta {{ --ps-ind: var(--ps-down); }} .ps-ind.t-aviso {{ --ps-ind: var(--ps-amber); }} .ps-ind.t-neutro {{ --ps-ind: var(--ps-muted); }}
 .ps-sec {{ margin: 1.9rem 0 .7rem; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }}
 [class*="st-key-psc_"] .ps-sec {{ margin-top: .1rem; }}
 .ps-sec h2 {{ font-family: var(--ps-font); font-weight: 600; font-size: 1.12rem; letter-spacing: -.02em; margin: 0; padding: 0; color: var(--ps-ink); }}

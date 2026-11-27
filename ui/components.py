@@ -76,9 +76,33 @@ def marca_html() -> str:
 
 
 # ---------------------------------------------------------------- estrutura de página
-def cabecalho(titulo: str, descricao: str | None = None, extra_html: str = "") -> None:
+_ICONE_PAGINA = {"Administração": "escudo", "Relatórios": "livros", "Publicar relatório": "enviar", "Editar relatório": "enviar",
+                 "Metrics Promo": "megafone", "Meu perfil": "pessoa", "PriceMetrics": "grafico"}
+
+
+def cabecalho(titulo: str, descricao: str | None = None, extra_html: str = "", icone: str | None = None,
+              detalhe: str | None = None) -> None:
+    """Faixa do topo de cada página: ícone, título, descrição e, à direita, a data de hoje (e um detalhe opcional)."""
+    import datetime as _dt
     desc = f"<p>{esc(descricao)}</p>" if descricao else ""
-    st.html(f"<div class='ps-head'><h1>{esc(titulo)}</h1>{desc}{extra_html}</div>")
+    nome_icone = icone or _ICONE_PAGINA.get(titulo, "grafico")
+    agora = _dt.datetime.now(_dt.timezone(_dt.timedelta(hours=-3)))
+    det = f"<span class='ps-faixa-chip'>{esc(detalhe)}</span>" if detalhe else ""
+    st.html(f"<div class='ps-head ps-faixa'><div class='ps-faixa-ic'>{_icone(nome_icone)}</div>"
+            f"<div class='ps-faixa-tx'><h1>{esc(titulo)}</h1>{desc}{extra_html}</div>"
+            f"<div class='ps-faixa-meta'>{det}<span class='ps-faixa-chip'>{_icone('calendario')}{agora:%d/%m/%Y}</span>"
+            f"<span class='ps-faixa-chip ps-faixa-hora'>atualizado às {agora:%H:%M}</span></div></div>")
+
+
+def indicadores(itens: list[tuple]) -> None:
+    """Cartões de indicador (rótulo, valor, ícone, tom[, nota]). tom: primary | ok | alerta | aviso | neutro."""
+    cards = []
+    for item in itens:
+        rotulo, valor, icone, tom = item[:4]
+        nota = f"<small>{esc(item[4])}</small>" if len(item) > 4 and item[4] else ""
+        cards.append(f"<div class='ps-ind t-{tom}'><div class='ps-ind-top'><span class='ps-ind-ic'>{_icone(icone)}</span></div>"
+                     f"<div class='ps-ind-v'>{esc(numero(valor))}</div><div class='ps-ind-l'>{esc(rotulo)}</div>{nota}</div>")
+    st.html(f"<div class='ps-inds'>{''.join(cards)}</div>")
 
 
 def secao(titulo: str, descricao: str | None = None) -> None:
@@ -665,21 +689,40 @@ _ICONES = {
     "baixar": "<path d='M12 3v12'/><path d='m7 10 5 5 5-5'/><path d='M5 21h14'/>",
     "tela": "<path d='M8 3H5a2 2 0 0 0-2 2v3'/><path d='M16 3h3a2 2 0 0 1 2 2v3'/><path d='M8 21H5a2 2 0 0 1-2-2v-3'/><path d='M16 21h3a2 2 0 0 0 2-2v-3'/>",
     "ok": "<path d='m5 12 5 5 9-10'/>",
+    "escudo": "<path d='M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6l-8-3Z'/><path d='m9 12 2 2 4-4'/>",
+    "livros": "<path d='M4 19V5a2 2 0 0 1 2-2h4v18H6a2 2 0 0 1-2-2Z'/><path d='M10 3h4v18h-4'/><path d='m15 4 3.5-1 3 16-3.5 1'/>",
+    "enviar": "<path d='M12 16V4'/><path d='m7 9 5-5 5 5'/><path d='M5 20h14'/>",
+    "megafone": "<path d='M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1Z'/><path d='M17 9a4 4 0 0 1 0 6'/>",
+    "pessoa": "<circle cx='12' cy='8' r='4'/><path d='M4 21a8 8 0 0 1 16 0'/>",
+    "grafico": "<path d='M4 20V10'/><path d='M10 20V4'/><path d='M16 20v-7'/><path d='M22 20H2'/>",
+    "pessoas": "<circle cx='9' cy='8' r='3.5'/><path d='M2.5 20a6.5 6.5 0 0 1 13 0'/><path d='M16 4.5a3.5 3.5 0 0 1 0 7'/><path d='M18 14a6 6 0 0 1 3.5 6'/>",
+    "relogio": "<circle cx='12' cy='12' r='9'/><path d='M12 7v5l3 2'/>",
+    "sinal": "<path d='M5 12.5a10 10 0 0 1 14 0'/><path d='M8.5 16a5 5 0 0 1 7 0'/><circle cx='12' cy='19.5' r='.8'/>",
+    "mapa": "<path d='m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Z'/><path d='M9 3v15'/><path d='M15 6v15'/>",
+    "calendario": "<rect x='3' y='5' width='18' height='16' rx='2'/><path d='M3 10h18'/><path d='M8 3v4'/><path d='M16 3v4'/>",
+    "seta": "<path d='m9 6 6 6-6 6'/>",
 }
 
 
-def _icone(nome: str) -> str:
-    return (f"<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' "
-            f"stroke-linejoin='round' aria-hidden='true'>{_ICONES[nome]}</svg>")
+def _icone(nome: str, svg: bool = False) -> str:
+    """Ícone de traço. Padrão: máscara CSS (o st.html das versões novas do Streamlit remove <svg>; a máscara fica e
+    pega a cor do texto). svg=True: <svg> de verdade, para os quadros próprios (components.html)."""
+    if svg:
+        return (f"<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' "
+                f"stroke-linejoin='round' aria-hidden='true'>{_ICONES[nome]}</svg>")
+    import urllib.parse
+    bruto = (f"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' "
+             f"stroke-linecap='round' stroke-linejoin='round'>{_ICONES[nome]}</svg>")
+    return f"<i class='ps-ic' aria-hidden='true' style=\"--i:url('data:image/svg+xml,{urllib.parse.quote(bruto)}')\"></i>"
 
 
 def acoes_relatorio(rid: str, links: list[str], nome_arquivo: str | None) -> None:
     """Copiar link, Baixar HTML (só para quem publica) e Tela cheia, no mesmo padrão dos botões do app."""
     t = theme.tokens()
-    botoes = [f"<button id='cp' type='button'>{_icone('link')}<span>Copiar link</span></button>"]
+    botoes = [f"<button id='cp' type='button'>{_icone('link', svg=True)}<span>Copiar link</span></button>"]
     if nome_arquivo:
-        botoes.append(f"<button id='dl' type='button'>{_icone('baixar')}<span>Baixar HTML</span></button>")
-    botoes.append(f"<button id='fs' type='button' class='pri'>{_icone('tela')}<span>Tela cheia</span></button>")
+        botoes.append(f"<button id='dl' type='button'>{_icone('baixar', svg=True)}<span>Baixar HTML</span></button>")
+    botoes.append(f"<button id='fs' type='button' class='pri'>{_icone('tela', svg=True)}<span>Tela cheia</span></button>")
     largura = 150 * len(botoes) + 8 * (len(botoes) - 1) + 4
     components.html(f"""<!doctype html><html><head><meta charset="utf-8"><style>
 @import url('{theme.FONTE_URL}');
