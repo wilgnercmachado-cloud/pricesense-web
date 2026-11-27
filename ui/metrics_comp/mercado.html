@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- Market Metrics: pesquisa de mercado para o comprador (consultar e extrair preços). Tudo roda no navegador com os
+     dados que o servidor já tem; nada vem do Supabase. -->
+<script>
+window.__mkRender = null;
+window.addEventListener('message', e => { if (e.data && e.data.type === 'streamlit:render') window.__mkRender = e.data; });
+window.parent.postMessage({ isStreamlitMessage: true, type: 'streamlit:componentReady', apiVersion: 1 }, '*');
+</script>
+<style id="tema"></style>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;background:transparent;color:var(--ink);font:13px 'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+#raiz{display:flex;flex-direction:column;gap:12px;overflow:hidden}
+.num,.mono{font-family:'Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.caixa{background:var(--surface-solid);border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 2px rgba(15,23,42,.05)}
+button{font:inherit;color:inherit;cursor:pointer}
+.bt{height:34px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface-solid);display:inline-flex;align-items:center;gap:7px;font-weight:500}
+.bt:hover{border-color:var(--primary);color:var(--primary)}
+.bt.pri{background:var(--primary);border-color:var(--primary);color:#fff}
+.bt.pri:hover{filter:brightness(1.08);color:#fff}
+.bt svg{width:15px;height:15px}
+/* cabeçalho */
+.cab{display:flex;align-items:center;gap:14px;padding:12px 16px}
+.cab .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--primary-soft);color:var(--primary)}
+.cab .ic svg{width:20px;height:20px}
+.cab h1{margin:0;font-size:18px;letter-spacing:-.02em}
+.cab h1 b{color:var(--primary);font-weight:600}
+.cab small{display:block;color:var(--muted);margin-top:2px}
+.cab .acoes{margin-left:auto;display:flex;gap:8px}
+/* faixa rolante (lenta, para ler) */
+.faixa{position:relative;overflow:hidden;height:36px;display:flex;align-items:center;mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent)}
+.faixa .trilho{display:flex;gap:34px;white-space:nowrap;animation:rola var(--dur,120s) linear infinite;padding-left:100%}
+.faixa:hover .trilho{animation-play-state:paused}
+@keyframes rola{to{transform:translateX(-100%)}}
+.fi{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer}
+.fi .tag{font:600 10px 'Geist Mono',monospace;letter-spacing:.08em;padding:2px 7px;border-radius:6px}
+.fi .tag.enc{background:var(--amber-soft);color:var(--amber)}.fi .tag.bx{background:var(--up-soft);color:var(--up)}.fi .tag.ac{background:color-mix(in srgb,var(--down) 14%,transparent);color:var(--down)}
+.fi b{font-weight:600}.fi .mono{color:var(--ink)}.fi small{color:var(--muted)}
+/* cartões */
+.cards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.card{padding:14px 16px;position:relative;overflow:hidden}
+.card .t{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;font-weight:500}
+.card .t i{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 14%,transparent);color:var(--c)}
+.card .t i svg{width:14px;height:14px}
+.card .v{display:flex;align-items:baseline;gap:10px;margin-top:10px}
+.card .v b{font:650 24px/1 'Geist',sans-serif;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.card .v span{font:500 12px 'Geist Mono',monospace;color:var(--muted)}
+.card .d{margin-top:6px;color:var(--muted);font-size:12px;min-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card:before{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--c);opacity:.55}
+.ctx{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;padding:0 4px}
+.ctx b{color:var(--ink)}
+.ctx button{border:0;background:none;color:var(--primary);padding:0;font-weight:500}
+/* gráficos */
+.graf{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:12px}
+.gc{padding:12px 14px 8px;position:relative;min-height:236px}
+.gc h3{margin:0;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+.gc h3 small{color:var(--muted);font-weight:400}
+.gc svg.ch{width:100%;height:190px;display:block;margin-top:6px;overflow:visible}
+.leg{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:2px;font-size:11.5px;color:var(--muted)}
+.leg span{display:inline-flex;align-items:center;gap:5px;cursor:pointer}.leg span.off{opacity:.35}
+.leg i{width:10px;height:3px;border-radius:2px;background:var(--c)}
+.rk{display:flex;flex-direction:column;gap:5px;margin-top:10px}
+.rk .l{display:grid;grid-template-columns:22px minmax(0,1fr) 120px 64px 58px;align-items:center;gap:8px;font-size:12.5px;padding:3px 4px;border-radius:8px}
+.rk .l:hover{background:var(--raised)}
+.rk .l .n{color:var(--muted);font:500 11px 'Geist Mono',monospace}
+.rk .bar{height:6px;border-radius:4px;background:var(--raised);position:relative}
+.rk .bar i{position:absolute;top:0;bottom:0;border-radius:4px}
+.rk .bar:after{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--line-strong)}
+#dica{position:fixed;z-index:50;pointer-events:none;background:var(--surface-solid);border:1px solid var(--line);border-radius:10px;padding:8px 10px;
+  box-shadow:0 12px 28px -12px rgba(2,6,23,.45);font-size:12px;opacity:0;transition:opacity .1s;min-width:150px}
+#dica.on{opacity:1}
+#dica .dt{font-weight:600;margin-bottom:5px}
+#dica .li{display:flex;align-items:center;gap:7px;justify-content:space-between}
+#dica .li span{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+#dica .li i{width:8px;height:8px;border-radius:2px;background:var(--c)}
+#dica .li b{font-family:'Geist Mono',monospace;font-weight:600}
+/* tabela */
+.tab{display:flex;flex-direction:column;min-height:0;flex:1}
+.barra{display:flex;align-items:center;gap:8px;padding:10px 12px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.barra input{height:34px;border-radius:10px;border:1px solid var(--line);background:var(--field);color:var(--ink);padding:0 12px;min-width:280px;font:inherit}
+.chip{height:30px;padding:0 11px;border-radius:15px;border:1px solid var(--line);background:none;font-size:12px;display:inline-flex;align-items:center;gap:6px}
+.chip.on{background:var(--primary-soft);border-color:var(--primary);color:var(--primary)}
+.chip em{font-style:normal;font:600 11px 'Geist Mono',monospace;color:var(--muted)}
+.barra .info{margin-left:auto;color:var(--muted);font-size:12px}
+.rol{overflow:auto;flex:1;min-height:0}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px}
+th{position:sticky;top:0;z-index:2;background:var(--surface-solid);color:var(--muted);font-weight:500;font-size:11.5px;text-align:right;padding:8px 10px;
+  border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none}
+th:first-child{text-align:left}
+th.gr{border-bottom:0;text-align:center;color:var(--ink);font-weight:600;cursor:default;padding-bottom:0}
+th.ord{color:var(--primary)}
+td{padding:7px 10px;border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent);text-align:right;white-space:nowrap}
+td:first-child{text-align:left;max-width:360px;overflow:hidden;text-overflow:ellipsis}
+td.c{color:var(--muted);text-align:left;max-width:170px;overflow:hidden;text-overflow:ellipsis}
+td.dt{color:var(--muted);font-size:11.5px}
+tr.p{cursor:pointer}tr.p:hover td{background:var(--raised)}
+tr.p.sel td{background:var(--primary-soft)}
+tr.p.sel td:first-child{box-shadow:inset 3px 0 0 var(--primary)}
+tr.u td{background:color-mix(in srgb,var(--raised) 60%,transparent)}tr.u td:first-child{padding-left:30px}
+tr.f td{font-size:12px}tr.f td:first-child{padding-left:52px;color:var(--muted)}
+.car{display:inline-grid;place-items:center;width:18px;height:18px;margin-right:6px;border-radius:5px;color:var(--muted);transition:transform .15s}
+.car.ab{transform:rotate(90deg);color:var(--primary)}
+.car svg{width:12px;height:12px}
+.v{font-weight:600}.vd{color:var(--up)}.vm{color:var(--down)}.en{color:var(--amber)}
+.mt{color:var(--muted)}
+.mais{display:block;margin:10px auto 14px}
+.vazio{padding:40px;text-align:center;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:18px;transform:translate(-50%,20px);opacity:0;background:var(--ink);color:var(--surface-solid);padding:9px 16px;border-radius:10px;font-size:12.5px;transition:.2s;z-index:60}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+@media (max-width:1200px){.cards{grid-template-columns:repeat(3,minmax(0,1fr))}.graf{grid-template-columns:1fr}}
+</style>
+</head><body><div id="raiz"><div class="vazio">Carregando a pesquisa…</div></div><div id="dica"></div><div class="toast" id="toast"></div>
+<script src="xlsx.mini.min.js" async></script>
+<script>
+(() => {
+const ST = { send(type, x){ window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type }, x || {}), '*'); },
+             altura(h){ this.send('streamlit:setFrameHeight', { height: h }); } };
+const P_ = {
+  radar: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 12 19 5"/>',
+  moda: '<path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/>', baixo: '<path d="m3 7 7 7 4-4 7 7"/><path d="M14 17h7v-7"/>',
+  hist: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>', enc: '<path d="M3 11 21 4l-4 17-5-7-9-3Z"/>',
+  nos: '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+  xls: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>', seta: '<path d="m9 18 6-6-6-6"/>', x: '<path d="M6 6l12 12M18 6 6 18"/>' };
+const ic = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${P_[n]}</svg>`;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const nf2 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), nf0 = new Intl.NumberFormat('pt-BR'),
+      nf1 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const rs = c => c > 0 ? nf2.format(c / 100) : '–';                  /* centavos -> "12,34" */
+const R$ = c => c > 0 ? 'R$ ' + nf2.format(c / 100) : '–';
+const pct = x => (x > 0 ? '+' : '') + nf1.format(x * 100) + '%';
+const CORES = ['#2D4BFF', '#E8590C', '#0CA678', '#AE3EC9', '#F59F00', '#1098AD', '#E03131', '#5C7CFA', '#94D82D', '#868E96'];
+let D = null, N = 0, SEL = -1, ABERTOS = new Set(), ABERTOS_U = new Set(), ORD = { c: 'col', d: -1 }, BUSCA = '', CHIPS = new Set(), LIM = 400, ESCONDIDAS = new Set();
+let IDX_E = {}, IDX_F = {}, IDX_S = {};
+const $ = id => document.getElementById(id);
+const toast = t => { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('on'), 2200); };
+
+/* ---------- dados ---------- */
+async function abrir(b64){
+  const bin = atob(b64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  return JSON.parse(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).text()); }
+function indexar(){
+  N = D.p.nome.length; IDX_E = {}; IDX_F = {}; IDX_S = {};
+  D.e.p.forEach((p, i) => (IDX_E[p] = IDX_E[p] || []).push(i));
+  if (D.f) D.f.p.forEach((p, i) => { if (p < 0) return; const k = p + '|' + D.f.uf[i]; (IDX_F[k] = IDX_F[k] || []).push(i); });
+  D.s.p.forEach((p, i) => (IDX_S[p] = IDX_S[p] || []).push(i));
+  D.nossoDia = {}; D.o.p.forEach((p, i) => (D.nossoDia[p] = D.nossoDia[p] || {})[D.o.t[i]] = D.o.v[i]);
+}
+const M = (c, i) => D.m[c][i], E = (c, i) => D.e[c][i];
+const conc = k => k >= 0 ? (D.K[k] || '') : '', dia = t => t >= 0 ? (D.T[t] || '') : '';
+const nossoC = i => D.p.vm[i] > 0 ? Math.round(D.p.vm[i] * 100) : -1;
+
+/* ---------- filtro e ordem ---------- */
+function linhas(){
+  const q = BUSCA.toLowerCase(); let L = [];
+  for (let i = 0; i < N; i++) {
+    if (q && !(D.p.nome[i].toLowerCase().includes(q) || D.p.dep[i].toLowerCase().includes(q) || D.p.cat[i].toLowerCase().includes(q))) continue;
+    if (CHIPS.has('enc') && !(M('ev', i) > 0)) continue;
+    if (CHIPS.has('bx') && !(M('rv', i) > 0 && M('mv', i) > 0 && M('rv', i) < M('mv', i) * .95)) continue;
+    if (CHIPS.has('ac') && !(nossoC(i) > 0 && M('rv', i) > 0 && nossoC(i) > M('rv', i))) continue;
+    if (CHIPS.has('cesta') && !D.p.cesta[i]) continue;
+    L.push(i); }
+  const val = i => ORD.c === 'nome' ? D.p.nome[i] : ORD.c === 'nos' ? nossoC(i) : ORD.c === 'dif' ? difMenor(i) : ORD.c === 'venda' ? D.p.venda[i] : M(ORD.c, i);
+  L.sort((a, b) => { const x = val(a), y = val(b); if (typeof x === 'string') return ORD.d * x.localeCompare(y);
+    if (x < 0 && y >= 0) return 1; if (y < 0 && x >= 0) return -1; return ORD.d * (x - y); });
+  return L; }
+const difMenor = i => nossoC(i) > 0 && M('rv', i) > 0 ? nossoC(i) / M('rv', i) - 1 : -9;
+
+/* ---------- desenho ---------- */
+function montar(){
+  $('raiz').innerHTML = `
+  <div class="caixa cab"><span class="ic">${ic('radar')}</span><div><h1>Market <b>Metrics</b></h1>
+    <small id="escopo"></small></div><div class="acoes">
+    <button class="bt" id="xP">${ic('xls')}Extrair produtos e estados</button>
+    <button class="bt pri" id="xF">${ic('xls')}Extrair por filial</button></div></div>
+  <div class="caixa faixa"><div class="trilho" id="trilho"></div></div>
+  <div class="ctx" id="ctx"></div>
+  <div class="cards" id="cards"></div>
+  <div class="graf"><div class="caixa gc"><h3 id="gT"></h3><svg class="ch" id="gL"></svg><div class="leg" id="gLeg"></div></div>
+    <div class="caixa gc"><h3>Concorrentes <small id="rkSub"></small></h3><div class="rk" id="rk"></div></div></div>
+  <div class="caixa tab"><div class="barra"><input id="busca" type="search" placeholder="Buscar produto, departamento ou categoria">
+    <button class="chip" data-ch="enc">Com encarte <em id="nEnc"></em></button>
+    <button class="chip" data-ch="bx">Menor abaixo da moda (−5%) <em id="nBx"></em></button>
+    <button class="chip" data-ch="ac">Nosso preço acima do menor <em id="nAc"></em></button>
+    <button class="chip" data-ch="cesta">Só cesta</button>
+    <span class="info" id="info"></span></div><div class="rol" id="rol"></div></div>`;
+  $('busca').oninput = e => { BUSCA = e.target.value; LIM = 400; tabela(); };
+  document.querySelectorAll('[data-ch]').forEach(b => b.onclick = () => { const c = b.dataset.ch; CHIPS.has(c) ? CHIPS.delete(c) : CHIPS.add(c); b.classList.toggle('on'); LIM = 400; tabela(); });
+  $('xP').onclick = extrairProdutos; $('xF').onclick = extrairFiliais;
+  $('rol').addEventListener('click', clique);
+}
+function escopo(){
+  const col = D.m.col.reduce((a, b) => a + Math.max(0, b), 0);
+  $('escopo').textContent = `${D.ufs.map(u => u.split(' - ')[0]).join(', ')} · ${nf0.format(N)} produtos · ${nf0.format(col)} coletas · ${D.T[0] || ''} a ${D.T[D.T.length - 1] || ''}`;
+  let n = [0, 0, 0]; for (let i = 0; i < N; i++) { if (M('ev', i) > 0) n[0]++; if (M('rv', i) > 0 && M('mv', i) > 0 && M('rv', i) < M('mv', i) * .95) n[1]++;
+    if (nossoC(i) > 0 && M('rv', i) > 0 && nossoC(i) > M('rv', i)) n[2]++; }
+  $('nEnc').textContent = nf0.format(n[0]); $('nBx').textContent = nf0.format(n[1]); $('nAc').textContent = nf0.format(n[2]);
+}
+
+/* ---------- faixa rolante: encartes recentes, maiores quedas e onde estamos acima ---------- */
+function faixa(){
+  const ult = D.T.length - 1, itens = [];
+  for (let i = 0; i < N; i++) {
+    if (M('ev', i) > 0 && M('et', i) >= ult - 3) itens.push([0, M('mv', i) > 0 ? 1 - M('ev', i) / M('mv', i) : 0, i]);
+    if (M('rv', i) > 0 && M('mv', i) > 0 && M('rv', i) < M('mv', i) * .92) itens.push([1, 1 - M('rv', i) / M('mv', i), i]);
+    if (nossoC(i) > 0 && M('rv', i) > 0 && nossoC(i) > M('rv', i) * 1.05) itens.push([2, nossoC(i) / M('rv', i) - 1, i]); }
+  const pega = tipo => itens.filter(x => x[0] === tipo).sort((a, b) => b[1] - a[1] || D.p.venda[b[2]] - D.p.venda[a[2]]).slice(0, 12);
+  const mix = []; const g = [pega(0), pega(1), pega(2)]; for (let k = 0; k < 12; k++) g.forEach(l => l[k] && mix.push(l[k]));
+  const nome = i => esc(D.p.nome[i].replace(/^\d+\s*-\s*/, ''));
+  const html = mix.map(([t, x, i]) => t === 0
+      ? `<span class="fi" data-p="${i}"><span class="tag enc">ENCARTE</span><b>${nome(i)}</b><span class="mono">${R$(M('ev', i))}</span><small>${esc(conc(M('ek', i)))} · ${dia(M('et', i))}${M('mv', i) > 0 ? ` · ${pct(M('ev', i) / M('mv', i) - 1)} vs moda` : ''}</small></span>`
+      : t === 1 ? `<span class="fi" data-p="${i}"><span class="tag bx">ABAIXO DA MODA</span><b>${nome(i)}</b><span class="mono">${R$(M('rv', i))}</span><small>${esc(conc(M('rk', i)))} · ${pct(-x)} vs moda ${R$(M('mv', i))}</small></span>`
+      : `<span class="fi" data-p="${i}"><span class="tag ac">ESTAMOS ACIMA</span><b>${nome(i)}</b><span class="mono">${R$(nossoC(i))}</span><small>menor ${R$(M('rv', i))} no ${esc(conc(M('rk', i)))} · ${pct(x)}</small></span>`).join('');
+  $('trilho').innerHTML = html || '<span class="fi"><small>Sem destaques no recorte escolhido.</small></span>';
+  $('trilho').style.setProperty('--dur', Math.max(70, mix.length * 7) + 's');           /* ~7 s por item: dá para ler */
+  $('trilho').onclick = e => { const f = e.target.closest('[data-p]'); if (f) selecionar(+f.dataset.p, true); };
+}
+
+/* ---------- cartões: produto clicado ou média dos produtos filtrados ---------- */
+function cartoes(){
+  const L = SEL >= 0 ? [SEL] : linhas();
+  const media = c => { let s = 0, n = 0; for (const i of L) { const v = c(i); if (v > 0) { s += v; n++; } } return n ? s / n : -1; };
+  const um = SEL >= 0, i = SEL;
+  $('ctx').innerHTML = um ? `Produto selecionado: <b>${esc(D.p.nome[i])}</b> <button id="limpaSel">${ic('x').replace('<svg', '<svg width="12" height="12"')} ver média</button>`
+                          : `Média de <b>${nf0.format(L.length)}</b> produtos no filtro · clique num produto para ver os preços dele`;
+  if ($('limpaSel')) $('limpaSel').onclick = () => selecionar(-1);
+  const card = (t, n, c, v, a, d) => `<div class="caixa card" style="--c:${c}"><div class="t"><i>${ic(n)}</i>${t}</div>
+     <div class="v"><b>${v}</b>${a ? `<span>atac. ${a}</span>` : ''}</div><div class="d">${d || '&nbsp;'}</div></div>`;
+  const ip = um ? (nossoC(i) > 0 && M('rv', i) > 0 ? nossoC(i) / M('rv', i) * 100 : -1) : media(j => nossoC(j) > 0 && M('rv', j) > 0 ? nossoC(j) / M('rv', j) * 100 : -1);
+  $('cards').innerHTML = [
+    card('Preço moda', 'moda', 'var(--primary)', R$(um ? M('mv', i) : media(j => M('mv', j))), rs(um ? M('ma', i) : media(j => M('ma', j))),
+         um ? `repetiu em ${nf0.format(M('fq', i))} dias de coleta` : 'média das modas'),
+    card('Menor preço recente', 'baixo', 'var(--up)', R$(um ? M('rv', i) : media(j => M('rv', j))), rs(um ? M('ra', i) : media(j => M('ra', j))),
+         um ? `${esc(conc(M('rk', i)))} · ${dia(M('rt', i))}` : 'última coleta de cada concorrente'),
+    card('Menor histórico', 'hist', '#7A3FD1', R$(um ? M('hv', i) : media(j => M('hv', j))), rs(um ? M('ha', i) : media(j => M('ha', j))),
+         um ? `${esc(conc(M('hk', i)))} · ${dia(M('ht', i))}` : `menor preço de ${D.T[0] || ''} a ${D.T[D.T.length - 1] || ''}`),
+    card('Preço de encarte', 'enc', 'var(--amber)', R$(um ? M('ev', i) : media(j => M('ev', j))), '',
+         um ? (M('ev', i) > 0 ? `${esc(conc(M('ek', i)))} · ${dia(M('et', i))}` : 'sem encarte no período') : 'média dos produtos com encarte'),
+    card('Nosso preço', 'nos', 'var(--down)', R$(um ? nossoC(i) : media(nossoC)), '',
+         ip > 0 ? `IP ${nf1.format(ip)} (nosso ÷ menor recente)` : '')].join('');
+}
+
+/* ---------- gráfico de linhas: preço por bandeira (produto) ou índice vs moda (média) ---------- */
+function grafico(){
+  const svg = $('gL'), W = svg.clientWidth || 700, H = 190, pl = 46, pr = 12, pt = 10, pb = 22, T = D.T.length;
+  const X = t => pl + (W - pl - pr) * (T > 1 ? t / (T - 1) : .5);
+  let series = [], titulo, fmt, ref = null;
+  if (SEL >= 0) {
+    const i = SEL, por = {};
+    for (const k of IDX_S[i] || []) (por[D.s.b[k]] = por[D.s.b[k]] || {})[D.s.t[k]] = D.s.v[k];
+    series = Object.keys(por).map(b => ({ nome: D.B[b], cor: CORES[b % CORES.length], pts: por[b] }));
+    if (D.nossoDia[i]) series.push({ nome: 'Nosso preço', cor: 'var(--ink)', pts: D.nossoDia[i], grossa: 1 });
+    ref = M('mv', i) > 0 ? { v: M('mv', i), nome: 'Moda ' + R$(M('mv', i)) } : null;
+    titulo = `Histórico de preço · ${esc(D.p.nome[i])}`; fmt = v => R$(v);
+  } else {
+    const L = new Set(linhas()), soma = {}, cont = {};
+    for (let k = 0; k < D.s.p.length; k++) { const p = D.s.p[k]; if (!L.has(p) || !(M('mv', p) > 0)) continue;
+      const b = D.s.b[k], t = D.s.t[k], r = D.s.v[k] / M('mv', p) * 100; (soma[b] = soma[b] || {}); (cont[b] = cont[b] || {});
+      soma[b][t] = (soma[b][t] || 0) + r; cont[b][t] = (cont[b][t] || 0) + 1; }
+    series = Object.keys(soma).map(b => { const pts = {}; for (const t in soma[b]) pts[t] = soma[b][t] / cont[b][t]; return { nome: D.B[b], cor: CORES[b % CORES.length], pts }; });
+    ref = { v: 100, nome: 'Moda = 100' };
+    titulo = 'Preço de cada concorrente em relação à moda <small>(100 = moda; abaixo de 100 = mais barato)</small>'; fmt = v => nf1.format(v);
+  }
+  $('gT').innerHTML = titulo;
+  const vis = series.filter(s => !ESCONDIDAS.has(s.nome));
+  let lo = Infinity, hi = -Infinity; vis.forEach(s => Object.values(s.pts).forEach(v => { if (v > 0) { lo = Math.min(lo, v); hi = Math.max(hi, v); } }));
+  if (ref) { lo = Math.min(lo, ref.v); hi = Math.max(hi, ref.v); }
+  if (!isFinite(lo)) { svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" fill="var(--muted)" font-size="12">Sem coletas para mostrar</text>`; $('gLeg').innerHTML = ''; return; }
+  const m = (hi - lo) * .1 || hi * .05 || 1; lo -= m; hi += m;
+  const Y = v => pt + (H - pt - pb) * (1 - (v - lo) / (hi - lo));
+  let g = '';
+  for (let k = 0; k <= 3; k++) { const v = lo + (hi - lo) * k / 3; g += `<line x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-dasharray="2 4"/>
+    <text x="${pl - 6}" y="${Y(v) + 4}" text-anchor="end" fill="var(--muted)" font-size="10.5" font-family="Geist Mono">${fmt(v)}</text>`; }
+  [0, Math.floor((T - 1) / 2), T - 1].forEach(t => g += `<text x="${X(t)}" y="${H - 4}" text-anchor="middle" fill="var(--muted)" font-size="10.5" font-family="Geist Mono">${D.T[t] || ''}</text>`);
+  if (ref) g += `<line x1="${pl}" x2="${W - pr}" y1="${Y(ref.v)}" y2="${Y(ref.v)}" stroke="var(--primary)" stroke-width="1.2" stroke-dasharray="6 4" opacity=".7"/>
+    <text x="${W - pr}" y="${Y(ref.v) - 5}" text-anchor="end" fill="var(--primary)" font-size="10.5">${esc(ref.nome)}</text>`;
+  vis.forEach(s => { const ts = Object.keys(s.pts).map(Number).sort((a, b) => a - b).filter(t => s.pts[t] > 0);
+    if (!ts.length) return;
+    g += `<polyline fill="none" stroke="${s.cor}" stroke-width="${s.grossa ? 2.4 : 1.7}" stroke-linejoin="round" stroke-linecap="round" points="${ts.map(t => X(t) + ',' + Y(s.pts[t])).join(' ')}"/>`;
+    g += ts.map(t => `<circle cx="${X(t)}" cy="${Y(s.pts[t])}" r="2.2" fill="${s.cor}"/>`).join(''); });
+  g += `<line id="gCur" x1="0" x2="0" y1="${pt}" y2="${H - pb}" stroke="var(--line-strong)" opacity="0"/><rect x="${pl}" y="0" width="${W - pl - pr}" height="${H}" fill="transparent" id="gHit"/>`;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.innerHTML = g;
+  $('gLeg').innerHTML = series.map(s => `<span data-s="${esc(s.nome)}" class="${ESCONDIDAS.has(s.nome) ? 'off' : ''}" style="--c:${s.cor}"><i></i>${esc(s.nome)}</span>`).join('')
+    + (ref ? `<span style="--c:var(--primary)"><i style="height:0;border-top:2px dashed var(--primary)"></i>${esc(ref.nome)}</span>` : '');
+  $('gLeg').onclick = e => { const s = e.target.closest('[data-s]'); if (!s) return; const n = s.dataset.s; ESCONDIDAS.has(n) ? ESCONDIDAS.delete(n) : ESCONDIDAS.add(n); grafico(); };
+  /* passar o mouse: o preço de cada concorrente naquele dia */
+  const hit = $('gHit'), cur = $('gCur'), dica = $('dica');
+  hit.onmousemove = e => { const r = svg.getBoundingClientRect(), x = (e.clientX - r.left) * (W / r.width);
+    const t = Math.max(0, Math.min(T - 1, Math.round((x - pl) / ((W - pl - pr) / Math.max(1, T - 1)))));
+    cur.setAttribute('x1', X(t)); cur.setAttribute('x2', X(t)); cur.setAttribute('opacity', 1);
+    const li = vis.map(s => [s, s.pts[t]]).filter(x => x[1] > 0).sort((a, b) => a[1] - b[1]);
+    dica.innerHTML = `<div class="dt">${D.T[t] || ''}</div>` + (li.length ? li.map(([s, v]) => `<div class="li"><span style="--c:${s.cor}"><i></i>${esc(s.nome)}</span><b>${fmt(v)}</b></div>`).join('')
+      : '<div class="li"><span>Sem coleta neste dia</span></div>') + (ref ? `<div class="li" style="margin-top:4px"><span>${SEL >= 0 ? 'Moda' : 'Moda'}</span><b>${fmt(ref.v)}</b></div>` : '');
+    dica.classList.add('on'); dica.style.left = Math.min(innerWidth - dica.offsetWidth - 8, e.clientX + 14) + 'px'; dica.style.top = Math.max(8, e.clientY - dica.offsetHeight - 10) + 'px'; };
+  hit.onmouseleave = () => { cur.setAttribute('opacity', 0); dica.classList.remove('on'); };
+}
+
+/* ---------- ranking de concorrentes (bandeiras): preço médio frente à moda ---------- */
+function ranking(){
+  const L = SEL >= 0 ? new Set([SEL]) : new Set(linhas()), acc = {};
+  for (let k = 0; k < D.s.p.length; k++) { const p = D.s.p[k]; if (!L.has(p) || !(M('mv', p) > 0)) continue;
+    const b = D.s.b[k], a = acc[b] = acc[b] || { s: 0, n: 0, menores: 0 }; a.s += D.s.v[k] / M('mv', p) - 1; a.n++; if (D.s.v[k] < M('mv', p)) a.menores++; }
+  const R = Object.entries(acc).map(([b, a]) => ({ b: +b, d: a.s / a.n, n: a.n, me: a.menores })).sort((x, y) => x.d - y.d);
+  const mx = Math.max(.05, ...R.map(r => Math.abs(r.d)));
+  $('rkSub').textContent = SEL >= 0 ? 'neste produto, frente à moda' : 'preço médio frente à moda de cada produto';
+  $('rk').innerHTML = R.length ? R.map((r, k) => `<div class="l" data-dica="${esc(D.B[r.b])}: ${pct(r.d)} frente à moda em ${nf0.format(r.n)} coletas; ${nf0.format(r.me)} abaixo da moda">
+      <span class="n">${k + 1}</span><b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(D.B[r.b])}</b>
+      <div class="bar"><i style="${r.d < 0 ? `right:50%;width:${50 * -r.d / mx}%;background:var(--up)` : `left:50%;width:${50 * r.d / mx}%;background:var(--down)`}"></i></div>
+      <span class="num ${r.d < 0 ? 'vd' : 'vm'}" style="text-align:right">${pct(r.d)}</span><span class="num mt" style="text-align:right">${nf0.format(r.n)}</span></div>`).join('')
+    : '<div class="mt">Sem coletas no recorte.</div>';
+  const dica = $('dica');
+  $('rk').onmousemove = e => { const l = e.target.closest('[data-dica]'); if (!l) { dica.classList.remove('on'); return; }
+    dica.innerHTML = `<div class="li"><span>${esc(l.dataset.dica)}</span></div>`; dica.classList.add('on');
+    dica.style.left = Math.min(innerWidth - dica.offsetWidth - 8, e.clientX + 14) + 'px'; dica.style.top = (e.clientY + 14) + 'px'; };
+  $('rk').onmouseleave = () => dica.classList.remove('on');
+}
+
+/* ---------- tabela produto -> estado -> filial ---------- */
+const COLS = [['nome', 'Produto'], ['col', 'Coletas'], ['fq', 'Freq. moda'], ['mv', 'Varejo'], ['ma', 'Atacado'], ['rv', 'Varejo'], ['ra', 'Atacado'], ['rk', 'Concorrente'],
+  ['rt', 'Data'], ['hv', 'Varejo'], ['ha', 'Atacado'], ['hk', 'Concorrente'], ['ht', 'Data'], ['ev', 'Encarte'], ['nos', 'Nosso preço'], ['dif', 'Nosso vs menor']];
+function celulas(g, i, nosso){
+  const rv = g('rv', i), mv = g('mv', i);
+  return `<td class="num">${nf0.format(Math.max(0, g('col', i)))}</td><td class="num">${g('fq', i) > 0 ? nf0.format(g('fq', i)) : '–'}</td>
+    <td class="num v">${rs(mv)}</td><td class="num mt">${rs(g('ma', i))}</td>
+    <td class="num v ${rv > 0 && mv > 0 ? (rv < mv ? 'vd' : '') : ''}">${rs(rv)}</td><td class="num mt">${rs(g('ra', i))}</td><td class="c">${esc(conc(g('rk', i)))}</td><td class="dt">${dia(g('rt', i))}</td>
+    <td class="num">${rs(g('hv', i))}</td><td class="num mt">${rs(g('ha', i))}</td><td class="c">${esc(conc(g('hk', i)))}</td><td class="dt">${dia(g('ht', i))}</td>
+    <td class="num en">${g('ev', i) > 0 ? rs(g('ev', i)) : '–'}</td><td class="num">${rs(nosso)}</td>
+    <td class="num ${nosso > 0 && rv > 0 ? (nosso > rv ? 'vm' : 'vd') : ''}">${nosso > 0 && rv > 0 ? pct(nosso / rv - 1) : '–'}</td>`; }
+function tabela(){
+  const L = linhas();
+  $('info').textContent = `${nf0.format(L.length)} de ${nf0.format(N)} produtos`;
+  const car = ab => `<span class="car${ab ? ' ab' : ''}">${ic('seta')}</span>`;
+  let h = `<table><thead><tr><th class="gr"></th><th class="gr" colspan="2"></th><th class="gr" colspan="2">Moda</th><th class="gr" colspan="4">Menor recente</th>
+    <th class="gr" colspan="4">Menor histórico</th><th class="gr" colspan="3"></th></tr><tr>${COLS.map(([c, t]) => `<th data-o="${c}" class="${ORD.c === c ? 'ord' : ''}">${t}${ORD.c === c ? (ORD.d < 0 ? ' ↓' : ' ↑') : ''}</th>`).join('')}</tr></thead><tbody>`;
+  for (const i of L.slice(0, LIM)) {
+    const ab = ABERTOS.has(i);
+    h += `<tr class="p${SEL === i ? ' sel' : ''}" data-p="${i}"><td title="${esc(D.p.nome[i])} · ${esc(D.p.dep[i])}">${car(ab)}${esc(D.p.nome[i])}</td>${celulas(M, i, nossoC(i))}</tr>`;
+    if (!ab) continue;
+    for (const k of IDX_E[i] || []) { const uf = D.e.u[k], chave = i + '|' + uf, abU = ABERTOS_U.has(chave);
+      h += `<tr class="u" data-u="${esc(chave)}"><td>${car(abU)}<b>${esc(uf)}</b></td>${celulas(E, k, -1)}</tr>`;
+      if (!abU) continue;
+      if (!D.f) { h += `<tr class="f"><td colspan="16">Muitas filiais no filtro: escolha menos estados para ver a linha de cada filial.</td></tr>`; continue; }
+      for (const f of IDX_F[chave] || []) { const F = D.f, mk = Math.round((F.mk[f] || 0) * 100), mo = Math.round((F.mo[f] || 0) * 100), vm = Math.round((F.vm[f] || 0) * 100);
+        h += `<tr class="f"><td>${esc(F.fil[f])}</td><td></td><td></td><td class="num">${rs(mo)}</td><td class="num mt">${rs(Math.round((F.ma[f] || 0) * 100))}</td>
+          <td class="num v ${mk > 0 && mo > 0 && mk < mo ? 'vd' : ''}">${rs(mk)}</td><td class="num mt">${rs(Math.round((F.amk[f] || 0) * 100))}</td><td class="c">${esc(F.conc[f] || '')}</td>
+          <td class="dt">${esc(F.data[f] || '')}</td><td></td><td></td><td></td><td></td><td></td><td class="num">${rs(vm)}</td>
+          <td class="num ${vm > 0 && mk > 0 ? (vm > mk ? 'vm' : 'vd') : ''}">${vm > 0 && mk > 0 ? pct(vm / mk - 1) : '–'}</td></tr>`; } } }
+  h += '</tbody></table>';
+  if (L.length > LIM) h += `<button class="bt mais" id="mais">Mostrar mais ${nf0.format(Math.min(400, L.length - LIM))} produtos</button>`;
+  if (!L.length) h = '<div class="vazio">Nenhum produto com esses filtros.</div>';
+  $('rol').innerHTML = h;
+}
+function clique(e){
+  const th = e.target.closest('th[data-o]'); if (th) { const c = th.dataset.o; ORD = ORD.c === c ? { c, d: -ORD.d } : { c, d: c === 'nome' ? 1 : -1 }; tabela(); return; }
+  if (e.target.id === 'mais') { LIM += 400; tabela(); return; }
+  const u = e.target.closest('tr.u'); if (u) { const k = u.dataset.u; ABERTOS_U.has(k) ? ABERTOS_U.delete(k) : ABERTOS_U.add(k); tabela(); return; }
+  const p = e.target.closest('tr.p'); if (!p) return; const i = +p.dataset.p;
+  if (e.target.closest('.car')) { ABERTOS.has(i) ? ABERTOS.delete(i) : ABERTOS.add(i); tabela(); return; }
+  selecionar(SEL === i ? -1 : i);
+}
+function selecionar(i, rolar){ SEL = i; ESCONDIDAS.clear(); cartoes(); grafico(); ranking(); tabela();
+  if (rolar && i >= 0) { const r = $('rol').querySelector(`tr.p[data-p="${i}"]`); if (r) r.scrollIntoView({ block: 'center' }); else toast(D.p.nome[i]); } }
+
+/* ---------- extrações (no navegador, sem consumir o banco) ---------- */
+function xls(linhas, aba, arq){ if (!window.XLSX) { toast('Preparando o Excel, tente de novo em instantes'); return; }
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(linhas), aba);
+  XLSX.writeFile(wb, `${arq}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`); toast(nf0.format(linhas.length) + ' linhas no Excel'); }
+const real = c => c > 0 ? c / 100 : null;
+function linhaMet(g, i){ return { 'Coletas': g('col', i), 'Concorrentes': g('nk', i), 'Freq. moda (dias)': g('fq', i) > 0 ? g('fq', i) : null,
+  'Moda varejo': real(g('mv', i)), 'Moda atacado': real(g('ma', i)), 'Menor recente varejo': real(g('rv', i)), 'Menor recente atacado': real(g('ra', i)),
+  'Concorrente (recente)': conc(g('rk', i)), 'Data (recente)': dia(g('rt', i)), 'Menor histórico varejo': real(g('hv', i)), 'Menor histórico atacado': real(g('ha', i)),
+  'Concorrente (histórico)': conc(g('hk', i)), 'Data (histórico)': dia(g('ht', i)), 'Encarte': real(g('ev', i)), 'Concorrente (encarte)': conc(g('ek', i)), 'Data (encarte)': dia(g('et', i)) }; }
+function extrairProdutos(){ const L = linhas(), out = [];
+  for (const i of L) { const base = { 'Produto': D.p.nome[i], 'Departamento': D.p.dep[i], 'Categoria': D.p.cat[i], 'Comprador': D.p.comp[i] };
+    out.push(Object.assign({ 'Nível': 'Produto (estados juntos)', 'Estado': D.ufs.join(', ') }, base, linhaMet(M, i), { 'Nosso preço': real(nossoC(i)) }));
+    for (const k of IDX_E[i] || []) out.push(Object.assign({ 'Nível': 'Estado', 'Estado': D.e.u[k] }, base, linhaMet(E, k))); }
+  xls(out, 'Produtos e estados', 'market_metrics_produtos'); }
+function extrairFiliais(){ if (!D.f) { toast('Muitas filiais no filtro: escolha menos estados'); return; } const L = new Set(linhas()), F = D.f, out = [];
+  for (let f = 0; f < F.p.length; f++) { const i = F.p[f]; if (!L.has(i)) continue;
+    out.push({ 'Estado': F.uf[f], 'Filial': F.fil[f], 'Produto': D.p.nome[i], 'Departamento': D.p.dep[i], 'Categoria': D.p.cat[i], 'Comprador': D.p.comp[i],
+      'Menor recente varejo': F.mk[f] > 0 ? F.mk[f] : null, 'Menor recente atacado': F.amk[f] > 0 ? F.amk[f] : null, 'Concorrente': F.conc[f] || '', 'Data': F.data[f] || '',
+      'Moda varejo': F.mo[f] > 0 ? F.mo[f] : null, 'Moda atacado': F.ma[f] > 0 ? F.ma[f] : null, 'Nosso preço': F.vm[f] > 0 ? F.vm[f] : null }); }
+  xls(out, 'Por filial', 'market_metrics_filiais'); }
+
+/* ---------- altura: ocupa a tela; a tabela rola por dentro ---------- */
+function ajustar(){ let h = 900; try { const fe = window.frameElement, pw = window.parent; const z = (fe.offsetHeight ? fe.getBoundingClientRect().height / fe.offsetHeight : 1) || 1;
+  h = Math.max(760, Math.round((pw.innerHeight - fe.getBoundingClientRect().top - 8) / z)); } catch (e) {}
+  $('raiz').style.height = h + 'px'; ST.altura(h); }
+
+let CHAVE = null;
+async function desenhar(msg){
+  const a = msg.args || {};
+  $('tema').textContent = `@import url('${a.fonte}');:root{${a.tokens}}`;
+  if (a.chave === CHAVE) return; CHAVE = a.chave;
+  if (!a.dados) { $('raiz').innerHTML = `<div class="caixa vazio">${esc(a.vazio || 'Sem pesquisa para os filtros escolhidos.')}</div>`; ajustar(); return; }
+  D = await abrir(a.dados); indexar(); SEL = -1; ABERTOS.clear(); ABERTOS_U.clear(); LIM = 400;
+  montar(); escopo(); faixa(); cartoes(); grafico(); ranking(); tabela(); ajustar();
+  if (!desenhar.ouvindo) { desenhar.ouvindo = 1; addEventListener('resize', () => { if (D) { ajustar(); grafico(); } }); }
+}
+window.addEventListener('message', e => { if (e.data && e.data.type === 'streamlit:render') desenhar(e.data); });
+if (window.__mkRender) desenhar(window.__mkRender);
+})();
+</script></body></html>
