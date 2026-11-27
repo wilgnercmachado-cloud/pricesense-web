@@ -145,12 +145,17 @@ def nome_exibido(permissao: str) -> str:
 
 
 def estados_permitidos() -> list[str] | None:
-    """Siglas dos estados que o usuário pode ver na PriceMetrics e no PriceBot. None = todos (administrador ou "Todos (Brasil)")."""
-    if eh_admin():
-        return None
+    """Siglas dos estados que o usuário pode ver na PriceMetrics, na Revisão de margem e no PriceBot. None = todos.
+
+    Vale também para administradores: ser administrador dá acesso às aprovações, não a todos os estados.
+    Todos os estados só para quem tem "Todos (Brasil)" no cadastro. Administrador sem nenhum estado no cadastro
+    (cadastros antigos, de antes desta regra) continua vendo todos, para ninguém perder o acesso de uma hora para outra.
+    """
     from core import reports
     ests = reports.estados_do_usuario(st.session_state.get("usuario_estado"))
-    return None if "TODOS" in ests else sorted(set(ests))
+    if "TODOS" in ests or (eh_admin() and not ests):
+        return None
+    return sorted(set(ests))
 
 
 def sigla_estado(valor) -> str:
