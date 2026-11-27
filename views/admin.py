@@ -95,13 +95,89 @@ def _painel_trafego() -> None:
                          hide_index=True, width="stretch")
 
 
+def _aba_concorrentes() -> None:
+    """Configuração da pesquisa: que lojas concorrentes cada filial pesquisa, por estado (vem da base GMAT, sem Supabase)."""
+    import html as _h
+    from core import associacoes as asc
+    from core import mercado as mc
+    if not st.toggle("Mostrar as associações", key="adm_assoc_ver",
+                     help="Carrega a base de pesquisa (Competitividade Pricing GMAT) já guardada no servidor."):
+        st.caption("Mostra, por estado e filial, quais lojas concorrentes estão associadas, quantas coletas cada uma teve "
+                   "no período e o dia da última coleta.")
+        return
+    fonte = mc.base_padrao()
+    if fonte is None:
+        ui.vazio("Base de pesquisa não encontrada", "Publique o relatório Competitividade Pricing GMAT na biblioteca.")
+        return
+    df, meta, rel = fonte
+    versao = f"{rel.get('id')}:{rel.get('atualizado_em')}"
+    t = asc.tabela(versao, df, meta)
+    if t.empty:
+        ui.vazio("Sem associações na base", "O relatório publicado não trouxe o bloco de concorrentes por filial.")
+        return
+    permitidos = auth.estados_permitidos()
+    if permitidos is not None:
+        t = t[t["Estado"].map(auth.sigla_estado).isin(permitidos)]
+    c1, c2, c3 = st.columns([1.2, 1.6, 1])
+    ests = c1.multiselect("Estado", sorted(t["Estado"].unique()), placeholder="Todos", key="adm_assoc_uf")
+    busca = c2.text_input("Buscar filial, bandeira ou concorrente", key="adm_assoc_busca", placeholder="Ex.: 544, Assaí, Atakarejo").strip().lower()
+    visao = c3.segmented_control("Ver", ["Por filial", "Lista completa"], default="Por filial", required=True, key="adm_assoc_visao")
+    v = t[t["Estado"].isin(ests)] if ests else t
+    if busca:
+        v = v[v["Filial"].str.lower().str.contains(busca, regex=False) | v["Bandeira"].str.lower().str.contains(busca, regex=False)
+              | v["Concorrente"].str.lower().str.contains(busca, regex=False)]
+    sem = asc.filiais_sem_concorrente(versao, df, t)
+    if ests:
+        sem = sem[sem["Estado"].isin(ests)]
+    if permitidos is not None:
+        sem = sem[sem["Estado"].map(auth.sigla_estado).isin(permitidos)]
+    parados = v[v["Coletas no período"] == 0]["Concorrente"].nunique()
+    ui.indicadores([
+        ("Filiais com concorrentes", v["Filial"].nunique(), "loja" if "loja" in ui._ICONES else "mapa", "primary"),
+        ("Lojas concorrentes", v["Concorrente"].nunique(), "pessoas", "primary"),
+        ("Bandeiras", v.loc[v["Bandeira"] != "-", "Bandeira"].nunique(), "escudo", "neutro"),
+        ("Filiais sem concorrente", len(sem), "alerta" if "alerta" in ui._ICONES else "relogio", "alerta" if len(sem) else "neutro"),
+        ("Concorrentes sem coleta no período", parados, "relogio", "aviso" if parados else "neutro"),
+    ])
+    if visao == "Lista completa":
+        st.dataframe(v, hide_index=True, width="stretch", height=520,
+                     column_config={"Coletas no período": st.column_config.NumberColumn(format="%d")})
+        st.download_button("Baixar a lista (CSV)", v.to_csv(index=False, sep=";").encode("utf-8-sig"),
+                           file_name="concorrentes_por_filial.csv", mime="text/csv", icon=":material/download:")
+    else:
+        blocos = []
+        for (uf, fil), g in list(v.groupby(["Estado", "Filial"], sort=True))[:300]:
+            chips = []
+            for (band,), gb in g.groupby(["Bandeira"], sort=True):
+                lojas = "".join(
+                    f"<span class='ps-as-loja{' off' if n == 0 else ''}' title='{_h.escape(str(n))} coletas · última: {_h.escape(u)}'>"
+                    f"{_h.escape(c)}<small>{n} · {_h.escape(u)}</small></span>"
+                    for c, n, u in zip(gb["Concorrente"], gb["Coletas no período"], gb["Última coleta"]))
+                chips.append(f"<div class='ps-as-band'><b>{_h.escape(band)}</b><div>{lojas}</div></div>")
+            blocos.append(f"<div class='ps-as-fil'><div class='ps-as-cab'><span>{_h.escape(fil)}</span><em>{_h.escape(uf)}</em>"
+                          f"<i>{g['Concorrente'].nunique()} concorrentes</i></div>{''.join(chips)}</div>")
+        st.html("<style>.ps-as-grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}"
+                ".ps-as-fil{border:1px solid var(--ps-line);border-radius:14px;padding:12px 14px;background:var(--ps-surface-solid)}"
+                ".ps-as-cab{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}.ps-as-cab span{font-weight:600;color:var(--ps-ink)}"
+                ".ps-as-cab em{font-style:normal;font-size:.75rem;color:var(--ps-muted)}.ps-as-cab i{margin-left:auto;font-style:normal;font-size:.75rem;color:var(--ps-primary)}"
+                ".ps-as-band{margin-top:6px}.ps-as-band b{display:block;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ps-muted);margin-bottom:4px}"
+                ".ps-as-band div{display:flex;flex-wrap:wrap;gap:6px}.ps-as-loja{display:inline-flex;flex-direction:column;padding:5px 9px;border-radius:9px;"
+                "border:1px solid var(--ps-line);background:var(--ps-raised);font-size:.82rem;color:var(--ps-ink);line-height:1.25}"
+                ".ps-as-loja small{font-size:.7rem;color:var(--ps-muted)}.ps-as-loja.off{border-color:var(--ps-down);color:var(--ps-down)}</style>"
+                f"<div class='ps-as-grade'>{''.join(blocos)}</div>")
+        if v["Filial"].nunique() > 300:
+            st.caption("Mostrando as 300 primeiras filiais. Use o filtro de estado ou a busca para ver as demais.")
+    if len(sem):
+        with st.expander(f"Filiais sem concorrente associado ({len(sem)})", icon=":material/warning:"):
+            st.dataframe(sem, hide_index=True, width="stretch")
+
+
 def render() -> None:
     if not auth.eh_admin():
         ui.cabecalho("Administração")
         ui.vazio("Área restrita", "Só administradores acessam esta página.")
         return
     ui.cabecalho("Administração", "Aprove acessos, ajuste permissões e revise pedidos de mapeamento de cluster.")
-    _painel_trafego()
     try:
         usuarios = db.listar_usuarios()
     except Exception as exc:
@@ -118,16 +194,21 @@ def render() -> None:
     from core import aprovacoes as ap
     uploads = ap.pendentes()
 
-    ui.etiquetas([
-        ui.etiqueta("Aguardando aprovação", len(pendentes), tipo="numero", tom="promo" if pendentes else "neutro"),
-        ui.etiqueta("Usuários ativos", len(ativos), tipo="numero", tom="primary"),
-        ui.etiqueta("Online agora", online, tipo="numero", tom="ok"),
-        ui.etiqueta("Clusters para mapear", len(pedidos_cluster), tipo="numero", tom="alert" if pedidos_cluster else "neutro"),
-        ui.etiqueta("Uploads para aprovar", len(uploads), tipo="numero", tom="promo" if uploads else "neutro"),
+    ui.indicadores([
+        ("Aguardando aprovação", len(pendentes), "relogio", "aviso" if pendentes else "neutro"),
+        ("Usuários ativos", len(ativos), "pessoas", "primary"),
+        ("Online agora", online, "sinal", "ok"),
+        ("Clusters para mapear", len(pedidos_cluster), "mapa", "alerta" if pedidos_cluster else "neutro"),
+        ("Uploads para aprovar", len(uploads), "enviar", "aviso" if uploads else "neutro"),
     ])
 
+    _painel_trafego()
     abas = st.tabs([f"Solicitações ({len(pendentes)})", f"Usuários ({len(ativos)})",
-                    f"Clusters ({len(pedidos_cluster)})", f"Bloqueados ({len(bloqueados)})", f"Uploads ({len(uploads)})"])
+                    f"Clusters ({len(pedidos_cluster)})", f"Bloqueados ({len(bloqueados)})", f"Uploads ({len(uploads)})",
+                    "Concorrentes por filial"])
+
+    with abas[5]:
+        _aba_concorrentes()
 
     with abas[4]:
         if not uploads:
