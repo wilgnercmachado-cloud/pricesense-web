@@ -313,11 +313,14 @@ def _uploads(rel: dict, meta_base: dict, df_base: pd.DataFrame | None = None, so
             _profimetrics(aba)
 
 
+AO_VIVO_LIGADO = False      # desligado em 25/11/2026 a pedido do time (gastava a cota do Supabase); True volta o botão
+
+
 def _controle_ao_vivo(modo: str, df: pd.DataFrame, rel: dict) -> dict:
     """Botão "Ao vivo": o analista inicia/encerra a precificação online dos estados; quem assiste vê os preços chegando.
     Comercial assiste sempre aos seus estados; analistas escolhem assistir."""
     base = f"{rel.get('id')}:{rel.get('atualizado_em')}"
-    if db.modo_local():                    # aplicativo para PC: cada computador é independente, não há ao vivo
+    if not AO_VIVO_LIGADO or db.modo_local():   # ao vivo desligado (consumo do banco); no PC não existe
         return {"base": base, "transmitir": None, "assistir": False, "ufs_vivos": [], "chave": "N"}
     from core import ao_vivo as av
     ss = st.session_state
