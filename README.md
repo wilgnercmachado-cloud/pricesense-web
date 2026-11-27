@@ -291,3 +291,12 @@ varejo. Sem custo na base, a margem não é medida. O histórico (gráfico) e a 
 - Topo: `ui/components.py` (`arrumaDireita`) mede tema, tela cheia, sininho e os botões da tela aberta e coloca cada um
   logo à esquerda do anterior; se faltar espaço no meio, o menu (ilha) anda para a esquerda, para o centro do espaço livre.
 
+## Identidade visual e cabeçalhos (27/11/2026)
+- Logo novo "P de tendência" (haste do P + linha de alta): `assets/logo_light.svg`, `assets/logo_dark.svg` (nome em
+  curvas, fonte Geist SemiBold), `assets/marca_*.svg` (só o símbolo) e `assets/favicon.png` (aba do navegador).
+- Faixa do topo de cada página (`ui.cabecalho`): fundo liso, ícone na cor da marca, data e "atualizado às HH:MM".
+- Ícones das páginas por máscara CSS (`ui/components._icone`): o `st.html` das versões novas do Streamlit remove `<svg>`.
+  Atenção: nada no CSS do tema pode conter "<" seguido de letra (nem em comentário), senão o `st.html` descarta o
+  estilo inteiro.
+- Modos claro e escuro sem as luzes animadas nas laterais (o Optimus mantém o visual próprio).
+

@@ -16,7 +16,9 @@ def _rerun_fragmento() -> None:
     except st.errors.StreamlitAPIException:
         st.rerun()
 
-st.set_page_config(page_title="PriceSense", page_icon=":material/sell:", layout="wide", initial_sidebar_state="collapsed")
+_FAVICON = Path(__file__).resolve().parent / "assets" / "favicon.png"
+st.set_page_config(page_title="PriceSense", page_icon=str(_FAVICON) if _FAVICON.exists() else ":material/sell:",
+                   layout="wide", initial_sidebar_state="collapsed")
 
 from core import trafego
 from core import auth, db, presenca, state  # noqa: E402
