@@ -300,3 +300,23 @@ varejo. Sem custo na base, a margem não é medida. O histórico (gráfico) e a 
   estilo inteiro.
 - Modos claro e escuro sem as luzes animadas nas laterais (o Optimus mantém o visual próprio).
 
+## PriceBot, calendário e concorrentes por filial (27/11/2026)
+- PriceBot: botão "Limpar tudo" (confirma no 2º clique) que volta estados, filiais, campanha e preços ao início.
+- Calendário próprio em todos os campos de data das telas (`pricesense_telas.html`, bloco `ps-calendario`): segue o tema,
+  com atalhos Hoje / Amanhã / +7 dias; o calendário do navegador fica desligado.
+- Administração > "Concorrentes por filial" (`core/associacoes.py`): por estado e filial, as lojas concorrentes associadas
+  (bloco data4 do GMAT), agrupadas por bandeira, com coletas no período e a última coleta. Tudo da base já carregada no
+  servidor (nada do Supabase). Respeita os estados do administrador.
+
+## Pesquisa de Mercado nova (Market Metrics, 27/11/2026)
+- Tela própria em `ui/metrics_comp/mercado.html` (servida por `ui.components.pasta_mercado`), dados de
+  `core/mercado.pacote_mercado_v2` (base GMAT + 1067 já no servidor; nada do Supabase).
+- Filtros: vários estados (só os do usuário), comprador, departamento, categoria e cesta.
+- Tabela produto → estado → filial: moda (varejo/atacado), frequência da moda (dias distintos por concorrente com o
+  preço moda), menor recente (a mais barata entre as coletas mais recentes de cada concorrente), menor histórico, encarte
+  (tipo de preço 2), nosso preço e diferença. Menor/moda/encarte com o corte de erro do preço vencedor; gráfico com a
+  pesquisa como veio.
+- Cartões: do produto clicado ou média dos produtos do filtro. Faixa rolante (~7 s por item): encartes recentes, menores
+  abaixo da moda e onde estamos acima. Gráficos com o preço de cada bandeira ao passar o mouse.
+- Extrações em Excel no navegador: produtos e estados; por filial.
+
