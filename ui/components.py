@@ -484,7 +484,26 @@ const d = window.parent.document, w = window.parent;
 }
 /* ilha dinâmica: a largura acompanha os itens do menu (medidos uma vez por mudança) */
 {
-  const ajustaIlha = () => { const nav = d.querySelector('[data-testid="stTopNav"]'); if (!nav) return;
+  /* botões fixos da direita (tema, tela cheia, sininho e os botões de cada tela) lado a lado, medidos de verdade:
+     cada um começa onde o anterior termina, então um sininho com número ou um botão a mais nunca se sobrepõe */
+  const arrumaDireita = () => {
+    const W = w.innerWidth, gap = 8;
+    const seq = [d.querySelector('.st-key-ps_tema'), d.getElementById('ps-fs'), d.querySelector('.st-key-ps_sino'),
+                 ...d.querySelectorAll('[class*="st-key-reg_topo"], [class*="st-key-promo_topo"], [class*="st-key-mk_topo"]')]
+      .filter(el => el && el.getClientRects().length && el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().top < 70);
+    if (seq.length < 2) return;
+    let borda = seq[0].getBoundingClientRect().left;
+    for (const el of seq.slice(1)) {
+      const r = el.getBoundingClientRect();
+      const z = (el.offsetWidth ? r.width / el.offsetWidth : 1) || 1;
+      const direita = W - borda + gap;
+      const css = Math.round(direita / z);
+      if (Math.abs((parseFloat(el.style.right) || -999) - css) > 1) el.style.setProperty('right', css + 'px', 'important');
+      borda = W - direita - r.width;
+    }
+  };
+  w.__psArrumaDireita = arrumaDireita;
+  const ajustaIlha = () => { arrumaDireita(); const nav = d.querySelector('[data-testid="stTopNav"]'); if (!nav) return;
     /* largura natural = soma dos itens clicáveis (Início, Ferramentas, ...), medidos direto, sem depender da estrutura interna */
     const els = [...nav.querySelectorAll('[data-testid="stTopNavLink"], [data-testid="stTopNavSection"]')].filter(e => e.getClientRects().length);
     if (!els.length) return;
@@ -497,7 +516,11 @@ const d = window.parent.document, w = window.parent;
     let dir = W;
     d.querySelectorAll('.st-key-ps_tema, #ps-fs, .st-key-ps_sino, [class*="st-key-reg_topo"], [class*="st-key-promo_topo"], [class*="st-key-mk_topo"]').forEach(el => {
       const r = el.getBoundingClientRect(); if (r.width > 0 && r.top < 70) dir = Math.min(dir, r.left); });
-    const maximo = Math.max(120, 2 * Math.min(meio - esq, dir - meio) - 28);
+    /* centralizado quando cabe; se os botões da direita invadirem o meio, a ilha anda para a esquerda, no meio do espaço livre */
+    const centrado = 2 * Math.min(meio - esq, dir - meio) - 28, livre = dir - esq - 28;
+    let desloc = 0, maximo = centrado;
+    if (natural > centrado && livre > centrado) { maximo = livre; desloc = (esq + dir) / 2 - meio; }
+    maximo = Math.max(120, maximo);
     /* sem espaço: os botões da direita viram só ícones (compacto) antes de a ilha encolher; nada se sobrepõe */
     const b_ = d.body;
     if (natural > maximo && !b_.classList.contains('ps-topo-compacto')) { b_.classList.add('ps-topo-compacto'); return setTimeout(ajustaIlha, 60); }
@@ -506,6 +529,8 @@ const d = window.parent.document, w = window.parent;
     const z = (nav.offsetWidth ? nav.getBoundingClientRect().width / nav.offsetWidth : 1) || 1;   /* zoom efetivo da ilha (do site ou do navegador) */     /* medidas na tela; a largura é aplicada antes do zoom do site */
     alvo = Math.round(alvo / z); const maxCss = Math.round(maximo / z);
     if (Math.abs((parseFloat(nav.style.width) || 0) - alvo) > 1) { nav.style.setProperty('width', alvo + 'px', 'important'); nav.style.setProperty('max-width', maxCss + 'px', 'important'); }
+    const esquerda = desloc ? `calc(50% + ${Math.round(desloc / z)}px)` : '';
+    if ((nav.style.left || '') !== esquerda) { if (esquerda) nav.style.setProperty('left', esquerda, 'important'); else nav.style.removeProperty('left'); }
     nav.dataset.ilha = '1'; };
   /* o selo "Atualizado" nunca encosta na ilha: encolhe (só a data) e, se ainda faltar espaço, sai do topo */
   const ajustaSelo = () => { const nav = d.querySelector('[data-testid="stTopNav"]'), selo = d.querySelector('.ps-atualizado'); if (!nav || !selo) return;
