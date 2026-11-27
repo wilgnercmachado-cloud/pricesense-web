@@ -776,6 +776,23 @@ if (dl) dl.onclick = async () => {{
 
 
 
+def pasta_mercado() -> str:
+    """Pasta da tela Market Metrics: ui/metrics_comp/mercado.html copiado como index.html para uma pasta temporária."""
+    import shutil
+    import tempfile
+    from pathlib import Path as _P
+    origem = _P(__file__).resolve().parent / "metrics_comp"
+    destino = _P(tempfile.gettempdir()) / "pricesense_mercado"
+    destino.mkdir(parents=True, exist_ok=True)
+    fonte, alvo = origem / "mercado.html", destino / "index.html"
+    if not alvo.exists() or alvo.stat().st_size != fonte.stat().st_size or alvo.stat().st_mtime < fonte.stat().st_mtime:
+        shutil.copyfile(fonte, alvo)
+    for extra in ("xlsx.mini.min.js", "LICENSE-sheetjs.txt"):
+        if (origem / extra).exists() and not (destino / extra).exists():
+            shutil.copyfile(origem / extra, destino / extra)
+    return str(destino)
+
+
 def pasta_telas() -> str:
     """Pasta das telas HTML (Início, PriceMetrics, Metrics Promo, PriceBot, Pesquisa de Mercado).
 
